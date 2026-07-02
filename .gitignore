@@ -3,3 +3,10 @@ dist/
 *.log
 .env
 .specstory/
+
+# Private build brief and session-law files. These stay dark permanently —
+# never tracked, never public. See docs/adr/0001-governing-principle.md and
+# docs/adr/0002-oracle-update-policy.md for what IS public about the process
+# these files govern.
+/CLAUDE.md
+/PDR-duckadrift.md
