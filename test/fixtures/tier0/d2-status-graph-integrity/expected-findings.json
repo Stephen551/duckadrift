@@ -1,8 +1,51 @@
 [
   {
     "check": "D2",
-    "claim": "ADR-0001 declares `superseded-by: 0002`, but no ADR numbered 0002 exists in the log.",
-    "evidence": [{ "adr": "0001-original-decision.md" }],
+    "claim": "ADR-0001 declares `superseded-by: 0099`, but no ADR numbered 0099 exists in the log.",
+    "evidence": [
+      {
+        "adr": "0001-original-decision.md"
+      }
+    ],
     "consequence": "A supersession pointer to nothing leaves the reader unable to find the decision that replaced this one — the status graph is broken at this node."
+  },
+  {
+    "check": "D2",
+    "claim": "Supersession cycle detected: ADR-0002 -> ADR-0003 -> ADR-0002.",
+    "evidence": [
+      {
+        "adr": "0002-cycle-a.md"
+      },
+      {
+        "adr": "0003-cycle-b.md"
+      }
+    ],
+    "consequence": "A cycle in the status graph means no ADR in the loop is the final, currently-governing decision."
+  },
+  {
+    "check": "D2",
+    "claim": "ADR-0004 and ADR-0005 are both Accepted and each claims to supersede the other.",
+    "evidence": [
+      {
+        "adr": "0004-mutual-a.md"
+      },
+      {
+        "adr": "0005-mutual-b.md"
+      }
+    ],
+    "consequence": "Mutual supersession between two live decisions leaves no single decision in force."
+  },
+  {
+    "check": "D2",
+    "claim": "ADR-0006 (Accepted) claims to supersede the later ADR-0007, which is still Accepted.",
+    "evidence": [
+      {
+        "adr": "0006-stale-early.md"
+      },
+      {
+        "adr": "0007-stale-late.md"
+      }
+    ],
+    "consequence": "An earlier decision cannot supersede a later one that was never updated — one status is stale."
   }
 ]

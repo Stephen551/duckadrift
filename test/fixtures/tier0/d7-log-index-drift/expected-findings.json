@@ -2,7 +2,11 @@
   {
     "check": "D7",
     "claim": "The ADR index lists `0002-second-decision.md`, which does not exist in the directory.",
-    "evidence": [{ "adr": "README.md" }],
+    "evidence": [
+      {
+        "file": "docs/adr/README.md"
+      }
+    ],
     "consequence": "An index that disagrees with the directory misleads anyone who trusts the index as the table of contents."
   }
 ]

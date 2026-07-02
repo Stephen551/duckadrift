@@ -1,29 +1,45 @@
 [
   {
     "check": "D1",
-    "claim": "ADR number 0001 is claimed by two files.",
+    "claim": "ADR number 0001 is claimed by 2 files.",
     "evidence": [
-      { "adr": "0001-first-decision.md" },
-      { "adr": "0001-duplicate-number.md" }
+      {
+        "adr": "0001-duplicate-number.md"
+      },
+      {
+        "adr": "0001-first-decision.md"
+      }
     ],
     "consequence": "Duplicate numbering makes ADR references ambiguous; downstream ghost-reference and status-graph checks cannot resolve a single target."
   },
   {
     "check": "D1",
     "claim": "ADR numbering skips 0002 between 0001 and 0003.",
-    "evidence": [{ "adr": "0003-skip-two.md" }],
+    "evidence": [
+      {
+        "adr": "0003-skip-two.md"
+      }
+    ],
     "consequence": "A skipped number is either a lost ADR or a numbering error; both need a human to confirm which."
   },
   {
     "check": "D1",
     "claim": "ADR-0004 has status `aproved`, which is not a valid status for this dialect.",
-    "evidence": [{ "adr": "0004-bad-status.md" }],
+    "evidence": [
+      {
+        "adr": "0004-bad-status.md"
+      }
+    ],
     "consequence": "An unrecognized status value makes this ADR invisible to status-graph and staleness checks that filter on valid statuses."
   },
   {
     "check": "D1",
     "claim": "ADR-0005 is missing the required `## Decision` section for its dialect.",
-    "evidence": [{ "adr": "0005-missing-decision-section.md" }],
+    "evidence": [
+      {
+        "adr": "0005-missing-decision-section.md"
+      }
+    ],
     "consequence": "A decision record with no recorded decision fails its one job."
   }
 ]
