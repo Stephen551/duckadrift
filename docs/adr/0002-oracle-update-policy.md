@@ -14,11 +14,11 @@ Accepted — 2026-07-02
 
 ## Context
 
-M0 built the Tier 0 fixture corpus before any detector existed (PDR §4, M0): each fixture's `expected-findings.json` was hand-authored ground truth describing which check should fire and why. That text was necessarily a guess at wording no detector yet produced.
+M0 built the Tier 0 fixture corpus before any detector existed: each fixture's `expected-findings.json` was hand-authored ground truth describing which check should fire and why. That text was necessarily a guess at wording no detector yet produced.
 
 M1 implemented the real D1–D7 detectors and ran them against their own fixtures. The exact output — claim wording, evidence shape, and in D2's case three entirely new findings once the fixture grew to cover sub-clauses M0 never isolated — differed from the M0 guesses. Every difference was reviewed and judged correct (see the session's diff, presented for director triage), and `expected-findings.json` was updated to match real detector output, all bundled into commits alongside the fixture and engine work that produced them.
 
-That bundling is the problem this ADR exists to close. `expected-findings.json` is not a scratch file — it is the oracle kill clause A (PDR §1.5) measures "zero false positives" against. If the oracle can be edited in the same breath as the code that's supposed to satisfy it, a bug can be silently "fixed" by loosening the expectation instead of correcting the detector, and nothing in the diff distinguishes the two cases from each other.
+That bundling is the problem this ADR exists to close. `expected-findings.json` is not a scratch file — it is the oracle the project's kill clause A measures "zero false positives" against. If the oracle can be edited in the same breath as the code that's supposed to satisfy it, a bug can be silently "fixed" by loosening the expectation instead of correcting the detector, and nothing in the diff distinguishes the two cases from each other.
 
 ## Decision
 
