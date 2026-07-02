@@ -1,0 +1,34 @@
+name: Check-fixture parity
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  parity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Require a fixture change alongside any check-logic change
+        run: |
+          BASE="${{ github.event.pull_request.base.sha }}"
+          HEAD="${{ github.event.pull_request.head.sha }}"
+          CHANGED=$(git diff --name-only "$BASE" "$HEAD")
+
+          CHECK_CHANGED=$(echo "$CHANGED" | grep -E '^src/checks/.*\.ts$' || true)
+          FIXTURE_CHANGED=$(echo "$CHANGED" | grep -E '^test/fixtures/tier0/' || true)
+
+          if [ -n "$CHECK_CHANGED" ] && [ -z "$FIXTURE_CHANGED" ]; then
+            echo "::error::This PR modifies check logic under src/checks/** without touching any fixture under test/fixtures/tier0/**. Every check ships with its isolating fixture in the same PR — add or update the corresponding fixture and its expected-findings.json."
+            echo "Changed check files:"
+            echo "$CHECK_CHANGED"
+            exit 1
+          fi
+
+          echo "OK: no check-logic change without a corresponding fixture change."

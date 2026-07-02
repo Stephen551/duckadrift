@@ -1,0 +1,4 @@
+# Tier 0's ground truth requires director sign-off before merge.
+# This entry is inert until branch protection on `main` has
+# "Require review from Code Owners" enabled — see CONTRIBUTING.md.
+/test/fixtures/**/expected-findings.json @Stephen551
