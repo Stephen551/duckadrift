@@ -5,3 +5,4 @@ Architecture decisions for duckadrift itself, recorded in duckadrift's own vocab
 | ADR | Title | Status | Severity |
 |-----|-------|--------|----------|
 | [0001](0001-governing-principle.md) | The governing principle (the Pact) | Accepted | critical |
+| [0002](0002-oracle-update-policy.md) | Oracle-update policy | Accepted | critical |
