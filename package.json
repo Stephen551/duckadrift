@@ -1,0 +1,21 @@
+{
+  "name": "duckadrift",
+  "version": "0.0.0",
+  "private": true,
+  "description": "A GitHub Action that verifies an ADR log against reality.",
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "typescript": "^5.5.0",
+    "vitest": "^2.0.0"
+  }
+}
