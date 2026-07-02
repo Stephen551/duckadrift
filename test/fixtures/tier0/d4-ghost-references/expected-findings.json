@@ -1,0 +1,8 @@
+[
+  {
+    "check": "D4",
+    "claim": "`src/example.ts` cites ADR-0001 as governing, but ADR-0001 is Superseded (by ADR-0002).",
+    "evidence": [{ "file": "src/example.ts", "line": 1 }, { "adr": "0001-old-approach.md" }],
+    "consequence": "Code that cites a dead decision as live is following guidance the project has already retracted."
+  }
+]

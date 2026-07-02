@@ -1,0 +1,14 @@
+[
+  {
+    "check": "D3",
+    "claim": "ADR-0001 links to `0099-nonexistent.md`, which does not resolve at HEAD.",
+    "evidence": [{ "adr": "0001-decision.md" }],
+    "consequence": "A dangling ADR-to-ADR link breaks traceability for anyone following the decision trail."
+  },
+  {
+    "check": "D3",
+    "claim": "ADR-0001 links to `src/pipeline/color.ts`, which does not resolve at HEAD.",
+    "evidence": [{ "adr": "0001-decision.md" }, { "file": "src/pipeline/color.ts" }],
+    "consequence": "A dangling ADR-to-code link means the decision's cited implementation cannot be verified to exist."
+  }
+]

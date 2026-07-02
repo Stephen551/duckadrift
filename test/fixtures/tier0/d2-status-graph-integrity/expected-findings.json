@@ -1,0 +1,8 @@
+[
+  {
+    "check": "D2",
+    "claim": "ADR-0001 declares `superseded-by: 0002`, but no ADR numbered 0002 exists in the log.",
+    "evidence": [{ "adr": "0001-original-decision.md" }],
+    "consequence": "A supersession pointer to nothing leaves the reader unable to find the decision that replaced this one — the status graph is broken at this node."
+  }
+]

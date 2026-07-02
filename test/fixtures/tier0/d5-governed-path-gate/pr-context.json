@@ -1,0 +1,5 @@
+{
+  "changedFiles": ["src/auth/login.ts"],
+  "commitMessage": "Fix login redirect bug",
+  "prBody": "Fixes a redirect loop on login. No ADR touched, no override marker present — this is the seeded violation."
+}
