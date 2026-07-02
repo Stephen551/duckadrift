@@ -8,10 +8,18 @@
   "engines": {
     "node": ">=20"
   },
+  "bin": {
+    "duckadrift": "dist/cli/index.js"
+  },
   "scripts": {
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "build": "tsc -p tsconfig.build.json"
+  },
+  "dependencies": {
+    "minimatch": "^10.2.5",
+    "yaml": "^2.9.0"
   },
   "devDependencies": {
     "@types/node": "^20.14.0",
