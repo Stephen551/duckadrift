@@ -1,7 +1,7 @@
 [
   {
     "check": "D1",
-    "claim": "ADR number 0001 is claimed by 2 files.",
+    "claim": "ADR number 0001 is claimed by 2 files in the ADR root.",
     "evidence": [
       {
         "adr": "0001-duplicate-number.md"
