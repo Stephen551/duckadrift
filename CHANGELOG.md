@@ -28,6 +28,7 @@ Running the tool against real ADR logs from large open-source projects surfaced 
 - An ADR number reused in a different subdirectory no longer fails the build. Teams numbering their own decisions independently is a real convention, so it's surfaced softly instead. The same number twice in one directory still fails.
 - Reference checking no longer reports things that were never file or code references: GitHub `@username` mentions and plain email addresses in author or reviewer tables, scoped package names like `@scope/name`, and links starting with a leading slash (relative to the repo root).
 - Links written for how a documentation site renders pages — MkDocs- or Docusaurus-style, no file extension, often a trailing slash — now resolve as long as the real file exists somewhere in the repository. A link with no match anywhere still fails.
+- Advisory findings now read like what they are. A numbering gap, a duplicate ADR number across directories or across an annex-style pair, or a missing section under an undeclared dialect used to say "required" or "skips" no matter the tier. They now read as an observation with a way to resolve it — declare a dialect, or the numbering convention, and the wording tightens up to match. Fact-tier findings (dialect declared, `numbering: global`, `numbering_gaps: fail`, or a same-directory collision with no annex explanation) keep their direct, unhedged wording.
 
 ### Known limits
 
