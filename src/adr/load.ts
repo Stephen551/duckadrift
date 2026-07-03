@@ -1,12 +1,17 @@
-import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
-import { isAbsolute, join } from "node:path";
+import { existsSync, readFileSync, statSync } from "node:fs";
+import { extname, isAbsolute, join, relative } from "node:path";
 import { loadConfig } from "../config/load.js";
 import { SetupError } from "../errors.js";
+import { walkRepoFiles } from "../repo/walk.js";
 import { ADR_FILENAME_RE, parseAdrFile } from "./parse.js";
 import type { AdrLogContext, PrContext } from "./types.js";
 
 const ADR_DIR_CANDIDATES = ["docs/adr", "doc/adr"];
 const INDEX_FILE_RE = /^readme\.md$/i;
+// The index lives at the ADR root only — a nested README documents its own
+// subdirectory, not the log as a whole, and isn't assumed to be a second
+// table of contents.
+const CANDIDATE_EXTENSIONS = new Set([".md", ".mdx"]);
 
 export function detectAdrDir(repoRoot: string): string {
   for (const candidate of ADR_DIR_CANDIDATES) {
@@ -46,28 +51,47 @@ export function loadAdrLog(
   adrDirOverride?: string
 ): AdrLogContext {
   const adrDir = resolveAdrDir(repoRoot, adrDirOverride);
-  const entries = readdirSync(adrDir);
+
+  // Recurses under the ADR root (ADR-0007) — real logs group ADRs into
+  // per-team/per-area subdirectories (found running R5's opendatahub,
+  // whose actual decisions live under operator/, mlflow/, autox/, etc.,
+  // which the old top-level-only readdirSync never saw at all). Reuses
+  // walkRepoFiles' directory-exclusion and file-size safeguards rather
+  // than a bespoke recursive readdir.
+  const candidateFiles = walkRepoFiles(adrDir).filter((f) =>
+    CANDIDATE_EXTENSIONS.has(extname(f.relativePath).toLowerCase())
+  );
 
   const adrs: AdrLogContext["adrs"] = [];
+  const unrecognizedFiles: string[] = [];
   let indexPath: string | null = null;
   let indexContent: string | null = null;
 
-  for (const entry of entries) {
-    const full = join(adrDir, entry);
-    if (!statSync(full).isFile()) continue;
-
-    if (INDEX_FILE_RE.test(entry)) {
-      indexPath = full;
-      indexContent = readFileSync(full, "utf-8");
+  for (const file of candidateFiles) {
+    const isAtRoot = !file.relativePath.includes("/");
+    if (isAtRoot && INDEX_FILE_RE.test(file.relativePath)) {
+      indexPath = file.absolutePath;
+      indexContent = file.content;
       continue;
     }
-    if (!ADR_FILENAME_RE.test(entry)) continue;
 
-    const raw = readFileSync(full, "utf-8");
-    adrs.push(parseAdrFile(raw, full, entry));
+    const baseName = file.relativePath.split("/").pop()!;
+    if (!ADR_FILENAME_RE.test(baseName)) {
+      // Silence is a violation regardless of cause (ADR-0007): a markdown
+      // file under the ADR root that isn't recognized as an ADR or the
+      // index must be surfaced, not silently dropped from consideration —
+      // whether it's legitimately non-ADR documentation or a real decision
+      // this tool's naming heuristic failed to catch is a human's call,
+      // not something to guess silently either way.
+      unrecognizedFiles.push(relative(repoRoot, file.absolutePath).split("\\").join("/"));
+      continue;
+    }
+
+    adrs.push(parseAdrFile(file.content, file.absolutePath, file.relativePath));
   }
 
   adrs.sort((a, b) => (a.number ?? 0) - (b.number ?? 0));
+  unrecognizedFiles.sort();
 
   // A declared dialect is a repo-wide assertion, not a per-file guess: it
   // overrides auto-detection for every ADR, and unlocks fact-mode claims
@@ -84,6 +108,7 @@ export function loadAdrLog(
     adrs,
     indexPath,
     indexContent,
+    unrecognizedFiles,
     prContext: loadPrContext(prContextPath),
     dialectDeclared,
   };

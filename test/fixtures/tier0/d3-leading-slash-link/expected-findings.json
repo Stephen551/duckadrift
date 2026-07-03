@@ -1,0 +1,13 @@
+[
+  {
+    "check": "D3",
+    "claim": "ADR-0001 links to `/docs/adr/0099-missing.md`, which does not resolve at HEAD.",
+    "evidence": [
+      {
+        "adr": "0001-decision.md",
+        "line": 16
+      }
+    ],
+    "consequence": "A dangling ADR-to-ADR link breaks traceability for anyone following the decision trail."
+  }
+]

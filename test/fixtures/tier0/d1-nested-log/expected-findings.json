@@ -1,0 +1,15 @@
+[
+  {
+    "check": "D1",
+    "claim": "ADR number 0001 is claimed by 2 files.",
+    "evidence": [
+      {
+        "adr": "0001-root-decision.md"
+      },
+      {
+        "adr": "team-a/0001-nested-decision.md"
+      }
+    ],
+    "consequence": "Duplicate numbering makes ADR references ambiguous; downstream ghost-reference and status-graph checks cannot resolve a single target."
+  }
+]

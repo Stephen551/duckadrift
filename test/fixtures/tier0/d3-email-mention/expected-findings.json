@@ -1,0 +1,13 @@
+[
+  {
+    "check": "D3",
+    "claim": "ADR-0001 links to `0099-nonexistent.md`, which does not resolve at HEAD.",
+    "evidence": [
+      {
+        "adr": "0001-reviewer-table.md",
+        "line": 14
+      }
+    ],
+    "consequence": "A dangling ADR-to-ADR link breaks traceability for anyone following the decision trail."
+  }
+]
