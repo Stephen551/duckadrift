@@ -34,12 +34,15 @@ function dangleConsequence(target: string): string {
 // ADR-0011: a link that doesn't resolve under any of the conventions above
 // might still be genuine — written for a published doc site's URL depth
 // (found running R5: edgex-docs' ADR-0026, cosmos-sdk's ADR-054), not the
-// raw git tree. If a file with the same basename exists anywhere else in
-// the repo, that's provable (the file is real) but not provable-as-error
-// (the link might render correctly on the published site) — advisory, with
-// the discovered path folded in so a human can jump straight to it. A
-// target with no match anywhere in the tree has nothing to explain it away
-// with — stays fact.
+// raw git tree. The dominant version of that idiom is extensionless and
+// often trailing-slash (MkDocs/Docusaurus "pretty URLs" — "../adr/foo/",
+// not "../adr/foo.md"), handled by findByBasename's normalization below.
+// If a file with the same basename exists anywhere else in the repo,
+// that's provable (the file is real) but not provable-as-error (the link
+// might render correctly on the published site) — advisory, with the
+// discovered path folded in so a human can jump straight to it. A target
+// with no match anywhere in the tree has nothing to explain it away with
+// — stays fact.
 const SITE_RELATIVE_CONSEQUENCE =
   "A link written for a published doc site's URL depth can look broken in the raw repository tree even though the target exists — confirm whether this needs fixing for direct GitHub browsing, or just reflects how the site renders it.";
 
@@ -50,15 +53,50 @@ export function d3ReferenceIntegrity(ctx: AdrLogContext): Finding[] {
   // resolve, reused for every dangling link after that in this same call —
   // not one repo-wide walk per link.
   let basenameIndex: Map<string, string> | null = null;
-  function findByBasename(target: string): string | undefined {
-    if (!basenameIndex) {
-      basenameIndex = new Map();
-      for (const f of walkAllPaths(ctx.repoRoot)) {
-        const base = f.relativePath.split("/").pop()!;
-        if (!basenameIndex.has(base)) basenameIndex.set(base, f.relativePath);
+  let indexDirIndex: Map<string, string> | null = null;
+  function buildIndices(): void {
+    if (basenameIndex) return;
+    basenameIndex = new Map();
+    indexDirIndex = new Map();
+    for (const f of walkAllPaths(ctx.repoRoot)) {
+      const segments = f.relativePath.split("/");
+      const base = segments[segments.length - 1]!;
+      if (!basenameIndex.has(base)) basenameIndex.set(base, f.relativePath);
+      // MkDocs/Docusaurus per-page-directory convention: a bare slug link
+      // can map to <slug>/index.md, not <slug>.md — found alongside the
+      // trailing-slash gap below, the other half of the same idiom.
+      if (base.toLowerCase() === "index.md" && segments.length >= 2) {
+        const parentDir = segments[segments.length - 2]!;
+        if (!indexDirIndex.has(parentDir)) indexDirIndex.set(parentDir, f.relativePath);
       }
     }
-    return basenameIndex.get(target.split("/").pop()!);
+  }
+
+  function findByBasename(target: string): string | undefined {
+    buildIndices();
+    // The dominant MkDocs/Docusaurus idiom (found running R5's edgex-docs,
+    // caught in verifier review): a site-relative link is written without
+    // an extension and often with a trailing slash — "../../adr/foo/", not
+    // "foo.md". A raw split("/").pop() on a trailing-slash target returns
+    // "" (nothing follows the last slash), which can never match anything.
+    // Strip the trailing slash first, then — if the resulting slug has no
+    // extension of its own — try the two source shapes that idiom actually
+    // maps to: "<slug>.md" and "<slug>/index.md".
+    const stripped = target.replace(/\/+$/, "");
+    const slug = stripped.split("/").pop()!;
+    if (slug === "") return undefined;
+
+    const direct = basenameIndex!.get(slug);
+    if (direct !== undefined) return direct;
+
+    if (!/\.[a-z0-9]+$/i.test(slug)) {
+      const withMd = basenameIndex!.get(`${slug}.md`);
+      if (withMd !== undefined) return withMd;
+      const asIndexDir = indexDirIndex!.get(slug);
+      if (asIndexDir !== undefined) return asIndexDir;
+    }
+
+    return undefined;
   }
 
   for (const adr of ctx.adrs) {
