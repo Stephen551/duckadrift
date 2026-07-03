@@ -7,9 +7,16 @@ import type { Finding } from "../types.js";
 const EXTERNAL_LINK_RE = /^[a-z][a-z0-9+.-]*:/i;
 // `[Name](@handle)` is a GitHub-attribution-mention idiom, not a file or code
 // reference — found running R5's opendatahub, whose Authors table cites
-// reviewers this way. "@handle" is never a resolvable relative path under any
-// convention, so it can't be mistaken for a real dangling reference.
-const USERNAME_MENTION_RE = /^@/;
+// reviewers this way. Matches a bare GitHub-username-shaped target ONLY: no
+// `/`, no `.`, nothing after the handle. An unanchored `/^@/` (the first cut
+// of this fix) would also silently swallow npm/yarn scoped-package targets
+// like `@backstage/core-plugin-api` — a real shape, since Backstage-style
+// monorepos are in this tool's own exam set — turning a would-be dangling
+// reference into a false negative instead of the false positive this was
+// built to fix. A bare `@` with nothing after it (found in the same corpus,
+// an evidently unfilled attribution slot) is correctly NOT a match here and
+// falls through to normal existence checking.
+const USERNAME_MENTION_RE = /^@[a-zA-Z0-9](?:-?[a-zA-Z0-9])*$/;
 
 function dangleConsequence(target: string): string {
   return /\.md$/i.test(target)
