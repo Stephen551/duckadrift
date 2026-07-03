@@ -1,0 +1,28 @@
+[
+  {
+    "check": "D3",
+    "claim": "ADR-0001 links to `../../src/pipeline/color.ts`, which does not resolve at HEAD (possibly site-relative — found at `lib/render/color.ts`).",
+    "evidence": [
+      {
+        "adr": "0001-decision.md",
+        "line": 10
+      },
+      {
+        "file": "lib/render/color.ts"
+      }
+    ],
+    "consequence": "A link written for a published doc site's URL depth can look broken in the raw repository tree even though the target exists — confirm whether this needs fixing for direct GitHub browsing, or just reflects how the site renders it.",
+    "advisory": true
+  },
+  {
+    "check": "D3",
+    "claim": "ADR-0001 links to `nothing-anywhere-in-this-repo.ts`, which does not resolve at HEAD.",
+    "evidence": [
+      {
+        "adr": "0001-decision.md",
+        "line": 21
+      }
+    ],
+    "consequence": "A dangling ADR-to-code link means the decision's cited implementation cannot be verified to exist."
+  }
+]
