@@ -80,16 +80,22 @@ function runReport(argv: string[]): void {
 function main(): void {
   const [, , command, ...rest] = process.argv;
 
-  switch (command) {
-    case "check":
-      runCheck(rest);
-      break;
-    case "report":
-      runReport(rest);
-      break;
-    default:
-      printUsage();
-      process.exitCode = command === undefined ? 0 : 1;
+  try {
+    switch (command) {
+      case "check":
+        runCheck(rest);
+        break;
+      case "report":
+        runReport(rest);
+        break;
+      default:
+        printUsage();
+        process.exitCode = command === undefined ? 0 : 1;
+    }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error(`duckadrift: ${message}`);
+    process.exitCode = 1;
   }
 }
 
