@@ -1,0 +1,94 @@
+name: 'duckadrift'
+description: 'Verifies an ADR log against reality — drift, contradictions, and unrecorded decisions.'
+author: 'Stephen551'
+branding:
+  icon: 'anchor'
+  color: 'blue'
+
+inputs:
+  adr-dir:
+    description: 'Override ADR directory auto-detection (docs/adr, doc/adr).'
+    required: false
+  working-directory:
+    description: 'Path to the repo root to check.'
+    required: false
+    default: '.'
+  github-token:
+    description: 'Token for schedule-mode issue open/update. PR annotations need no token (native workflow commands).'
+    required: false
+    default: ${{ github.token }}
+
+outputs:
+  failing-count:
+    description: 'Number of Tier 0 findings that fail CI.'
+    value: ${{ steps.run.outputs.failing-count }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Set up Node
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Build duckadrift
+      shell: bash
+      working-directory: ${{ github.action_path }}
+      run: |
+        npm ci
+        npm run build
+
+    - name: Derive PR context
+      if: github.event_name == 'pull_request'
+      shell: bash
+      run: |
+        git fetch origin "${{ github.event.pull_request.base.ref }}" --depth=1
+        node "${{ github.action_path }}/action/pr-context-from-event.mjs" "$RUNNER_TEMP/duckadrift-pr-context.json"
+
+    - name: Run duckadrift
+      id: run
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+      run: |
+        set -e
+        ARGS=(report . --out duckadrift-report.md)
+        if [ -n "${{ inputs.adr-dir }}" ]; then
+          ARGS+=(--adr-dir "${{ inputs.adr-dir }}")
+        fi
+        if [ -f "$RUNNER_TEMP/duckadrift-pr-context.json" ]; then
+          ARGS+=(--pr-context "$RUNNER_TEMP/duckadrift-pr-context.json")
+        fi
+
+        set +e
+        node "${{ github.action_path }}/dist/cli/index.js" "${ARGS[@]}"
+        DUCKADRIFT_EXIT=$?
+        set -e
+
+        if [ "$DUCKADRIFT_EXIT" -eq 2 ]; then
+          echo "::notice title=duckadrift::No ADR directory found yet — nothing to check. Add docs/adr/ or doc/adr/ (or set adr-dir) to get started."
+          echo "failing-count=0" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+
+        if [ -f duckadrift-report.md ]; then
+          cat duckadrift-report.md >> "$GITHUB_STEP_SUMMARY"
+        fi
+
+        FAILING=0
+        if [ -f duckadrift-report.json ]; then
+          FAILING=$(node -e "console.log(JSON.parse(require('fs').readFileSync('duckadrift-report.json','utf-8')).failingCount)")
+          node "${{ github.action_path }}/action/emit-annotations.mjs" duckadrift-report.json
+        fi
+        echo "failing-count=$FAILING" >> "$GITHUB_OUTPUT"
+
+        if { [ "${{ github.event_name }}" = "schedule" ] || [ "${{ github.event_name }}" = "workflow_dispatch" ]; } && [ -f duckadrift-report.json ]; then
+          bash "${{ github.action_path }}/action/issue-sweep.sh" duckadrift-report.md duckadrift-report.json
+        fi
+
+        if [ "${{ github.event_name }}" = "pull_request" ] && [ "$FAILING" -gt 0 ]; then
+          echo "::error title=duckadrift::$FAILING Tier 0 finding(s) failing — see annotations above and the job summary."
+          exit 1
+        fi
+        exit 0
