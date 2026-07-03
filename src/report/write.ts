@@ -30,9 +30,11 @@ function renderEvidence(ev: FindingEvidence): string {
 
 export function renderMarkdownReport(findings: Finding[]): string {
   const sorted = sortFindings(findings);
+  const failing = sorted.filter((f) => !f.advisory).length;
+  const advisory = sorted.length - failing;
   const lines: string[] = ["# duckadrift report", ""];
 
-  lines.push(`Tier 0 findings: ${sorted.length}`);
+  lines.push(`Tier 0 findings: ${sorted.length} (${failing} failing, ${advisory} advisory)`);
   lines.push("Tier 1: not run (M1 scope)");
   lines.push("", "## Tier 0 findings", "");
 
@@ -44,7 +46,7 @@ export function renderMarkdownReport(findings: Finding[]): string {
       if (group.length === 0) continue;
       lines.push(`### ${checkId} — ${CHECK_TITLES[checkId]} (${group.length})`, "");
       for (const f of group) {
-        lines.push(`- ${f.claim}`);
+        lines.push(`- ${f.advisory ? "[advisory] " : ""}${f.claim}`);
         lines.push(`  - Evidence: ${f.evidence.map(renderEvidence).join(", ")}`);
         lines.push(`  - Consequence: ${f.consequence}`);
       }
@@ -66,6 +68,8 @@ export interface JsonReport {
   tier0Findings: Finding[];
   tier1: null;
   checkCounts: Record<TierZeroCheckId, number>;
+  failingCount: number;
+  advisoryCount: number;
 }
 
 export function buildJsonReport(findings: Finding[]): JsonReport {
@@ -75,5 +79,12 @@ export function buildJsonReport(findings: Finding[]): JsonReport {
     number
   >;
   for (const f of sorted) checkCounts[f.check]++;
-  return { tier0Findings: sorted, tier1: null, checkCounts };
+  const advisoryCount = sorted.filter((f) => f.advisory).length;
+  return {
+    tier0Findings: sorted,
+    tier1: null,
+    checkCounts,
+    failingCount: sorted.length - advisoryCount,
+    advisoryCount,
+  };
 }

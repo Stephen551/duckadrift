@@ -1,5 +1,6 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { isAbsolute, join } from "node:path";
+import { loadConfig } from "../config/load.js";
 import { parseAdrFile } from "./parse.js";
 import type { AdrLogContext, PrContext } from "./types.js";
 
@@ -68,6 +69,15 @@ export function loadAdrLog(
 
   adrs.sort((a, b) => (a.number ?? 0) - (b.number ?? 0));
 
+  // A declared dialect is a repo-wide assertion, not a per-file guess: it
+  // overrides auto-detection for every ADR, and unlocks fact-mode claims
+  // that rest on dialect (D1's missing-section check, ADR-0005).
+  const config = loadConfig(repoRoot);
+  const dialectDeclared = config.dialect !== undefined;
+  if (config.dialect !== undefined) {
+    for (const adr of adrs) adr.dialect = config.dialect;
+  }
+
   return {
     repoRoot,
     adrDir,
@@ -75,5 +85,6 @@ export function loadAdrLog(
     indexPath,
     indexContent,
     prContext: loadPrContext(prContextPath),
+    dialectDeclared,
   };
 }

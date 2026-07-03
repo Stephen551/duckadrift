@@ -1,4 +1,4 @@
-export type Dialect = "nygard" | "madr" | "unknown";
+export type Dialect = "nygard" | "madr" | "loose" | "unknown";
 
 export interface AdrFrontmatter {
   status?: string;
@@ -54,4 +54,11 @@ export interface AdrLogContext {
   indexContent: string | null;
   /** PR-diff context for D5; null in schedule/no-diff mode. */
   prContext: PrContext | null;
+  /**
+   * True when the user explicitly declared a dialect in `.duckadrift.yml`.
+   * False means dialect is auto-detected (a guess) — checks resting on
+   * dialect (D1's missing-section claim) must be advisory, not fact,
+   * when this is false (ADR-0005).
+   */
+  dialectDeclared: boolean;
 }

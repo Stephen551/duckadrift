@@ -18,6 +18,13 @@ export interface Finding {
   claim: string;
   evidence: FindingEvidence[];
   consequence: string;
+  /**
+   * True when this finding is informational only and must never fail CI —
+   * e.g. a structural claim resting on a guessed (not user-declared)
+   * dialect. Undefined/false means the finding is asserted as fact, the
+   * default for every Tier 0 check (ADR-0005).
+   */
+  advisory?: boolean;
 }
 
 export const TIER_ZERO_CHECK_IDS: readonly TierZeroCheckId[] = [

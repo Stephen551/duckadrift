@@ -53,9 +53,18 @@ function runCheck(argv: string[]): void {
     return;
   }
 
+  const failing = findings.filter((f) => !f.advisory).length;
+
   console.log(renderMarkdownReport(findings));
+  if (failing === 0) {
+    console.error(
+      `duckadrift: ${findings.length} Tier 0 finding(s), all advisory — not failing (dialect not declared, ADR-0005).`
+    );
+    process.exitCode = 0;
+    return;
+  }
   console.error(
-    `duckadrift: ${findings.length} Tier 0 finding(s) — failing (Tier 0 findings fail CI by contract).`
+    `duckadrift: ${failing} Tier 0 finding(s) — failing (Tier 0 findings fail CI by contract).`
   );
   process.exitCode = 1;
 }
@@ -73,7 +82,10 @@ function runReport(argv: string[]): void {
   writeFileSync(mdPath, markdown, "utf-8");
   writeFileSync(jsonPath, `${JSON.stringify(json, null, 2)}\n`, "utf-8");
 
-  console.log(`duckadrift: wrote ${mdPath} and ${jsonPath} (${findings.length} Tier 0 finding(s)).`);
+  const failing = findings.filter((f) => !f.advisory).length;
+  console.log(
+    `duckadrift: wrote ${mdPath} and ${jsonPath} (${findings.length} Tier 0 finding(s), ${failing} failing).`
+  );
   process.exitCode = 0;
 }
 
