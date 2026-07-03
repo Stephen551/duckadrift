@@ -44,11 +44,16 @@ export function validateFinding(value: unknown, context: string): Finding {
     throw new Error(`${context}: "consequence" must be a non-empty string`);
   }
 
+  if (candidate.advisory !== undefined && typeof candidate.advisory !== "boolean") {
+    throw new Error(`${context}: "advisory" must be a boolean when present`);
+  }
+
   return {
     check: candidate.check as TierZeroCheckId,
     claim: candidate.claim,
     evidence: candidate.evidence as FindingEvidence[],
     consequence: candidate.consequence,
+    ...(candidate.advisory !== undefined ? { advisory: candidate.advisory as boolean } : {}),
   };
 }
 

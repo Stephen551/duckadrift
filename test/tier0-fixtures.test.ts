@@ -54,9 +54,13 @@ describe("Tier 0 fixture corpus: isolation (mutation rule)", () => {
 });
 
 describe("Tier 0 fixture corpus: check coverage", () => {
-  it("every D1-D7 check has exactly one isolating fixture", () => {
+  it("every D1-D7 check has at least one isolating fixture", () => {
+    // Not "exactly one": D1's fact-vs-advisory split (ADR-0005) means the
+    // declared-dialect and undeclared-dialect cases can't share a fixture
+    // directory — dialect declaration is repo-wide, so they need separate
+    // "repos" to demonstrate both branches. More than one fixture per check
+    // is fine as long as each individually isolates the check (verified above).
     const covered = fixtureDirs.map(targetCheckFor).filter((c): c is string => c !== null);
-    expect(new Set(covered).size).toBe(covered.length); // no check claimed by more than one fixture
     expect(new Set(covered)).toEqual(new Set(TIER_ZERO_CHECK_IDS));
   });
 });
