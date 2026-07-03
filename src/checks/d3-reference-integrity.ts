@@ -21,8 +21,13 @@ export function d3ReferenceIntegrity(ctx: AdrLogContext): Finding[] {
       const target = link.target.split("#")[0]!.trim();
       if (target === "" || EXTERNAL_LINK_RE.test(target)) continue;
 
-      const resolved = resolve(baseDir, target);
-      if (existsSync(resolved)) continue;
+      // Primary: relative to the ADR's own directory (the markdown-correct
+      // reading of a relative link). Fallback: relative to repo root — a
+      // real, common ADR convention (cite code paths the way you'd type
+      // them from the repo root), confirmed running against a real repo
+      // during Gate G1 where every code citation used this style.
+      if (existsSync(resolve(baseDir, target))) continue;
+      if (existsSync(resolve(ctx.repoRoot, target))) continue;
 
       findings.push({
         check: "D3",
