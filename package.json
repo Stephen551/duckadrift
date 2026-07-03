@@ -1,10 +1,11 @@
 {
   "name": "duckadrift",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "private": true,
   "description": "A GitHub Action that verifies an ADR log against reality.",
   "type": "module",
   "license": "MIT",
+  "author": "Stephen551",
   "engines": {
     "node": ">=20"
   },

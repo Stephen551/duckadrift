@@ -1,5 +1,5 @@
 name: 'duckadrift'
-description: 'Verifies an ADR log against reality — drift, contradictions, and unrecorded decisions.'
+description: 'Verifies your ADR log against your codebase. Seven deterministic checks, zero network calls, fails CI only on what it can prove.'
 author: 'Stephen551'
 branding:
   icon: 'anchor'
