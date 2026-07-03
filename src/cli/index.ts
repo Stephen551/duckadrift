@@ -4,6 +4,7 @@ import { resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { loadAdrLog } from "../adr/load.js";
 import { runAllTierZeroChecks } from "../checks/index.js";
+import { SetupError } from "../errors.js";
 import { buildJsonReport, renderMarkdownReport } from "../report/write.js";
 
 function printUsage(): void {
@@ -107,7 +108,11 @@ function main(): void {
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     console.error(`duckadrift: ${message}`);
-    process.exitCode = 1;
+    // Exit 2: environment/setup problem (no ADR log yet, bad flag) — nothing
+    // was checked, so nothing failed. Exit 1 (below) means findings failed.
+    // The Action wrapper treats these differently (Gate G2): a stranger's
+    // first install shouldn't see a red X before they've written an ADR.
+    process.exitCode = err instanceof SetupError ? 2 : 1;
   }
 }
 

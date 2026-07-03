@@ -1,6 +1,7 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { isAbsolute, join } from "node:path";
 import { loadConfig } from "../config/load.js";
+import { SetupError } from "../errors.js";
 import { parseAdrFile } from "./parse.js";
 import type { AdrLogContext, PrContext } from "./types.js";
 
@@ -15,7 +16,7 @@ export function detectAdrDir(repoRoot: string): string {
       return full;
     }
   }
-  throw new Error(
+  throw new SetupError(
     `No ADR directory found under ${repoRoot} (looked for ${ADR_DIR_CANDIDATES.join(", ")}). ` +
       `If this repo keeps ADRs elsewhere, pass --adr-dir <path>.`
   );
@@ -27,7 +28,7 @@ export function resolveAdrDir(repoRoot: string, adrDirOverride?: string): string
 
   const full = isAbsolute(adrDirOverride) ? adrDirOverride : join(repoRoot, adrDirOverride);
   if (!existsSync(full) || !statSync(full).isDirectory()) {
-    throw new Error(`--adr-dir does not point to an existing directory: ${full}`);
+    throw new SetupError(`--adr-dir does not point to an existing directory: ${full}`);
   }
   return full;
 }
@@ -35,7 +36,7 @@ export function resolveAdrDir(repoRoot: string, adrDirOverride?: string): string
 export function loadPrContext(path: string | undefined): PrContext | null {
   if (!path) return null;
   if (!existsSync(path)) {
-    throw new Error(`PR context file not found: ${path}`);
+    throw new SetupError(`PR context file not found: ${path}`);
   }
   return JSON.parse(readFileSync(path, "utf-8")) as PrContext;
 }
