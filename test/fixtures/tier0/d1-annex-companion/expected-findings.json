@@ -1,7 +1,7 @@
 [
   {
     "check": "D1",
-    "claim": "ADR number 0001 is claimed by 2 files in the ADR root.",
+    "claim": "ADR number 0001 appears to be shared by 2 files with matching base filenames in the ADR root — looks like a main document plus annex-style companions, not necessarily a numbering mistake.",
     "evidence": [
       {
         "adr": "0001-sign-mode-textual-annex1.md"
