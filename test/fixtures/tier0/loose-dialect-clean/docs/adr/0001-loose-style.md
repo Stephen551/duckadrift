@@ -4,9 +4,14 @@
 
 Uses a bold Status line instead of a `## Status` heading or YAML
 frontmatter — a real-world pattern found running Gate G1 against an
-external repo (ADR-0004). No Context or Decision heading either; the
-loose dialect asserts no required sections, so nothing here is flagged.
+external repo (ADR-0004). Loose dialect still checks for Context/
+Decision-equivalent sections (ADR-0005 correction) — this fixture has
+both (Problem satisfies Context via the alias), so nothing fires.
 
-## Rationale
+## Problem
 
-Free-form section naming, not checked under the loose dialect.
+Loose dialect, Context-equivalent present.
+
+## Decision
+
+Loose dialect, Decision present.
