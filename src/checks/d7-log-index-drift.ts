@@ -1,4 +1,5 @@
-import { relative } from "node:path";
+import { existsSync } from "node:fs";
+import { relative, resolve } from "node:path";
 import type { AdrLogContext } from "../adr/types.js";
 import type { Finding } from "../types.js";
 
@@ -47,7 +48,16 @@ export function d7LogIndexDrift(ctx: AdrLogContext): Finding[] {
   const actualFiles = new Set(ctx.adrs.map((a) => a.fileName));
 
   for (const indexed of indexedFiles) {
+    // "Exists" means exists on disk, not "is itself an ADR" — found running
+    // R5's terraform-provider-proxmox: a numbered "Reading Order" list (now
+    // matched by the widened list-item scan) legitimately cites a companion
+    // reference doc living in the same directory. It's a real file, just not
+    // ADR_FILENAME_RE-shaped, so checking membership in ctx.adrs alone would
+    // wrongly call it missing. Same two-step resolution as D3: ADR-dir-
+    // relative first, repo-root-relative fallback.
     if (actualFiles.has(indexed)) continue;
+    if (existsSync(resolve(ctx.adrDir, indexed))) continue;
+    if (existsSync(resolve(ctx.repoRoot, indexed))) continue;
     findings.push({
       check: "D7",
       claim: `The ADR index lists \`${indexed}\`, which does not exist in the directory.`,
