@@ -22,6 +22,8 @@ First public release. Tier 0: seven deterministic checks that verify an ADR log 
 Running the tool against real ADR logs from large open-source projects surfaced a set of gaps. All fixed:
 
 - More filename styles are recognized as ADRs: letters glued straight to the number with no separator, a project prefix repeated in the filename, and similar real-world variants that a narrower pattern used to miss.
+- Index checking now understands bullet and numbered lists, not just tables. A log whose index is a plain Markdown list used to look driftless no matter what it actually listed.
+- Links inside HTML comments no longer count as references. A commented-out draft or old link scaffolding used to get flagged as broken even though nothing renders it.
 - A decision told across several files — a main document plus companions named with `-annex1`, `-appendix`, `-addendum`, `-supplement`, or `-part` style suffixes — is no longer flagged as a numbering mistake.
 - An ADR number reused in a different subdirectory no longer fails the build. Teams numbering their own decisions independently is a real convention, so it's surfaced softly instead. The same number twice in one directory still fails.
 - Reference checking no longer reports things that were never file or code references: GitHub `@username` mentions and plain email addresses in author or reviewer tables, scoped package names like `@scope/name`, and links starting with a leading slash (relative to the repo root).
