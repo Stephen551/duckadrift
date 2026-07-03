@@ -81,6 +81,25 @@ function directoryLabel(dir: string): string {
   return dir === "." ? "the ADR root" : `\`${dir}/\``;
 }
 
+// Issue #5: every advisory D1 claim used to read with the same confident,
+// unconditional wording as its fact-tier counterpart — only the evidence
+// and consequence hinted at the lower confidence, invisible to anyone
+// reading the claim text rather than checking the advisory flag. Below,
+// each advisory branch gets its own hedged wording; fact-tier wording is
+// untouched (evidence and consequence stay precise either way, per that
+// issue's own guidance — only the claim's confidence framing tracks tier).
+function duplicateNumberClaim(
+  number: number,
+  count: number,
+  annexShaped: boolean,
+  locationSuffix: string
+): string {
+  if (annexShaped) {
+    return `ADR number ${padAdrNumber(number)} appears to be shared by ${count} files with matching base filenames${locationSuffix} — looks like a main document plus annex-style companions, not necessarily a numbering mistake.`;
+  }
+  return `ADR number ${padAdrNumber(number)} is claimed by ${count} files${locationSuffix}.`;
+}
+
 /** D1: schema/structure lint — PDR §2.3. */
 export function d1SchemaLint(ctx: AdrLogContext): Finding[] {
   const findings: Finding[] = [];
@@ -101,7 +120,7 @@ export function d1SchemaLint(ctx: AdrLogContext): Finding[] {
         const annexShaped = isAnnexShaped(group);
         findings.push({
           check: "D1",
-          claim: `ADR number ${padAdrNumber(number)} is claimed by ${group.length} files.`,
+          claim: duplicateNumberClaim(number, group.length, annexShaped, ""),
           evidence: group.map((a) => ({ adr: a.fileName })),
           consequence: annexShaped ? ANNEX_CONSEQUENCE : DUPLICATE_CONSEQUENCE,
           ...(annexShaped ? { advisory: true } : {}),
@@ -125,7 +144,7 @@ export function d1SchemaLint(ctx: AdrLogContext): Finding[] {
         const annexShaped = isAnnexShaped(dirGroup);
         findings.push({
           check: "D1",
-          claim: `ADR number ${padAdrNumber(number)} is claimed by ${dirGroup.length} files in ${directoryLabel(dir)}.`,
+          claim: duplicateNumberClaim(number, dirGroup.length, annexShaped, ` in ${directoryLabel(dir)}`),
           evidence: dirGroup.map((a) => ({ adr: a.fileName })),
           consequence: annexShaped ? ANNEX_CONSEQUENCE : DUPLICATE_CONSEQUENCE,
           ...(annexShaped ? { advisory: true } : {}),
@@ -136,7 +155,7 @@ export function d1SchemaLint(ctx: AdrLogContext): Finding[] {
         const dirLabels = [...byDirectory.keys()].map(directoryLabel).join(", ");
         findings.push({
           check: "D1",
-          claim: `ADR number ${padAdrNumber(number)} is claimed by files in ${byDirectory.size} different directories (${dirLabels}).`,
+          claim: `ADR number ${padAdrNumber(number)} appears in ${byDirectory.size} different directories (${dirLabels}) — could be an intentional per-team numbering convention rather than a collision; declare \`numbering: global\` in \`.duckadrift.yml\` if this repo's numbers must be unique across the whole log.`,
           evidence: group.map((a) => ({ adr: a.fileName })),
           consequence: CROSS_DIRECTORY_CONSEQUENCE,
           advisory: true,
@@ -152,12 +171,16 @@ export function d1SchemaLint(ctx: AdrLogContext): Finding[] {
     if (curr - prev > 1) {
       const after = byNumber.get(curr)![0]!;
       for (let missing = prev + 1; missing < curr; missing++) {
+        const gapAdvisory = ctx.numberingGapsMode === "advisory";
+        const claim = gapAdvisory
+          ? `ADR numbering appears to skip ${padAdrNumber(missing)} between ${padAdrNumber(prev)} and ${padAdrNumber(curr)} — could be a retired number rather than a mistake; declare \`numbering_gaps: fail\` in \`.duckadrift.yml\` if gaps should always be treated as errors.`
+          : `ADR numbering skips ${padAdrNumber(missing)} between ${padAdrNumber(prev)} and ${padAdrNumber(curr)}.`;
         findings.push({
           check: "D1",
-          claim: `ADR numbering skips ${padAdrNumber(missing)} between ${padAdrNumber(prev)} and ${padAdrNumber(curr)}.`,
+          claim,
           evidence: [{ adr: after.fileName }],
           consequence: NUMBERING_GAP_CONSEQUENCE,
-          ...(ctx.numberingGapsMode === "advisory" ? { advisory: true } : {}),
+          ...(gapAdvisory ? { advisory: true } : {}),
         });
       }
     }
