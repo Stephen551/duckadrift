@@ -9,3 +9,4 @@ Architecture decisions for duckadrift itself, recorded in duckadrift's own vocab
 | [0003](0003-tier1-relevance-gate-and-cost-engineering.md) | Tier 1 relevance gate and cost engineering | Accepted | elevated |
 | [0004](0004-dialect-detection-widened.md) | Dialect detection widened for real-world templates | Accepted | elevated |
 | [0005](0005-fact-vs-advisory-declared-dialect.md) | Fact-vs-advisory — structural claims require a declared dialect | Accepted | critical |
+| [0006](0006-loose-dialect-correction.md) | Correction — loose dialect still checks Context/Decision, always advisory | Accepted | elevated |
