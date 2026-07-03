@@ -113,3 +113,42 @@ export function walkRepoFiles(repoRoot: string, excludeDirs: string[] = []): Rep
   walk(repoRoot);
   return results;
 }
+
+export interface RepoPath {
+  relativePath: string;
+  absolutePath: string;
+}
+
+/**
+ * Walks every file under `repoRoot`, no extension or size filtering and no
+ * content read — for existence/path lookups (D3's site-relative fallback,
+ * ADR-0011) where the target could be any file type (a `.proto`, an image,
+ * anything a relative link might cite), not just the text/code/doc subset
+ * `walkRepoFiles` reads for content scanning. Shares the same directory
+ * exclusions as walkRepoFiles, duplicated rather than factored out of it —
+ * that function is already fixture-verified and load-bearing; a second,
+ * simpler walker is safer than restructuring it.
+ */
+export function walkAllPaths(repoRoot: string, excludeDirs: string[] = []): RepoPath[] {
+  const excluded = new Set([...EXCLUDED_DIRS, ...excludeDirs]);
+  const results: RepoPath[] = [];
+
+  function walk(dir: string): void {
+    for (const entry of readdirSync(dir)) {
+      if (excluded.has(entry) || EXCLUDED_FILES.has(entry)) continue;
+      const full = join(dir, entry);
+      const stat = statSync(full);
+      if (stat.isDirectory()) {
+        walk(full);
+      } else if (stat.isFile()) {
+        results.push({
+          relativePath: relative(repoRoot, full).split("\\").join("/"),
+          absolutePath: full,
+        });
+      }
+    }
+  }
+
+  walk(repoRoot);
+  return results;
+}
