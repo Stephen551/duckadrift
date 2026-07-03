@@ -20,7 +20,8 @@
         "adr": "0003-skip-two.md"
       }
     ],
-    "consequence": "A skipped number is either a lost ADR or a numbering error; both need a human to confirm which."
+    "consequence": "A skipped number is either a lost ADR or a numbering error; both need a human to confirm which.",
+    "advisory": true
   },
   {
     "check": "D1",
