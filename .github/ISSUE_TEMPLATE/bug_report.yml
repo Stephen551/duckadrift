@@ -1,0 +1,52 @@
+name: Bug report
+description: Something duckadrift got wrong — a false positive, a missed finding, or a crash.
+labels: [bug]
+body:
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What did duckadrift claim, and why is it wrong — or what should it have caught and didn't?
+    validations:
+      required: true
+
+  - type: textarea
+    id: fixture
+    attributes:
+      label: Minimal fixture
+      description: >
+        A small ADR (or two) that reproduces the problem — the fewest files
+        needed to show it. This is the single most useful thing you can
+        include: it becomes the fixture that fixes the bug and stops it
+        from coming back (every fix ships with one — see CONTRIBUTING.md).
+      placeholder: |
+        ---
+        status: accepted
+        ---
+
+        # ADR-0001: Example
+
+        ## Status
+
+        Accepted
+
+        ## Context
+
+        ...
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: duckadrift version
+      placeholder: v0.1.0
+    validations:
+      required: true
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else
+    validations:
+      required: false
