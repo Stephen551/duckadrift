@@ -3,6 +3,19 @@ import type { AdrLogContext } from "../adr/types.js";
 import type { Finding } from "../types.js";
 
 const LINK_RE = /\[[^\]]*\]\(([^)]+)\)/g;
+// A markdown table row: starts with `|` (leading whitespace allowed). Index
+// entries live in the table; a "see also" link in the intro prose does not
+// mean the same thing and must not be read as an index entry (ADR-0004: the
+// exam found this — a real project's index cites an unrelated doc in its
+// opening paragraph, which the old unscoped scan misread as a stale entry).
+const TABLE_ROW_RE = /^\s*\|.*\|\s*$/;
+
+function indexTableLinks(indexContent: string): string[] {
+  return indexContent
+    .split(/\r?\n/)
+    .filter((line) => TABLE_ROW_RE.test(line))
+    .flatMap((line) => [...line.matchAll(LINK_RE)].map((m) => m[1]!));
+}
 
 /** D7: log/index drift — only applies if an index file is present (PDR §2.3). */
 export function d7LogIndexDrift(ctx: AdrLogContext): Finding[] {
@@ -11,8 +24,8 @@ export function d7LogIndexDrift(ctx: AdrLogContext): Finding[] {
   const indexRelPath = relative(ctx.repoRoot, ctx.indexPath).split("\\").join("/");
 
   const indexedFiles = new Set<string>();
-  for (const match of ctx.indexContent.matchAll(LINK_RE)) {
-    const target = match[1]!.split("#")[0]!.trim().replace(/^\.?\//, "");
+  for (const rawTarget of indexTableLinks(ctx.indexContent)) {
+    const target = rawTarget.split("#")[0]!.trim().replace(/^\.?\//, "");
     if (/\.md$/i.test(target)) indexedFiles.add(target);
   }
 
