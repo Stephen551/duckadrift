@@ -1,0 +1,130 @@
+# DuckADRift
+
+An ADR is a written rubber duck: you explain the decision to it, and the act of explaining is the point. duckadrift is the duck that talks back. It reads your Architecture Decision Records and verifies them against the codebase they describe, on every PR and on a schedule, and it fails your build when a recorded decision and reality disagree.
+
+It is an enforcement tool, not an authoring tool. It never writes an ADR.
+
+One sentence governs every design decision in this tool, quoted from its own [ADR-0001](docs/adr/0001-governing-principle.md):
+
+> The watch never stands down, and the siren is never wrong: every finding is surfaced, but only calibrated confidence crossed with declared consequence may open an interrupting channel.
+
+At v0.1.0 that sentence has three practical consequences. The tool runs continuously and initiates contact when it finds decay; it is not a run-on-demand linter. Only deterministic checks can fail CI; a guess never blocks a merge. And every finding is surfaced somewhere, even the ones that are not allowed to block anything.
+
+## When the siren was wrong
+
+There is no screenshot here. Instead, the pre-launch verification record, because a tool whose pitch is "the siren is never wrong" should show you what happened when it was.
+
+Before this release, duckadrift ran against real, unmodified external codebases, not curated fixtures. It produced 13 findings, and every one was verdicted by hand before shipping. Twelve were false positives, the tool crying wolf. They root-caused to three narrow bugs: a dialect-detection gap that missed a real-world ADR template variant, a link-resolution assumption that ignored repo-root-relative code citations, and an index parser that read prose links as if they were index entries. Each fix shipped with a permanent regression fixture, a test proven to fail before the fix and pass after it, so the same false positive cannot silently come back. The one remaining finding was real, confirmed correct by manual verification, and survived the whole process untouched.
+
+That is not a highlight reel. It is what taking "the siren is never wrong" seriously looks like while the tool is being built.
+
+## Install in 60 seconds
+
+```yaml
+- uses: Stephen551/duckadrift@v0.1.0
+```
+
+That is the whole install for a conventional `docs/adr` or `doc/adr` log. No configuration, no tokens to create. The checks themselves make zero network calls and involve no LLMs; everything is computed from the repo at HEAD.
+
+A complete workflow covering all three modes:
+
+```yaml
+name: duckadrift
+on:
+  pull_request:
+  schedule:
+    - cron: "0 6 * * 1" # weekly decay sweep
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write # schedule mode opens and updates the decay-sweep issue
+
+jobs:
+  duckadrift:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Stephen551/duckadrift@v0.1.0
+```
+
+Optional inputs exist for the unconventional cases: `adr-dir` if your log lives somewhere other than `docs/adr` or `doc/adr`, `working-directory` if the repo root to check is not the workflow's root, and `github-token` if the default token is not what schedule mode should use for issue management. PR annotations need no token at all.
+
+## Why enforcement, not authoring
+
+The existing ADR ecosystem (adr-tools, log4brains, ADR Manager, the recent wave of tools that draft ADRs for you) builds authoring: help producing the document. Nobody builds enforcement: treating the ADR log as testable claims about the codebase and gating merges on violations. An authoring tool's output is prose a human reviews; duckadrift's output is verdicts, engineered to be trustworthy enough to fail a build on.
+
+## The seven checks
+
+All seven are deterministic. No probabilistic scoring, no model calls; every finding is mechanically derivable from the repo.
+
+| ID | Check | What it catches |
+|----|-------|-----------------|
+| D1 | Schema/structure lint | Malformed status, duplicate or skipped ADR numbers, missing required sections for the detected dialect (Nygard, MADR, or a looser bold-status-line style) |
+| D2 | Status-graph integrity | Supersession targets that do not exist, supersession cycles, two Accepted ADRs each claiming to supersede the other, an earlier Accepted ADR superseding a later one that was never updated |
+| D3 | Reference integrity | Links from an ADR to another ADR or to a code file that do not resolve at HEAD, in both ADR-directory-relative and repo-root-relative styles |
+| D4 | Ghost references | Code, comments, or docs outside the log citing an ADR that has since been Superseded or Rejected |
+| D5 | Governed-path gate | A PR touches a path an Accepted ADR governs (a `governs:` glob in its frontmatter) without touching the ADR or carrying an `ADR-ACK: NNNN` marker in the commit message or PR body |
+| D6 | Staleness clock | An Accepted ADR whose `review-by:` date has passed |
+| D7 | Log/index drift | The ADR directory's index or TOC disagrees with what is actually in the directory (reads the index's table only, not incidental links in surrounding prose) |
+
+D5 is the flagship. It is the check that makes "installed in CI" mean something: declare in an ADR which paths it governs, and nobody changes those paths again without either updating the decision or explicitly acknowledging it.
+
+A finding, exactly as the report renders it:
+
+```
+### D5 — Governed-path gate (1)
+
+- PR touches `src/auth/session.ts`, governed by Accepted ADR-0007, without modifying the ADR or carrying an `ADR-ACK: 0007` marker.
+  - Evidence: `0007-session-tokens.md`, `src/auth/session.ts`
+  - Consequence: A silent change to a governed path bypasses the decision the team recorded to guard it.
+```
+
+## Fact vs advisory
+
+Every finding is normally asserted as fact and can fail your build. There is one exception, and it is deliberate. D1's missing-required-section claim depends on knowing which ADR template you use. Unless you have declared it, the dialect is auto-detected, which is a guess. A claim resting on a guess is downgraded to advisory: it still appears in the report, it still shows up on the PR as a notice, it just never fails the build.
+
+Declare your dialect and it becomes a real gate:
+
+```yaml
+# .duckadrift.yml
+dialect: madr # or: nygard
+```
+
+The principle behind the split: the tool does not assert as fact what it is only guessing at.
+
+## Modes
+
+- **`pull_request`**: annotates the PR inline with GitHub-native annotations, errors for failing findings and notices for advisory ones, plus a job summary. Failing findings fail the check.
+- **`schedule`**: a full-log sweep for the drift that never shows up in any single diff, only over time. Opens or updates a single tracking issue titled "duckadrift: decay sweep" and auto-closes it once a sweep comes back clean. This is the mode that keeps the watch from going dormant.
+- **`workflow_dispatch`**: an on-demand run.
+
+## The CLI underneath
+
+The Action wraps a plain CLI you can run anywhere:
+
+```
+duckadrift check <path>     exits non-zero if any finding fails
+duckadrift report <path>    writes duckadrift-report.md and duckadrift-report.json
+```
+
+It is not published to npm yet. From a clone: `npm ci && npm run build`, then `node dist/cli/index.js check .` (or `npm link` to put `duckadrift` on your PATH).
+
+## Limits
+
+Stated plainly, because a drift-detection tool that oversells itself has failed before it starts.
+
+- **Dialect detection is a guess unless you declare it.** The consequence is exactly the advisory downgrade described above, nothing worse. A `dialect:` line in `.duckadrift.yml` removes the guess.
+- **D5 and D6 need declarations to have teeth.** `governs:` globs and `review-by:` dates are opt-in frontmatter. An ADR log that declares neither gives those two checks nothing to enforce; the other five run regardless.
+- **No semantic checks in this release.** Contradiction between two decisions, code drifting from a decision's substance, decisions made in code but never recorded: detecting those requires judgment, not string matching. That is Tier 1, planned for a later release. It will never fail CI the way Tier 0 does, because a probabilistic finding blocking a merge would violate the sentence at the top of this README.
+- **Solo and Team setup presets are not live.** They configure the Tier 1 semantic backend and activate when Tier 1 ships. There is nothing to set up today.
+
+## More
+
+- [CHANGELOG.md](CHANGELOG.md) for release history.
+- [CONTRIBUTING.md](CONTRIBUTING.md) for the fixture-per-check rule and the PR checklist.
+- [docs/adr/](docs/adr/) is this repo's own ADR log, kept in the format duckadrift checks. ADR-0001 records the governing principle quoted above; ADR-0002 records the policy that keeps the test oracle honest.
+
+---
+
+The duck stays out of the output. Findings, reports, and annotations speak in a plain analyst voice: claim, evidence, consequence. The duck introduces the tool; it never talks through it.
