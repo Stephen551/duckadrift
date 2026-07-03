@@ -1,3 +1,4 @@
+import { dirname } from "node:path";
 import { REQUIRED_SECTIONS, sectionSatisfied } from "../adr/dialect.js";
 import { formatAdrRef, padAdrNumber } from "../adr/refs.js";
 import type { AdrLogContext, ParsedAdr } from "../adr/types.js";
@@ -5,11 +6,26 @@ import type { Finding } from "../types.js";
 
 const VALID_STATUSES = new Set(["proposed", "accepted", "rejected", "superseded", "deprecated"]);
 
+const DUPLICATE_CONSEQUENCE =
+  "Duplicate numbering makes ADR references ambiguous; downstream ghost-reference and status-graph checks cannot resolve a single target.";
+// Found running R5's opendatahub: a number reused across per-team
+// subdirectories may be an intentional convention, not a mistake — the tool
+// can't disprove that, so (ADR-0008) it can't assert the cross-directory
+// case as fact the way a same-directory collision still is.
+const CROSS_DIRECTORY_CONSEQUENCE =
+  "A number reused across directories may be an intentional per-directory namespace, or a genuine collision — declare `numbering: global` in `.duckadrift.yml` if this repo's numbers must be unique across the whole log.";
+
 function titleCase(heading: string): string {
   return heading
     .split(" ")
     .map((w) => (w.length > 0 ? w[0]!.toUpperCase() + w.slice(1) : w))
     .join(" ");
+}
+
+// dirname() on a bare root-level filename ("0001-foo.md") returns "." —
+// "the ADR root" reads better in a claim than a bare dot.
+function directoryLabel(dir: string): string {
+  return dir === "." ? "the ADR root" : `\`${dir}/\``;
 }
 
 /** D1: schema/structure lint — PDR §2.3. */
@@ -23,15 +39,52 @@ export function d1SchemaLint(ctx: AdrLogContext): Finding[] {
     byNumber.set(adr.number, group);
   }
 
-  for (const [number, group] of byNumber) {
-    if (group.length > 1) {
-      findings.push({
-        check: "D1",
-        claim: `ADR number ${padAdrNumber(number)} is claimed by ${group.length} files.`,
-        evidence: group.map((a) => ({ adr: a.fileName })),
-        consequence:
-          "Duplicate numbering makes ADR references ambiguous; downstream ghost-reference and status-graph checks cannot resolve a single target.",
-      });
+  // ADR-0008: the numbering namespace is the directory, not the whole ADR
+  // root, unless the repo declares numbering: global. Same-directory is
+  // still an unexplainable, provable collision — fact-tier either way.
+  if (ctx.numberingScope === "global") {
+    for (const [number, group] of byNumber) {
+      if (group.length > 1) {
+        findings.push({
+          check: "D1",
+          claim: `ADR number ${padAdrNumber(number)} is claimed by ${group.length} files.`,
+          evidence: group.map((a) => ({ adr: a.fileName })),
+          consequence: DUPLICATE_CONSEQUENCE,
+        });
+      }
+    }
+  } else {
+    for (const [number, group] of byNumber) {
+      if (group.length <= 1) continue;
+
+      const byDirectory = new Map<string, ParsedAdr[]>();
+      for (const adr of group) {
+        const dir = dirname(adr.fileName);
+        const dirGroup = byDirectory.get(dir) ?? [];
+        dirGroup.push(adr);
+        byDirectory.set(dir, dirGroup);
+      }
+
+      for (const [dir, dirGroup] of byDirectory) {
+        if (dirGroup.length <= 1) continue;
+        findings.push({
+          check: "D1",
+          claim: `ADR number ${padAdrNumber(number)} is claimed by ${dirGroup.length} files in ${directoryLabel(dir)}.`,
+          evidence: dirGroup.map((a) => ({ adr: a.fileName })),
+          consequence: DUPLICATE_CONSEQUENCE,
+        });
+      }
+
+      if (byDirectory.size > 1) {
+        const dirLabels = [...byDirectory.keys()].map(directoryLabel).join(", ");
+        findings.push({
+          check: "D1",
+          claim: `ADR number ${padAdrNumber(number)} is claimed by files in ${byDirectory.size} different directories (${dirLabels}).`,
+          evidence: group.map((a) => ({ adr: a.fileName })),
+          consequence: CROSS_DIRECTORY_CONSEQUENCE,
+          advisory: true,
+        });
+      }
     }
   }
 
