@@ -1,0 +1,9 @@
+[
+  {
+    "check": "D1",
+    "claim": "ADR-0001 is missing the required `## Context` section for its dialect.",
+    "evidence": [{ "adr": "0001-missing-context.md" }],
+    "consequence": "A decision record with no recorded decision fails its one job.",
+    "advisory": true
+  }
+]
