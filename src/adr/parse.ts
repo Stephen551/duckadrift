@@ -5,7 +5,19 @@ import type { AdrFrontmatter, AdrLink, AdrSection, ParsedAdr } from "./types.js"
 const FRONTMATTER_RE = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/;
 const HEADING_RE = /^(#{1,6})\s+(.*)$/;
 const LINK_RE = /\[([^\]]*)\]\(([^)]+)\)/g;
-const NUMBER_PREFIX_RE = /^(\d+)-/;
+
+// A bare-digit prefix ("0001-foo.md") is one convention among several real
+// ones (found running R5's calibration corpus): "adr-002-foo.md",
+// "adr001-foo.md" (letters glued to the number, no separator), "ODH-ADR-
+// 0001-foo.md" (project-prefixed, letters repeated). Zero or more letter(-)
+// groups, then the number, then a required hyphen, keeps this from matching
+// ordinary docs (README.md, PROCESS.md) that have no digits at all.
+export const ADR_FILENAME_RE = /^(?:[a-zA-Z]+-?)*(\d+)-.*\.md$/i;
+
+function parseAdrNumber(fileName: string): number | null {
+  const match = ADR_FILENAME_RE.exec(fileName);
+  return match ? Number.parseInt(match[1]!, 10) : null;
+}
 
 function splitFrontmatter(raw: string): { frontmatter: AdrFrontmatter; body: string } {
   const match = FRONTMATTER_RE.exec(raw);
@@ -57,11 +69,6 @@ function extractLinks(body: string): AdrLink[] {
     }
   });
   return links;
-}
-
-function parseAdrNumber(fileName: string): number | null {
-  const match = NUMBER_PREFIX_RE.exec(fileName);
-  return match ? Number.parseInt(match[1]!, 10) : null;
 }
 
 export function parseAdrFile(raw: string, filePath: string, fileName: string): ParsedAdr {

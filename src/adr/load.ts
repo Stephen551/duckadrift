@@ -2,11 +2,10 @@ import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { isAbsolute, join } from "node:path";
 import { loadConfig } from "../config/load.js";
 import { SetupError } from "../errors.js";
-import { parseAdrFile } from "./parse.js";
+import { ADR_FILENAME_RE, parseAdrFile } from "./parse.js";
 import type { AdrLogContext, PrContext } from "./types.js";
 
 const ADR_DIR_CANDIDATES = ["docs/adr", "doc/adr"];
-const ADR_FILE_RE = /^\d+-.*\.md$/i;
 const INDEX_FILE_RE = /^readme\.md$/i;
 
 export function detectAdrDir(repoRoot: string): string {
@@ -62,7 +61,7 @@ export function loadAdrLog(
       indexContent = readFileSync(full, "utf-8");
       continue;
     }
-    if (!ADR_FILE_RE.test(entry)) continue;
+    if (!ADR_FILENAME_RE.test(entry)) continue;
 
     const raw = readFileSync(full, "utf-8");
     adrs.push(parseAdrFile(raw, full, entry));
