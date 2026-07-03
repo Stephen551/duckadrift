@@ -11,3 +11,4 @@ Architecture decisions for duckadrift itself, recorded in duckadrift's own vocab
 | [0005](0005-fact-vs-advisory-declared-dialect.md) | Fact-vs-advisory — structural claims require a declared dialect | Accepted | critical |
 | [0006](0006-loose-dialect-correction.md) | Correction — loose dialect still checks Context/Decision, always advisory | Accepted | elevated |
 | [0007](0007-recursive-discovery-and-coverage-disclosure.md) | Recursive ADR discovery, and coverage disclosure as a standing doctrine | Accepted | critical |
+| [0008](0008-directory-scoped-numbering.md) | The numbering namespace is the directory, not the whole ADR root | Accepted | elevated |

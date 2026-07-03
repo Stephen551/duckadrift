@@ -101,6 +101,9 @@ export function loadAdrLog(
   if (config.dialect !== undefined) {
     for (const adr of adrs) adr.dialect = config.dialect;
   }
+  // Defaults to per-directory (ADR-0008) — a repo declares "global" only if
+  // its numbers really must be unique across the whole ADR root.
+  const numberingScope = config.numbering ?? "per-directory";
 
   return {
     repoRoot,
@@ -111,5 +114,6 @@ export function loadAdrLog(
     unrecognizedFiles,
     prContext: loadPrContext(prContextPath),
     dialectDeclared,
+    numberingScope,
   };
 }

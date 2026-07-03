@@ -1,5 +1,15 @@
 export type Dialect = "nygard" | "madr" | "loose" | "unknown";
 
+/**
+ * Declares what "unique" means for ADR numbers (ADR-0008). "per-directory"
+ * (default) scopes uniqueness to each directory — a real per-team numbering
+ * convention (found running R5's opendatahub) means the same number can
+ * legitimately recur in a sibling directory. "global" restores the whole-
+ * ADR-root uniqueness this tool originally assumed, for repos that declare
+ * numbers must be unique across the entire log regardless of directory.
+ */
+export type NumberingScope = "global" | "per-directory";
+
 export interface AdrFrontmatter {
   status?: string;
   date?: string;
@@ -75,4 +85,10 @@ export interface AdrLogContext {
    * when this is false (ADR-0005).
    */
   dialectDeclared: boolean;
+  /**
+   * Resolved from `.duckadrift.yml`'s `numbering:` key; defaults to
+   * "per-directory" when not declared (ADR-0008). Always a definite value —
+   * the defaulting happens once, at load time, not per-check.
+   */
+  numberingScope: NumberingScope;
 }
