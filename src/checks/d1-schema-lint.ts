@@ -1,4 +1,4 @@
-import { REQUIRED_SECTIONS } from "../adr/dialect.js";
+import { REQUIRED_SECTIONS, sectionSatisfied } from "../adr/dialect.js";
 import { formatAdrRef, padAdrNumber } from "../adr/refs.js";
 import type { AdrLogContext, ParsedAdr } from "../adr/types.js";
 import type { Finding } from "../types.js";
@@ -68,12 +68,17 @@ export function d1SchemaLint(ctx: AdrLogContext): Finding[] {
     const required = REQUIRED_SECTIONS[adr.dialect];
     const headings = new Set(adr.sections.map((s) => s.heading.toLowerCase().trim()));
     for (const req of required) {
-      if (!headings.has(req)) {
+      if (!sectionSatisfied(req, headings)) {
+        // A guessed dialect is a guess: asserting "missing" as fact when the
+        // user never declared their template would be exactly the kind of
+        // confident-but-wrong claim Tier 0's zero-false-positive contract
+        // forbids (ADR-0005). Declared dialects still fail CI as before.
         findings.push({
           check: "D1",
           claim: `${adr.number !== null ? formatAdrRef(adr.number) : adr.fileName} is missing the required \`## ${titleCase(req)}\` section for its dialect.`,
           evidence: [{ adr: adr.fileName }],
           consequence: "A decision record with no recorded decision fails its one job.",
+          ...(ctx.dialectDeclared ? {} : { advisory: true }),
         });
       }
     }
