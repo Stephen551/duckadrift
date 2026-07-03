@@ -5,6 +5,11 @@ import type { AdrLogContext } from "../adr/types.js";
 import type { Finding } from "../types.js";
 
 const EXTERNAL_LINK_RE = /^[a-z][a-z0-9+.-]*:/i;
+// `[Name](@handle)` is a GitHub-attribution-mention idiom, not a file or code
+// reference — found running R5's opendatahub, whose Authors table cites
+// reviewers this way. "@handle" is never a resolvable relative path under any
+// convention, so it can't be mistaken for a real dangling reference.
+const USERNAME_MENTION_RE = /^@/;
 
 function dangleConsequence(target: string): string {
   return /\.md$/i.test(target)
@@ -19,7 +24,7 @@ export function d3ReferenceIntegrity(ctx: AdrLogContext): Finding[] {
     const baseDir = dirname(adr.filePath);
     for (const link of adr.links) {
       const target = link.target.split("#")[0]!.trim();
-      if (target === "" || EXTERNAL_LINK_RE.test(target)) continue;
+      if (target === "" || EXTERNAL_LINK_RE.test(target) || USERNAME_MENTION_RE.test(target)) continue;
 
       // Primary: relative to the ADR's own directory (the markdown-correct
       // reading of a relative link). Fallback: relative to repo root — a
