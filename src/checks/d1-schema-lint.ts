@@ -1,5 +1,5 @@
 import { dirname } from "node:path";
-import { REQUIRED_SECTIONS, sectionSatisfied } from "../adr/dialect.js";
+import { REQUIRED_SECTIONS, SECTION_ALIASES, sectionSatisfied } from "../adr/dialect.js";
 import { formatAdrRef, padAdrNumber } from "../adr/refs.js";
 import type { AdrLogContext, ParsedAdr } from "../adr/types.js";
 import type { Finding } from "../types.js";
@@ -61,10 +61,43 @@ function titleCase(heading: string): string {
     .join(" ");
 }
 
+function orJoin(items: readonly string[]): string {
+  if (items.length === 1) return items[0]!;
+  if (items.length === 2) return `${items[0]} or ${items[1]}`;
+  return `${items.slice(0, -1).join(", ")}, or ${items[items.length - 1]}`;
+}
+
+// The full set of headings that would satisfy this requirement — not just
+// the one name the dialect happens to call it, since a repo's own template
+// might use any recognized alias (SECTION_ALIASES, ADR-0004).
+function sectionLabels(required: string): string {
+  const aliases = SECTION_ALIASES[required] ?? [required];
+  return orJoin(aliases.map((a) => `\`## ${titleCase(a)}\``));
+}
+
 // dirname() on a bare root-level filename ("0001-foo.md") returns "." —
 // "the ADR root" reads better in a claim than a bare dot.
 function directoryLabel(dir: string): string {
   return dir === "." ? "the ADR root" : `\`${dir}/\``;
+}
+
+// Issue #5: every advisory D1 claim used to read with the same confident,
+// unconditional wording as its fact-tier counterpart — only the evidence
+// and consequence hinted at the lower confidence, invisible to anyone
+// reading the claim text rather than checking the advisory flag. Below,
+// each advisory branch gets its own hedged wording; fact-tier wording is
+// untouched (evidence and consequence stay precise either way, per that
+// issue's own guidance — only the claim's confidence framing tracks tier).
+function duplicateNumberClaim(
+  number: number,
+  count: number,
+  annexShaped: boolean,
+  locationSuffix: string
+): string {
+  if (annexShaped) {
+    return `ADR number ${padAdrNumber(number)} appears to be shared by ${count} files with matching base filenames${locationSuffix} — looks like a main document plus annex-style companions, not necessarily a numbering mistake.`;
+  }
+  return `ADR number ${padAdrNumber(number)} is claimed by ${count} files${locationSuffix}.`;
 }
 
 /** D1: schema/structure lint — PDR §2.3. */
@@ -87,7 +120,7 @@ export function d1SchemaLint(ctx: AdrLogContext): Finding[] {
         const annexShaped = isAnnexShaped(group);
         findings.push({
           check: "D1",
-          claim: `ADR number ${padAdrNumber(number)} is claimed by ${group.length} files.`,
+          claim: duplicateNumberClaim(number, group.length, annexShaped, ""),
           evidence: group.map((a) => ({ adr: a.fileName })),
           consequence: annexShaped ? ANNEX_CONSEQUENCE : DUPLICATE_CONSEQUENCE,
           ...(annexShaped ? { advisory: true } : {}),
@@ -111,7 +144,7 @@ export function d1SchemaLint(ctx: AdrLogContext): Finding[] {
         const annexShaped = isAnnexShaped(dirGroup);
         findings.push({
           check: "D1",
-          claim: `ADR number ${padAdrNumber(number)} is claimed by ${dirGroup.length} files in ${directoryLabel(dir)}.`,
+          claim: duplicateNumberClaim(number, dirGroup.length, annexShaped, ` in ${directoryLabel(dir)}`),
           evidence: dirGroup.map((a) => ({ adr: a.fileName })),
           consequence: annexShaped ? ANNEX_CONSEQUENCE : DUPLICATE_CONSEQUENCE,
           ...(annexShaped ? { advisory: true } : {}),
@@ -122,7 +155,7 @@ export function d1SchemaLint(ctx: AdrLogContext): Finding[] {
         const dirLabels = [...byDirectory.keys()].map(directoryLabel).join(", ");
         findings.push({
           check: "D1",
-          claim: `ADR number ${padAdrNumber(number)} is claimed by files in ${byDirectory.size} different directories (${dirLabels}).`,
+          claim: `ADR number ${padAdrNumber(number)} appears in ${byDirectory.size} different directories (${dirLabels}) — could be an intentional per-team numbering convention rather than a collision; declare \`numbering: global\` in \`.duckadrift.yml\` if this repo's numbers must be unique across the whole log.`,
           evidence: group.map((a) => ({ adr: a.fileName })),
           consequence: CROSS_DIRECTORY_CONSEQUENCE,
           advisory: true,
@@ -138,12 +171,16 @@ export function d1SchemaLint(ctx: AdrLogContext): Finding[] {
     if (curr - prev > 1) {
       const after = byNumber.get(curr)![0]!;
       for (let missing = prev + 1; missing < curr; missing++) {
+        const gapAdvisory = ctx.numberingGapsMode === "advisory";
+        const claim = gapAdvisory
+          ? `ADR numbering appears to skip ${padAdrNumber(missing)} between ${padAdrNumber(prev)} and ${padAdrNumber(curr)} — could be a retired number rather than a mistake; declare \`numbering_gaps: fail\` in \`.duckadrift.yml\` if gaps should always be treated as errors.`
+          : `ADR numbering skips ${padAdrNumber(missing)} between ${padAdrNumber(prev)} and ${padAdrNumber(curr)}.`;
         findings.push({
           check: "D1",
-          claim: `ADR numbering skips ${padAdrNumber(missing)} between ${padAdrNumber(prev)} and ${padAdrNumber(curr)}.`,
+          claim,
           evidence: [{ adr: after.fileName }],
           consequence: NUMBERING_GAP_CONSEQUENCE,
-          ...(ctx.numberingGapsMode === "advisory" ? { advisory: true } : {}),
+          ...(gapAdvisory ? { advisory: true } : {}),
         });
       }
     }
@@ -165,13 +202,22 @@ export function d1SchemaLint(ctx: AdrLogContext): Finding[] {
     const headings = new Set(adr.sections.map((s) => s.heading.toLowerCase().trim()));
     for (const req of required) {
       if (!sectionSatisfied(req, headings)) {
+        const ref = adr.number !== null ? formatAdrRef(adr.number) : adr.fileName;
         // A guessed dialect is a guess: asserting "missing" as fact when the
         // user never declared their template would be exactly the kind of
         // confident-but-wrong claim Tier 0's zero-false-positive contract
-        // forbids (ADR-0005). Declared dialects still fail CI as before.
+        // forbids (ADR-0005). Declared dialects still fail CI, "required"
+        // and all — the user told the tool this is their template. Without
+        // a declaration, the claim is an observation plus an invitation, not
+        // an assertion of a rule this repo never agreed to: "no section
+        // found" instead of "missing the required section," ending in how
+        // to declare a dialect if this log does have a house template.
+        const claim = ctx.dialectDeclared
+          ? `${ref} is missing the required ${sectionLabels(req)} section for its dialect.`
+          : `${ref}: no ${sectionLabels(req)} section found — if this log uses a house template, declare it in \`.duckadrift.yml\`.`;
         findings.push({
           check: "D1",
-          claim: `${adr.number !== null ? formatAdrRef(adr.number) : adr.fileName} is missing the required \`## ${titleCase(req)}\` section for its dialect.`,
+          claim,
           evidence: [{ adr: adr.fileName }],
           consequence: "A decision record with no recorded decision fails its one job.",
           ...(ctx.dialectDeclared ? {} : { advisory: true }),

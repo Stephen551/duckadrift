@@ -14,7 +14,7 @@
   },
   {
     "check": "D1",
-    "claim": "ADR numbering skips 0002 between 0001 and 0003.",
+    "claim": "ADR numbering appears to skip 0002 between 0001 and 0003 — could be a retired number rather than a mistake; declare `numbering_gaps: fail` in `.duckadrift.yml` if gaps should always be treated as errors.",
     "evidence": [
       {
         "adr": "0003-skip-two.md"
