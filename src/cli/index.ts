@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { writeFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { relative, resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { loadAdrLog } from "../adr/load.js";
 import { runAllTierZeroChecks } from "../checks/index.js";
@@ -76,7 +76,8 @@ function runReport(argv: string[]): void {
   const findings = runAllTierZeroChecks(ctx);
 
   const markdown = renderMarkdownReport(findings);
-  const json = buildJsonReport(findings);
+  const adrDirRelative = relative(repoRoot, ctx.adrDir).split("\\").join("/");
+  const json = buildJsonReport(findings, adrDirRelative);
   const mdPath = out ?? resolve(repoRoot, "duckadrift-report.md");
   const jsonPath = mdPath.replace(/\.md$/i, "") + ".json";
 

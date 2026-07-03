@@ -70,9 +70,11 @@ export interface JsonReport {
   checkCounts: Record<TierZeroCheckId, number>;
   failingCount: number;
   advisoryCount: number;
+  /** ADR directory, relative to repo root (e.g. "docs/adr") — lets consumers turn evidence.adr (a bare filename) into a path GitHub can annotate. */
+  adrDirRelative: string;
 }
 
-export function buildJsonReport(findings: Finding[]): JsonReport {
+export function buildJsonReport(findings: Finding[], adrDirRelative: string): JsonReport {
   const sorted = sortFindings(findings);
   const checkCounts = Object.fromEntries(TIER_ZERO_CHECK_IDS.map((id) => [id, 0])) as Record<
     TierZeroCheckId,
@@ -86,5 +88,6 @@ export function buildJsonReport(findings: Finding[]): JsonReport {
     checkCounts,
     failingCount: sorted.length - advisoryCount,
     advisoryCount,
+    adrDirRelative,
   };
 }
