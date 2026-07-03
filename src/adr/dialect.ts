@@ -6,7 +6,10 @@ const NYGARD_MARKERS = ["status", "context", "decision", "consequences"];
 // A real-world pattern found running Gate G1 against an external repo: status
 // carried as bold prose (`- **Status:** Accepted ...`) right under the title,
 // no `## Status` heading, no YAML frontmatter. Structurally looser than
-// Nygard/MADR — REQUIRED_SECTIONS asserts nothing for it (ADR-0004).
+// Nygard/MADR (ADR-0004) — but still checked, always advisory (ADR-0005),
+// never silently dropped: loose can never be a *declared* dialect (only
+// nygard/madr are declarable, src/config/load.ts), so any loose-dialect
+// finding is automatically advisory under D1's existing gate.
 const BOLD_STATUS_RE = /^\s*[-*]?\s*\*\*Status:?\*\*/im;
 
 /**
@@ -38,7 +41,7 @@ export function detectDialect(sections: AdrSection[]): Dialect {
 export const REQUIRED_SECTIONS: Record<Dialect, readonly string[]> = {
   nygard: ["context", "decision"],
   madr: ["context and problem statement", "decision outcome"],
-  loose: [],
+  loose: ["context", "decision"],
   unknown: [],
 };
 
