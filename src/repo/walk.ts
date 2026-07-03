@@ -128,13 +128,20 @@ export interface RepoPath {
  * exclusions as walkRepoFiles, duplicated rather than factored out of it —
  * that function is already fixture-verified and load-bearing; a second,
  * simpler walker is safer than restructuring it.
+ *
+ * Traversal order is sorted per directory, not left as `readdirSync`
+ * returns it. D3's basename index (ADR-0011) keeps only the first path it
+ * sees for a given basename — with raw OS/filesystem order, a repeated
+ * basename's evidence path is dealer's-choice per environment, breaking the
+ * byte-identical-report guarantee (PDR §3.2). Sorting makes "first seen"
+ * mean "lexicographically first," the same on every machine.
  */
 export function walkAllPaths(repoRoot: string, excludeDirs: string[] = []): RepoPath[] {
   const excluded = new Set([...EXCLUDED_DIRS, ...excludeDirs]);
   const results: RepoPath[] = [];
 
   function walk(dir: string): void {
-    for (const entry of readdirSync(dir)) {
+    for (const entry of readdirSync(dir).sort()) {
       if (excluded.has(entry) || EXCLUDED_FILES.has(entry)) continue;
       const full = join(dir, entry);
       const stat = statSync(full);

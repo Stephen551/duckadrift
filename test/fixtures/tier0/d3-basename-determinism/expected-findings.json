@@ -1,0 +1,17 @@
+[
+  {
+    "check": "D3",
+    "claim": "ADR-0001 links to `../../missing/shared-config.proto`, which does not resolve at HEAD (possibly site-relative — found at `aaa/shared-config.proto`).",
+    "evidence": [
+      {
+        "adr": "0001-decision.md",
+        "line": 17
+      },
+      {
+        "file": "aaa/shared-config.proto"
+      }
+    ],
+    "consequence": "A link written for a published doc site's URL depth can look broken in the raw repository tree even though the target exists — confirm whether this needs fixing for direct GitHub browsing, or just reflects how the site renders it.",
+    "advisory": true
+  }
+]
