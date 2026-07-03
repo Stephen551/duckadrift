@@ -10,6 +10,15 @@ export type Dialect = "nygard" | "madr" | "loose" | "unknown";
  */
 export type NumberingScope = "global" | "per-directory";
 
+/**
+ * Declares whether a numbering gap fails CI or is surfaced softly
+ * (ADR-0010). "advisory" (default) treats a gap as a provable state, not a
+ * provable error — numbers retire legitimately in real, mature logs.
+ * "fail" restores the original hard-fail behavior for repos that want
+ * numbering gaps caught as errors.
+ */
+export type NumberingGapsMode = "advisory" | "fail";
+
 export interface AdrFrontmatter {
   status?: string;
   date?: string;
@@ -91,4 +100,10 @@ export interface AdrLogContext {
    * the defaulting happens once, at load time, not per-check.
    */
   numberingScope: NumberingScope;
+  /**
+   * Resolved from `.duckadrift.yml`'s `numbering_gaps:` key; defaults to
+   * "advisory" when not declared (ADR-0010). Always a definite value — the
+   * defaulting happens once, at load time, not per-check.
+   */
+  numberingGapsMode: NumberingGapsMode;
 }

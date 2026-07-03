@@ -14,6 +14,45 @@ const DUPLICATE_CONSEQUENCE =
 // case as fact the way a same-directory collision still is.
 const CROSS_DIRECTORY_CONSEQUENCE =
   "A number reused across directories may be an intentional per-directory namespace, or a genuine collision — declare `numbering: global` in `.duckadrift.yml` if this repo's numbers must be unique across the whole log.";
+// Found running R5's cosmos-sdk: ADR-050 is one decision told across a
+// main doc and two explicitly-named annexes (doctrine Q2, ADR-0009) — a
+// recognizable multi-file-per-decision convention, not an authoring
+// accident, when every file in the collision shares a base filename and
+// differs only by a known annex/companion-style suffix.
+const ANNEX_CONSEQUENCE =
+  "A shared base filename with an annex/companion-style suffix is a recognizable multi-file-per-decision convention, not necessarily a numbering mistake — confirm it's intentional if this repo doesn't use that pattern on purpose.";
+// ADR-0010: a gap is a provable state (the number genuinely doesn't exist),
+// not a provable error — numbers retire legitimately (a withdrawn proposal,
+// a renumbering) in real, mature logs. Advisory by default; a repo can
+// declare numbering_gaps: fail to keep the old hard-fail behavior.
+const NUMBERING_GAP_CONSEQUENCE =
+  "A skipped number is either a lost ADR or a numbering error; both need a human to confirm which.";
+
+// Deliberately narrow (ADR-0009): only a well-known documentary-annex
+// vocabulary counts as "recognizable," so this can't silently swallow a
+// genuine duplicate-numbering mistake in some other repo whose filenames
+// happen to share an unrelated suffix.
+const ANNEX_SUFFIX_RE = /^-(?:annex|appendix|companion|addendum|supplement|part)-?[a-z0-9]*$/i;
+// The slug is whatever follows the number-and-hyphen prefix, before ".md" —
+// re-derived here (not reusing ADR_FILENAME_RE's capture) since D1 only has
+// the already-resolved fileName, not the raw match.
+const SLUG_RE = /^(?:[a-zA-Z]+-?)*\d+-(.+)\.md$/i;
+
+function slugOf(fileName: string): string | null {
+  const base = fileName.split("/").pop()!;
+  const match = SLUG_RE.exec(base);
+  return match ? match[1]! : null;
+}
+
+function isAnnexShaped(group: ParsedAdr[]): boolean {
+  const slugs = group.map((a) => slugOf(a.fileName));
+  if (slugs.some((s) => s === null)) return false;
+  const known = slugs as string[];
+  const base = known.reduce((shortest, s) => (s.length < shortest.length ? s : shortest));
+  return known.every(
+    (s) => s === base || (s.startsWith(`${base}-`) && ANNEX_SUFFIX_RE.test(s.slice(base.length)))
+  );
+}
 
 function titleCase(heading: string): string {
   return heading
@@ -45,11 +84,13 @@ export function d1SchemaLint(ctx: AdrLogContext): Finding[] {
   if (ctx.numberingScope === "global") {
     for (const [number, group] of byNumber) {
       if (group.length > 1) {
+        const annexShaped = isAnnexShaped(group);
         findings.push({
           check: "D1",
           claim: `ADR number ${padAdrNumber(number)} is claimed by ${group.length} files.`,
           evidence: group.map((a) => ({ adr: a.fileName })),
-          consequence: DUPLICATE_CONSEQUENCE,
+          consequence: annexShaped ? ANNEX_CONSEQUENCE : DUPLICATE_CONSEQUENCE,
+          ...(annexShaped ? { advisory: true } : {}),
         });
       }
     }
@@ -67,11 +108,13 @@ export function d1SchemaLint(ctx: AdrLogContext): Finding[] {
 
       for (const [dir, dirGroup] of byDirectory) {
         if (dirGroup.length <= 1) continue;
+        const annexShaped = isAnnexShaped(dirGroup);
         findings.push({
           check: "D1",
           claim: `ADR number ${padAdrNumber(number)} is claimed by ${dirGroup.length} files in ${directoryLabel(dir)}.`,
           evidence: dirGroup.map((a) => ({ adr: a.fileName })),
-          consequence: DUPLICATE_CONSEQUENCE,
+          consequence: annexShaped ? ANNEX_CONSEQUENCE : DUPLICATE_CONSEQUENCE,
+          ...(annexShaped ? { advisory: true } : {}),
         });
       }
 
@@ -99,8 +142,8 @@ export function d1SchemaLint(ctx: AdrLogContext): Finding[] {
           check: "D1",
           claim: `ADR numbering skips ${padAdrNumber(missing)} between ${padAdrNumber(prev)} and ${padAdrNumber(curr)}.`,
           evidence: [{ adr: after.fileName }],
-          consequence:
-            "A skipped number is either a lost ADR or a numbering error; both need a human to confirm which.",
+          consequence: NUMBERING_GAP_CONSEQUENCE,
+          ...(ctx.numberingGapsMode === "advisory" ? { advisory: true } : {}),
         });
       }
     }
