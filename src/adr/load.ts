@@ -1,5 +1,5 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
-import { join } from "node:path";
+import { isAbsolute, join } from "node:path";
 import { parseAdrFile } from "./parse.js";
 import type { AdrLogContext, PrContext } from "./types.js";
 
@@ -15,8 +15,20 @@ export function detectAdrDir(repoRoot: string): string {
     }
   }
   throw new Error(
-    `No ADR directory found under ${repoRoot} (looked for ${ADR_DIR_CANDIDATES.join(", ")})`
+    `No ADR directory found under ${repoRoot} (looked for ${ADR_DIR_CANDIDATES.join(", ")}). ` +
+      `If this repo keeps ADRs elsewhere, pass --adr-dir <path>.`
   );
+}
+
+/** Explicit override bypasses auto-detection entirely — for repos whose ADR log isn't at docs/adr or doc/adr. */
+export function resolveAdrDir(repoRoot: string, adrDirOverride?: string): string {
+  if (!adrDirOverride) return detectAdrDir(repoRoot);
+
+  const full = isAbsolute(adrDirOverride) ? adrDirOverride : join(repoRoot, adrDirOverride);
+  if (!existsSync(full) || !statSync(full).isDirectory()) {
+    throw new Error(`--adr-dir does not point to an existing directory: ${full}`);
+  }
+  return full;
 }
 
 export function loadPrContext(path: string | undefined): PrContext | null {
@@ -27,8 +39,12 @@ export function loadPrContext(path: string | undefined): PrContext | null {
   return JSON.parse(readFileSync(path, "utf-8")) as PrContext;
 }
 
-export function loadAdrLog(repoRoot: string, prContextPath?: string): AdrLogContext {
-  const adrDir = detectAdrDir(repoRoot);
+export function loadAdrLog(
+  repoRoot: string,
+  prContextPath?: string,
+  adrDirOverride?: string
+): AdrLogContext {
+  const adrDir = resolveAdrDir(repoRoot, adrDirOverride);
   const entries = readdirSync(adrDir);
 
   const adrs: AdrLogContext["adrs"] = [];

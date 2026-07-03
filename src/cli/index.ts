@@ -12,20 +12,25 @@ function printUsage(): void {
       "duckadrift — verifies an ADR log against reality.",
       "",
       "Usage:",
-      "  duckadrift check [path] [--pr-context <file>]",
-      "  duckadrift report [path] [--pr-context <file>] [--out <file>]",
+      "  duckadrift check [path] [--pr-context <file>] [--adr-dir <path>]",
+      "  duckadrift report [path] [--pr-context <file>] [--adr-dir <path>] [--out <file>]",
       "",
       "path defaults to the current directory.",
+      "--adr-dir overrides auto-detection (docs/adr, doc/adr) for repos that",
+      "keep their ADR log elsewhere. Relative paths resolve against [path].",
     ].join("\n")
   );
 }
 
-function parseCommonArgs(argv: string[]): { repoRoot: string; prContextPath?: string; out?: string } {
+function parseCommonArgs(
+  argv: string[]
+): { repoRoot: string; prContextPath?: string; out?: string; adrDir?: string } {
   const { values, positionals } = parseArgs({
     args: argv,
     options: {
       "pr-context": { type: "string" },
       out: { type: "string" },
+      "adr-dir": { type: "string" },
     },
     allowPositionals: true,
   });
@@ -33,12 +38,13 @@ function parseCommonArgs(argv: string[]): { repoRoot: string; prContextPath?: st
     repoRoot: resolve(positionals[0] ?? "."),
     ...(values["pr-context"] !== undefined ? { prContextPath: values["pr-context"] } : {}),
     ...(values.out !== undefined ? { out: values.out } : {}),
+    ...(values["adr-dir"] !== undefined ? { adrDir: values["adr-dir"] } : {}),
   };
 }
 
 function runCheck(argv: string[]): void {
-  const { repoRoot, prContextPath } = parseCommonArgs(argv);
-  const ctx = loadAdrLog(repoRoot, prContextPath);
+  const { repoRoot, prContextPath, adrDir } = parseCommonArgs(argv);
+  const ctx = loadAdrLog(repoRoot, prContextPath, adrDir);
   const findings = runAllTierZeroChecks(ctx);
 
   if (findings.length === 0) {
@@ -49,14 +55,14 @@ function runCheck(argv: string[]): void {
 
   console.log(renderMarkdownReport(findings));
   console.error(
-    `duckadrift: ${findings.length} Tier 0 finding(s) — failing (Tier 0 findings fail CI by contract, PDR §2.5).`
+    `duckadrift: ${findings.length} Tier 0 finding(s) — failing (Tier 0 findings fail CI by contract).`
   );
   process.exitCode = 1;
 }
 
 function runReport(argv: string[]): void {
-  const { repoRoot, prContextPath, out } = parseCommonArgs(argv);
-  const ctx = loadAdrLog(repoRoot, prContextPath);
+  const { repoRoot, prContextPath, out, adrDir } = parseCommonArgs(argv);
+  const ctx = loadAdrLog(repoRoot, prContextPath, adrDir);
   const findings = runAllTierZeroChecks(ctx);
 
   const markdown = renderMarkdownReport(findings);

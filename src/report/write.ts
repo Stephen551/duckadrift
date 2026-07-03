@@ -33,7 +33,7 @@ export function renderMarkdownReport(findings: Finding[]): string {
   const lines: string[] = ["# duckadrift report", ""];
 
   lines.push(`Tier 0 findings: ${sorted.length}`);
-  lines.push("Tier 1: not run (M1 scope — see PDR §2.4)");
+  lines.push("Tier 1: not run (M1 scope)");
   lines.push("", "## Tier 0 findings", "");
 
   if (sorted.length === 0) {
@@ -55,7 +55,7 @@ export function renderMarkdownReport(findings: Finding[]): string {
   lines.push(
     "## Calibration status",
     "",
-    "Tier 1 semantic checks are not part of this build (M1). Calibration status appears here starting at M3 (PDR §2.6).",
+    "Tier 1 semantic checks are not part of this build (M1). Calibration status appears here starting at M3.",
     ""
   );
 
