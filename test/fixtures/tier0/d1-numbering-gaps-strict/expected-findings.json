@@ -1,0 +1,12 @@
+[
+  {
+    "check": "D1",
+    "claim": "ADR numbering skips 0002 between 0001 and 0003.",
+    "evidence": [
+      {
+        "adr": "0003-third-decision.md"
+      }
+    ],
+    "consequence": "A skipped number is either a lost ADR or a numbering error; both need a human to confirm which."
+  }
+]

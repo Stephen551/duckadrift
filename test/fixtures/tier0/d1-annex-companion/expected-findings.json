@@ -1,0 +1,16 @@
+[
+  {
+    "check": "D1",
+    "claim": "ADR number 0001 is claimed by 2 files in the ADR root.",
+    "evidence": [
+      {
+        "adr": "0001-sign-mode-textual-annex1.md"
+      },
+      {
+        "adr": "0001-sign-mode-textual.md"
+      }
+    ],
+    "consequence": "A shared base filename with an annex/companion-style suffix is a recognizable multi-file-per-decision convention, not necessarily a numbering mistake — confirm it's intentional if this repo doesn't use that pattern on purpose.",
+    "advisory": true
+  }
+]

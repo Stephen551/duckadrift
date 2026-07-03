@@ -1,0 +1,43 @@
+[
+  {
+    "check": "D3",
+    "claim": "ADR-0001 links to `../../other/decision-a/`, which does not resolve at HEAD (possibly site-relative — found at `other/decision-a.md`).",
+    "evidence": [
+      {
+        "adr": "0001-decision.md",
+        "line": 15
+      },
+      {
+        "file": "other/decision-a.md"
+      }
+    ],
+    "consequence": "A link written for a published doc site's URL depth can look broken in the raw repository tree even though the target exists — confirm whether this needs fixing for direct GitHub browsing, or just reflects how the site renders it.",
+    "advisory": true
+  },
+  {
+    "check": "D3",
+    "claim": "ADR-0001 links to `../../nonexistent-path/decision-b/`, which does not resolve at HEAD (possibly site-relative — found at `elsewhere/decision-b/index.md`).",
+    "evidence": [
+      {
+        "adr": "0001-decision.md",
+        "line": 18
+      },
+      {
+        "file": "elsewhere/decision-b/index.md"
+      }
+    ],
+    "consequence": "A link written for a published doc site's URL depth can look broken in the raw repository tree even though the target exists — confirm whether this needs fixing for direct GitHub browsing, or just reflects how the site renders it.",
+    "advisory": true
+  },
+  {
+    "check": "D3",
+    "claim": "ADR-0001 links to `../../other/decision-c/`, which does not resolve at HEAD.",
+    "evidence": [
+      {
+        "adr": "0001-decision.md",
+        "line": 25
+      }
+    ],
+    "consequence": "A dangling ADR-to-code link means the decision's cited implementation cannot be verified to exist."
+  }
+]

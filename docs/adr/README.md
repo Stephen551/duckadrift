@@ -12,3 +12,6 @@ Architecture decisions for duckadrift itself, recorded in duckadrift's own vocab
 | [0006](0006-loose-dialect-correction.md) | Correction — loose dialect still checks Context/Decision, always advisory | Accepted | elevated |
 | [0007](0007-recursive-discovery-and-coverage-disclosure.md) | Recursive ADR discovery, and coverage disclosure as a standing doctrine | Accepted | critical |
 | [0008](0008-directory-scoped-numbering.md) | The numbering namespace is the directory, not the whole ADR root | Accepted | elevated |
+| [0009](0009-annex-companion-numbering.md) | Annex-companion same-directory duplicates go advisory | Accepted | elevated |
+| [0010](0010-numbering-gaps-advisory.md) | Numbering gaps are advisory by default | Accepted | elevated |
+| [0011](0011-site-relative-dangles-advisory.md) | Site-relative dangling links go advisory when a match exists elsewhere | Accepted | elevated |
