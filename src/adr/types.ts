@@ -26,7 +26,13 @@ export interface AdrLink {
 export interface ParsedAdr {
   /** Absolute path to the ADR file. */
   filePath: string;
-  /** Bare filename, e.g. "0001-first-decision.md" — the evidence.adr reference. */
+  /**
+   * Path relative to the ADR root, e.g. "0001-first-decision.md" — or,
+   * once ADR discovery recurses into subdirectories (ADR-0007),
+   * "team/0001-first-decision.md". Equals the bare basename for every ADR
+   * at the root, which is every ADR in every fixture and repo this tool
+   * saw before ADR-0007. The evidence.adr reference.
+   */
   fileName: string;
   /** Parsed from the filename's numeric prefix; null if unparseable. */
   number: number | null;
@@ -52,6 +58,14 @@ export interface AdrLogContext {
   adrs: ParsedAdr[];
   indexPath: string | null;
   indexContent: string | null;
+  /**
+   * Repo-root-relative paths of markdown/MDX files found recursively under
+   * the ADR root that are neither the index nor ADR_FILENAME_RE-shaped
+   * (ADR-0007). Always surfaced in the report — silent partial coverage
+   * violates the Pact regardless of cause, even when the file turns out to
+   * be legitimately non-ADR documentation.
+   */
+  unrecognizedFiles: string[];
   /** PR-diff context for D5; null in schedule/no-diff mode. */
   prContext: PrContext | null;
   /**

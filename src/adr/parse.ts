@@ -25,8 +25,14 @@ function stripHtmlComments(body: string): string {
 // ordinary docs (README.md, PROCESS.md) that have no digits at all.
 export const ADR_FILENAME_RE = /^(?:[a-zA-Z]+-?)*(\d+)-.*\.md$/i;
 
+// `fileName` may be a bare basename ("0001-foo.md") or, once ADR discovery
+// recurses into subdirectories (ADR-0007), a path relative to the ADR root
+// ("team/0001-foo.md") — the numeric-prefix pattern only makes sense
+// against the last segment, since a directory name earlier in the path
+// could itself contain digits.
 function parseAdrNumber(fileName: string): number | null {
-  const match = ADR_FILENAME_RE.exec(fileName);
+  const base = fileName.split("/").pop() ?? fileName;
+  const match = ADR_FILENAME_RE.exec(base);
   return match ? Number.parseInt(match[1]!, 10) : null;
 }
 

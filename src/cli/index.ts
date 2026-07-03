@@ -49,14 +49,23 @@ function runCheck(argv: string[]): void {
   const findings = runAllTierZeroChecks(ctx);
 
   if (findings.length === 0) {
+    // A clean bill of health that hides an unscanned file is itself the
+    // silent-partial-coverage violation ADR-0007 exists to prevent — the
+    // zero-findings fast path still has to say what it didn't recognize.
     console.log("duckadrift: 0 Tier 0 findings.");
+    if (ctx.unrecognizedFiles.length > 0) {
+      console.log(
+        `duckadrift: ${ctx.unrecognizedFiles.length} file(s) under the ADR root were not recognized as an ADR or the index:`
+      );
+      for (const f of ctx.unrecognizedFiles) console.log(`  - ${f}`);
+    }
     process.exitCode = 0;
     return;
   }
 
   const failing = findings.filter((f) => !f.advisory).length;
 
-  console.log(renderMarkdownReport(findings));
+  console.log(renderMarkdownReport(findings, ctx.unrecognizedFiles));
   if (failing === 0) {
     console.error(
       `duckadrift: ${findings.length} Tier 0 finding(s), all advisory — not failing (dialect not declared, ADR-0005).`
@@ -75,9 +84,9 @@ function runReport(argv: string[]): void {
   const ctx = loadAdrLog(repoRoot, prContextPath, adrDir);
   const findings = runAllTierZeroChecks(ctx);
 
-  const markdown = renderMarkdownReport(findings);
+  const markdown = renderMarkdownReport(findings, ctx.unrecognizedFiles);
   const adrDirRelative = relative(repoRoot, ctx.adrDir).split("\\").join("/");
-  const json = buildJsonReport(findings, adrDirRelative);
+  const json = buildJsonReport(findings, adrDirRelative, ctx.unrecognizedFiles);
   const mdPath = out ?? resolve(repoRoot, "duckadrift-report.md");
   const jsonPath = mdPath.replace(/\.md$/i, "") + ".json";
 

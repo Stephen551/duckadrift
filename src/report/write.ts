@@ -28,7 +28,7 @@ function renderEvidence(ev: FindingEvidence): string {
   return "(unspecified)";
 }
 
-export function renderMarkdownReport(findings: Finding[]): string {
+export function renderMarkdownReport(findings: Finding[], unrecognizedFiles: string[] = []): string {
   const sorted = sortFindings(findings);
   const failing = sorted.filter((f) => !f.advisory).length;
   const advisory = sorted.length - failing;
@@ -54,6 +54,22 @@ export function renderMarkdownReport(findings: Finding[]): string {
     }
   }
 
+  // Always present (ADR-0007) — silent partial coverage violates the Pact
+  // regardless of cause. Unconditional, so the absence of anything to
+  // report is stated, never merely implied by an omitted section.
+  lines.push("## Coverage", "");
+  if (unrecognizedFiles.length === 0) {
+    lines.push("Every markdown file found under the ADR root was recognized as an ADR or the index.", "");
+  } else {
+    lines.push(
+      `${unrecognizedFiles.length} file(s) found under the ADR root that are neither the index nor ` +
+        "recognized as an ADR — verify none of these is a real decision this tool's naming heuristic missed:",
+      ""
+    );
+    for (const f of unrecognizedFiles) lines.push(`- \`${f}\``);
+    lines.push("");
+  }
+
   lines.push(
     "## Calibration status",
     "",
@@ -72,9 +88,15 @@ export interface JsonReport {
   advisoryCount: number;
   /** ADR directory, relative to repo root (e.g. "docs/adr") — lets consumers turn evidence.adr (a bare filename) into a path GitHub can annotate. */
   adrDirRelative: string;
+  /** Repo-root-relative paths under the ADR root that are neither the index nor a recognized ADR (ADR-0007). Always present, empty when clean. */
+  unrecognizedFiles: string[];
 }
 
-export function buildJsonReport(findings: Finding[], adrDirRelative: string): JsonReport {
+export function buildJsonReport(
+  findings: Finding[],
+  adrDirRelative: string,
+  unrecognizedFiles: string[] = []
+): JsonReport {
   const sorted = sortFindings(findings);
   const checkCounts = Object.fromEntries(TIER_ZERO_CHECK_IDS.map((id) => [id, 0])) as Record<
     TierZeroCheckId,
@@ -89,5 +111,6 @@ export function buildJsonReport(findings: Finding[], adrDirRelative: string): Js
     failingCount: sorted.length - advisoryCount,
     advisoryCount,
     adrDirRelative,
+    unrecognizedFiles,
   };
 }
