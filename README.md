@@ -10,6 +10,8 @@ One sentence governs every design decision in this tool, quoted from its own [AD
 
 At v0.1.0 that sentence has three practical consequences. The tool runs continuously and initiates contact when it finds decay; it is not a run-on-demand linter. Only deterministic checks can fail CI; a guess never blocks a merge. And every finding is surfaced somewhere, even the ones that are not allowed to block anything.
 
+And when semantic checks arrive, they earn the right to interrupt you only by measurement: a labeled corpus establishes how often a given confidence level is actually right, and the tool interrupts only above the level that clears a declared precision floor. Confidence thresholds are measured, never typed into a config. That doctrine is why the semantic tier isn't here yet — it does not ship until it can be calibrated.
+
 ## When the siren was wrong
 
 There is no screenshot here. Instead, the pre-launch verification record, because a tool whose pitch is "the siren is never wrong" should show you what happened when it was.
@@ -21,8 +23,10 @@ That is not a highlight reel. It is what taking "the siren is never wrong" serio
 ## Install in 60 seconds
 
 ```yaml
-- uses: Stephen551/duckadrift@v0.1.0
+- uses: Stephen551/duckadrift@v0
 ```
+
+`@v0` floats to the latest v0.x release; pin `@v0.1.2` for a reproducible build.
 
 That is the whole install for a conventional `docs/adr` or `doc/adr` log. No configuration, no tokens to create. The checks themselves make zero network calls and involve no LLMs; everything is computed from the repo at HEAD.
 
@@ -45,7 +49,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: Stephen551/duckadrift@v0.1.0
+      - uses: Stephen551/duckadrift@v0
 ```
 
 Optional inputs exist for the unconventional cases: `adr-dir` if your log lives somewhere other than `docs/adr` or `doc/adr`, `working-directory` if the repo root to check is not the workflow's root, and `github-token` if the default token is not what schedule mode should use for issue management. PR annotations need no token at all.

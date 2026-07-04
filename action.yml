@@ -1,9 +1,9 @@
-name: 'duckadrift'
-description: 'Verifies your ADR log against your codebase. Seven deterministic checks, zero network calls, fails CI only on what it can prove.'
+name: 'DuckADRift — ADR drift detection & enforcement'
+description: 'Enforce your Architecture Decision Records against the codebase. Deterministic ADR checks that fail CI only on what they can prove — no network calls, no LLM, no config.'
 author: 'Stephen551'
 branding:
-  icon: 'anchor'
-  color: 'blue'
+  icon: 'eye'
+  color: 'gray-dark'
 
 inputs:
   adr-dir:
