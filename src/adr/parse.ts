@@ -43,14 +43,41 @@ function parseAdrNumber(fileName: string): number | null {
   return match ? Number.parseInt(match[1]!, 10) : null;
 }
 
-function splitFrontmatter(raw: string): { frontmatter: AdrFrontmatter; body: string } {
+type FrontmatterState = "present" | "malformed" | "absent";
+
+function splitFrontmatter(raw: string): {
+  frontmatter: AdrFrontmatter;
+  body: string;
+  state: FrontmatterState;
+} {
   const match = FRONTMATTER_RE.exec(raw);
   if (!match) {
-    return { frontmatter: {}, body: raw };
+    // No `---` block at all. Might be a legitimate frontmatter-less ADR
+    // (status recorded in a `## Status` section) — surfaced softly by D1, not
+    // treated as broken.
+    return { frontmatter: {}, body: raw, state: "absent" };
   }
   const [, yamlText, body] = match;
-  const parsed = (parseYaml(yamlText ?? "") ?? {}) as AdrFrontmatter;
-  return { frontmatter: parsed, body: body ?? "" };
+  let parsed: unknown;
+  try {
+    parsed = parseYaml(yamlText ?? "");
+  } catch {
+    // The `---` block is present but its YAML is broken (an unterminated flow
+    // sequence, a duplicate key). Before S5 this threw and crashed the whole
+    // run; now the broken ADR is surfaced as a D1 finding (ADR-0013).
+    return { frontmatter: {}, body: body ?? "", state: "malformed" };
+  }
+  if (parsed === null || parsed === undefined) {
+    // An empty `---\n---` block — present but carries nothing. Not broken.
+    return { frontmatter: {}, body: body ?? "", state: "present" };
+  }
+  if (typeof parsed !== "object" || Array.isArray(parsed)) {
+    // Frontmatter that parses to a bare string or a list, not a mapping.
+    // Before S5 this was silently cast to an empty frontmatter and the broken
+    // ADR passed clean — the confirmed silent-swallow (ADR-0013).
+    return { frontmatter: {}, body: body ?? "", state: "malformed" };
+  }
+  return { frontmatter: parsed as AdrFrontmatter, body: body ?? "", state: "present" };
 }
 
 function parseSections(body: string): AdrSection[] {
@@ -96,7 +123,7 @@ function extractLinks(body: string): AdrLink[] {
 }
 
 export function parseAdrFile(raw: string, filePath: string, fileName: string): ParsedAdr {
-  const { frontmatter, body: rawBody } = splitFrontmatter(raw);
+  const { frontmatter, body: rawBody, state: frontmatterState } = splitFrontmatter(raw);
   // A status is the same decision state regardless of case or surrounding
   // space: "Accepted" — the most common ADR status and Nygard's own canonical
   // spelling — is not a different status from "accepted" (C3, ADR-0013).
@@ -114,6 +141,7 @@ export function parseAdrFile(raw: string, filePath: string, fileName: string): P
     fileName,
     number: parseAdrNumber(fileName),
     frontmatter,
+    frontmatterState,
     title: extractTitle(sections),
     sections,
     links: extractLinks(body),

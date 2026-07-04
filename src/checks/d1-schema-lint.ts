@@ -187,6 +187,30 @@ export function d1SchemaLint(ctx: AdrLogContext): Finding[] {
   }
 
   for (const adr of ctx.adrs) {
+    const adrRef = adr.number !== null ? formatAdrRef(adr.number) : adr.fileName;
+
+    // S5 (ADR-0013): a broken ADR must never pass as clean. A frontmatter
+    // block that is present but unparseable — invalid YAML, or valid YAML that
+    // isn't a mapping (a bare string, a list) — is provably broken regardless
+    // of dialect, so it fails fact-tier. Before S5, the invalid-YAML case
+    // crashed the whole run and the non-mapping case was silently cast to an
+    // empty frontmatter and the broken ADR passed clean (the confirmed silent-
+    // swallow). An *absent* block is deliberately NOT flagged here: the loose
+    // dialect (ADR-0006) records status in a bold line or a `## Status`
+    // section with no YAML at all, a real clean pattern this tool already
+    // recognizes — flagging it would reintroduce the false-positive class this
+    // release exists to remove. `frontmatterState` still distinguishes absent
+    // for any future anomaly-based check.
+    if (adr.frontmatterState === "malformed") {
+      findings.push({
+        check: "D1",
+        claim: `${adrRef} has malformed frontmatter — the \`---\` block is present but is not valid YAML or is not a mapping of fields.`,
+        evidence: [{ adr: adr.fileName }],
+        consequence:
+          "Unreadable frontmatter means status, governs, and review-by can't be parsed — the ADR is invisible to every check that reads them, so a broken record would otherwise pass as clean.",
+      });
+    }
+
     const status = adr.frontmatter.status;
     if (status !== undefined && !VALID_STATUSES.has(status)) {
       findings.push({
