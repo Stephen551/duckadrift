@@ -16,3 +16,4 @@ Architecture decisions for duckadrift itself, recorded in duckadrift's own vocab
 | [0010](0010-numbering-gaps-advisory.md) | Numbering gaps are advisory by default | Accepted | elevated |
 | [0011](0011-site-relative-dangles-advisory.md) | Site-relative dangling links go advisory when a match exists elsewhere | Accepted | elevated |
 | [0012](0012-what-1.0-means.md) | What 1.0 means | Accepted | elevated |
+| [0013](0013-the-v0.1.0-adversarial-audit.md) | The v0.1.0 adversarial audit, and what it exposed | Accepted | elevated |
