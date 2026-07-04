@@ -134,6 +134,21 @@ export function parseAdrFile(raw: string, filePath: string, fileName: string): P
   if (typeof frontmatter.status === "string") {
     frontmatter.status = frontmatter.status.trim().toLowerCase();
   }
+  // `governs` accepts a single glob or a list; YAML gives a bare string for
+  // the common `governs: src/**` shape (S4, ADR-0013). Normalize to an array
+  // so D5's glob matching always has a list to iterate. Before this, a scalar
+  // governs passed D5's `.length` guard (a string's length is truthy) and then
+  // crashed the run on `.some`, which strings don't have. A value that is
+  // neither string nor list (a number, a map) can't be a glob — drop it to an
+  // empty list rather than crash.
+  const rawGoverns: unknown = frontmatter.governs;
+  if (typeof rawGoverns === "string") {
+    frontmatter.governs = [rawGoverns];
+  } else if (Array.isArray(rawGoverns)) {
+    frontmatter.governs = rawGoverns.map((g) => String(g));
+  } else if (rawGoverns !== undefined) {
+    frontmatter.governs = [];
+  }
   const body = stripHtmlComments(rawBody);
   const sections = parseSections(body);
   return {
