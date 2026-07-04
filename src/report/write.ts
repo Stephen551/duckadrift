@@ -22,9 +22,37 @@ export function sortFindings(findings: Finding[]): Finding[] {
   return [...findings].sort((a, b) => findingSortKey(a).localeCompare(findingSortKey(b)));
 }
 
+/**
+ * Wraps a user-controlled value in a Markdown code span it cannot break out of
+ * (S3, ADR-0013). The report is piped verbatim into the job summary and the
+ * schedule-mode issue body; before this, a backtick inside a filename or a D3
+ * link target closed the code span and the rest of the value rendered as live
+ * Markdown — autolinks, @mentions, raw HTML. A fence one backtick longer than
+ * the longest run inside the value keeps every inner backtick literal; padding
+ * spaces stop a leading or trailing backtick from touching the fence. Content
+ * inside a code span renders literally, so HTML and autolinks stay inert. A
+ * value with no backticks produces exactly `` `value` ``, unchanged.
+ */
+export function code(value: string): string {
+  const s = String(value);
+  let longest = 0;
+  let run = 0;
+  for (const ch of s) {
+    if (ch === "`") {
+      run += 1;
+      if (run > longest) longest = run;
+    } else {
+      run = 0;
+    }
+  }
+  const fence = "`".repeat(longest + 1);
+  const pad = s.length === 0 || s.startsWith("`") || s.endsWith("`") ? " " : "";
+  return `${fence}${pad}${s}${pad}${fence}`;
+}
+
 function renderEvidence(ev: FindingEvidence): string {
-  if (ev.adr) return `\`${ev.adr}\``;
-  if (ev.file) return ev.line !== undefined ? `\`${ev.file}:${ev.line}\`` : `\`${ev.file}\``;
+  if (ev.adr) return code(ev.adr);
+  if (ev.file) return ev.line !== undefined ? code(`${ev.file}:${ev.line}`) : code(ev.file);
   return "(unspecified)";
 }
 
@@ -66,7 +94,7 @@ export function renderMarkdownReport(findings: Finding[], unrecognizedFiles: str
         "recognized as an ADR — verify none of these is a real decision this tool's naming heuristic missed:",
       ""
     );
-    for (const f of unrecognizedFiles) lines.push(`- \`${f}\``);
+    for (const f of unrecognizedFiles) lines.push(`- ${code(f)}`);
     lines.push("");
   }
 

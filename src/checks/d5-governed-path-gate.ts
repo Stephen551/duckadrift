@@ -1,6 +1,7 @@
 import { minimatch } from "minimatch";
 import { formatAdrRef, padAdrNumber } from "../adr/refs.js";
 import type { AdrLogContext } from "../adr/types.js";
+import { code } from "../report/write.js";
 import type { Finding } from "../types.js";
 
 const ACK_RE = /ADR-ACK:\s*(\d+)/gi;
@@ -35,7 +36,7 @@ export function d5GovernedPathGate(ctx: AdrLogContext): Finding[] {
 
     findings.push({
       check: "D5",
-      claim: `PR touches ${touched.map((f) => `\`${f}\``).join(", ")}, governed by Accepted ${formatAdrRef(adr.number)}, without modifying the ADR or carrying an \`ADR-ACK: ${padAdrNumber(adr.number)}\` marker.`,
+      claim: `PR touches ${touched.map((f) => code(f)).join(", ")}, governed by Accepted ${formatAdrRef(adr.number)}, without modifying the ADR or carrying an ${code(`ADR-ACK: ${padAdrNumber(adr.number)}`)} marker.`,
       evidence: [{ adr: adr.fileName }, ...touched.map((f) => ({ file: f }))],
       consequence: "A silent change to a governed path bypasses the decision the team recorded to guard it.",
     });

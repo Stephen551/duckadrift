@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import { relative, resolve } from "node:path";
 import type { AdrLogContext } from "../adr/types.js";
+import { code } from "../report/write.js";
 import type { Finding } from "../types.js";
 
 const LINK_RE = /\[[^\]]*\]\(([^)]+)\)/g;
@@ -60,7 +61,7 @@ export function d7LogIndexDrift(ctx: AdrLogContext): Finding[] {
     if (existsSync(resolve(ctx.repoRoot, indexed))) continue;
     findings.push({
       check: "D7",
-      claim: `The ADR index lists \`${indexed}\`, which does not exist in the directory.`,
+      claim: `The ADR index lists ${code(indexed)}, which does not exist in the directory.`,
       evidence: [{ file: indexRelPath }],
       consequence: "An index that disagrees with the directory misleads anyone who trusts the index as the table of contents.",
     });
@@ -70,7 +71,7 @@ export function d7LogIndexDrift(ctx: AdrLogContext): Finding[] {
     if (indexedFiles.has(adr.fileName)) continue;
     findings.push({
       check: "D7",
-      claim: `\`${adr.fileName}\` exists in the directory but is not listed in the ADR index.`,
+      claim: `${code(adr.fileName)} exists in the directory but is not listed in the ADR index.`,
       evidence: [{ file: indexRelPath }, { adr: adr.fileName }],
       consequence: "An index that disagrees with the directory misleads anyone who trusts the index as the table of contents.",
     });

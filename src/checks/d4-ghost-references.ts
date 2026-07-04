@@ -1,6 +1,7 @@
 import { formatAdrRef, parseAdrRef } from "../adr/refs.js";
 import type { AdrLogContext } from "../adr/types.js";
 import { walkRepoFiles } from "../repo/walk.js";
+import { code } from "../report/write.js";
 import type { Finding } from "../types.js";
 
 const ADR_MENTION_RE = /\bADR-(\d+)\b/gi;
@@ -44,7 +45,7 @@ export function d4GhostReferences(ctx: AdrLogContext): Finding[] {
         // never blocking (ADR-0005, provable-state-not-provable-error).
         findings.push({
           check: "D4",
-          claim: `\`${file.relativePath}\` references ${formatAdrRef(num)}, which is ${capitalize(status)}${suffix}.`,
+          claim: `${code(file.relativePath)} references ${formatAdrRef(num)}, which is ${capitalize(status)}${suffix}.`,
           evidence: [
             { file: file.relativePath, line: idx + 1 },
             { adr: target.fileName },

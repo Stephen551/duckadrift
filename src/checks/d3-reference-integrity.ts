@@ -2,6 +2,7 @@ import { existsSync } from "node:fs";
 import { dirname, isAbsolute, relative, resolve } from "node:path";
 import { formatAdrRef } from "../adr/refs.js";
 import { walkAllPaths } from "../repo/walk.js";
+import { code } from "../report/write.js";
 import type { AdrLogContext } from "../adr/types.js";
 import type { Finding } from "../types.js";
 
@@ -167,7 +168,7 @@ export function d3ReferenceIntegrity(ctx: AdrLogContext): Finding[] {
       if (foundPath !== undefined) {
         findings.push({
           check: "D3",
-          claim: `${adr.number !== null ? formatAdrRef(adr.number) : adr.fileName} links to \`${target}\`, which does not resolve at HEAD (possibly site-relative — found at \`${foundPath}\`).`,
+          claim: `${adr.number !== null ? formatAdrRef(adr.number) : adr.fileName} links to ${code(target)}, which does not resolve at HEAD (possibly site-relative — found at ${code(foundPath)}).`,
           evidence: [
             { adr: adr.fileName, line: link.line },
             { file: foundPath },
@@ -180,7 +181,7 @@ export function d3ReferenceIntegrity(ctx: AdrLogContext): Finding[] {
 
       findings.push({
         check: "D3",
-        claim: `${adr.number !== null ? formatAdrRef(adr.number) : adr.fileName} links to \`${target}\`, which does not resolve at HEAD.`,
+        claim: `${adr.number !== null ? formatAdrRef(adr.number) : adr.fileName} links to ${code(target)}, which does not resolve at HEAD.`,
         evidence: [{ adr: adr.fileName, line: link.line }],
         consequence: dangleConsequence(target),
       });
