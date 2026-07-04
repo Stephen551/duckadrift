@@ -1,5 +1,6 @@
 import { formatAdrRef, padAdrNumber } from "../adr/refs.js";
 import { parseAdrRef, parseAdrRefList } from "../adr/refs.js";
+import { code } from "../report/write.js";
 import type { AdrLogContext, NumberingScope, ParsedAdr } from "../adr/types.js";
 import type { Finding } from "../types.js";
 
@@ -9,8 +10,13 @@ function dirOf(fileName: string): string {
   return i === -1 ? "" : fileName.slice(0, i);
 }
 
+// The directory name is attacker-authorable — a fork can name an ADR
+// subdirectory anything the filesystem allows, backticks included. Fence it
+// through code() so a backtick can't close the span and inject live markdown
+// into the report (S3 post-audit, ADR-0013). D1's directoryLabel already does
+// this; the hand-rolled single-backtick span here was the sibling that missed.
 function dirLabel(dir: string): string {
-  return dir === "" ? "the ADR root" : `\`${dir}/\``;
+  return dir === "" ? "the ADR root" : code(`${dir}/`);
 }
 
 /**
