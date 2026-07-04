@@ -1,0 +1,5 @@
+{
+  "changedFiles": ["src/auth.ts"],
+  "commitMessage": "change auth",
+  "prBody": "No ADR touched, no override marker — the seeded violation."
+}

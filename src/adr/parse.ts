@@ -27,10 +27,17 @@ function stripHtmlComments(body: string): string {
 // A bare-digit prefix ("0001-foo.md") is one convention among several real
 // ones (found running R5's calibration corpus): "adr-002-foo.md",
 // "adr001-foo.md" (letters glued to the number, no separator), "ODH-ADR-
-// 0001-foo.md" (project-prefixed, letters repeated). Zero or more letter(-)
-// groups, then the number, then a required hyphen, keeps this from matching
+// 0001-foo.md" (project-prefixed, letters repeated). A run of letters and
+// hyphens, then the number, then a required hyphen, keeps this from matching
 // ordinary docs (README.md, PROCESS.md) that have no digits at all.
-export const ADR_FILENAME_RE = /^(?:[a-zA-Z]+-?)*(\d+)-.*\.md$/i;
+//
+// The prefix is a single character-class quantifier, NOT the nested
+// `(?:[a-zA-Z]+-?)*` this used to be (S6, ADR-0013): that nesting caused
+// catastrophic backtracking on a letters-only filename with no digit — one
+// crafted ~50-char name under docs/adr pinned a CPU until CI's kill. The
+// class excludes digits, so the prefix and `\d+` can't overlap and the match
+// is linear.
+export const ADR_FILENAME_RE = /^[a-zA-Z-]*(\d+)-.*\.md$/i;
 
 // `fileName` may be a bare basename ("0001-foo.md") or, once ADR discovery
 // recurses into subdirectories (ADR-0007), a path relative to the ADR root
@@ -133,6 +140,21 @@ export function parseAdrFile(raw: string, filePath: string, fileName: string): P
   // "accepted" gate and D4's dead-status set all at once.
   if (typeof frontmatter.status === "string") {
     frontmatter.status = frontmatter.status.trim().toLowerCase();
+  }
+  // `governs` accepts a single glob or a list; YAML gives a bare string for
+  // the common `governs: src/**` shape (S4, ADR-0013). Normalize to an array
+  // so D5's glob matching always has a list to iterate. Before this, a scalar
+  // governs passed D5's `.length` guard (a string's length is truthy) and then
+  // crashed the run on `.some`, which strings don't have. A value that is
+  // neither string nor list (a number, a map) can't be a glob — drop it to an
+  // empty list rather than crash.
+  const rawGoverns: unknown = frontmatter.governs;
+  if (typeof rawGoverns === "string") {
+    frontmatter.governs = [rawGoverns];
+  } else if (Array.isArray(rawGoverns)) {
+    frontmatter.governs = rawGoverns.map((g) => String(g));
+  } else if (rawGoverns !== undefined) {
+    frontmatter.governs = [];
   }
   const body = stripHtmlComments(rawBody);
   const sections = parseSections(body);

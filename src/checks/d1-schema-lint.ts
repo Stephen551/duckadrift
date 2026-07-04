@@ -2,6 +2,7 @@ import { dirname } from "node:path";
 import { REQUIRED_SECTIONS, SECTION_ALIASES, sectionSatisfied } from "../adr/dialect.js";
 import { formatAdrRef, padAdrNumber } from "../adr/refs.js";
 import type { AdrLogContext, ParsedAdr } from "../adr/types.js";
+import { code } from "../report/write.js";
 import type { Finding } from "../types.js";
 
 const VALID_STATUSES = new Set(["proposed", "accepted", "rejected", "superseded", "deprecated"]);
@@ -35,8 +36,10 @@ const NUMBERING_GAP_CONSEQUENCE =
 const ANNEX_SUFFIX_RE = /^-(?:annex|appendix|companion|addendum|supplement|part)-?[a-z0-9]*$/i;
 // The slug is whatever follows the number-and-hyphen prefix, before ".md" —
 // re-derived here (not reusing ADR_FILENAME_RE's capture) since D1 only has
-// the already-resolved fileName, not the raw match.
-const SLUG_RE = /^(?:[a-zA-Z]+-?)*\d+-(.+)\.md$/i;
+// the already-resolved fileName, not the raw match. Linear prefix, not the
+// nested `(?:[a-zA-Z]+-?)*` (S6, ADR-0013) — same catastrophic-backtracking
+// shape as ADR_FILENAME_RE, same fix.
+export const SLUG_RE = /^[a-zA-Z-]*\d+-(.+)\.md$/i;
 
 function slugOf(fileName: string): string | null {
   const base = fileName.split("/").pop()!;
@@ -78,7 +81,7 @@ function sectionLabels(required: string): string {
 // dirname() on a bare root-level filename ("0001-foo.md") returns "." —
 // "the ADR root" reads better in a claim than a bare dot.
 function directoryLabel(dir: string): string {
-  return dir === "." ? "the ADR root" : `\`${dir}/\``;
+  return dir === "." ? "the ADR root" : code(`${dir}/`);
 }
 
 // Issue #5: every advisory D1 claim used to read with the same confident,
@@ -215,7 +218,7 @@ export function d1SchemaLint(ctx: AdrLogContext): Finding[] {
     if (status !== undefined && !VALID_STATUSES.has(status)) {
       findings.push({
         check: "D1",
-        claim: `${adr.number !== null ? formatAdrRef(adr.number) : adr.fileName} has status \`${status}\`, which is not a valid status for this dialect.`,
+        claim: `${adr.number !== null ? formatAdrRef(adr.number) : adr.fileName} has status ${code(status)}, which is not a valid status for this dialect.`,
         evidence: [{ adr: adr.fileName }],
         consequence:
           "An unrecognized status value makes this ADR invisible to status-graph and staleness checks that filter on valid statuses.",

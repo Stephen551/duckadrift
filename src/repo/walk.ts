@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { lstatSync, readdirSync, readFileSync } from "node:fs";
 import { extname, join, relative } from "node:path";
 
 const EXCLUDED_DIRS = new Set([
@@ -95,7 +95,13 @@ export function walkRepoFiles(repoRoot: string, excludeDirs: string[] = []): Rep
     for (const entry of readdirSync(dir)) {
       if (excluded.has(entry) || EXCLUDED_FILES.has(entry)) continue;
       const full = join(dir, entry);
-      const stat = statSync(full);
+      // lstat, not stat: never follow a symlink (S2, ADR-0013). Before this,
+      // statSync followed links, so a broken symlink under the ADR tree threw
+      // ENOENT and a symlink cycle threw ELOOP (or looped) — either aborted
+      // the whole run, which the Action then passed off as a silent green. A
+      // symlink is skipped; a real repo's ADRs are not symlinks.
+      const stat = lstatSync(full);
+      if (stat.isSymbolicLink()) continue;
       if (stat.isDirectory()) {
         walk(full);
       } else if (stat.isFile()) {
@@ -144,7 +150,10 @@ export function walkAllPaths(repoRoot: string, excludeDirs: string[] = []): Repo
     for (const entry of readdirSync(dir).sort()) {
       if (excluded.has(entry) || EXCLUDED_FILES.has(entry)) continue;
       const full = join(dir, entry);
-      const stat = statSync(full);
+      // lstat, not stat: never follow a symlink (S2, ADR-0013) — same crash
+      // and cycle protection as walkRepoFiles.
+      const stat = lstatSync(full);
+      if (stat.isSymbolicLink()) continue;
       if (stat.isDirectory()) {
         walk(full);
       } else if (stat.isFile()) {

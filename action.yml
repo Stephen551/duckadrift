@@ -41,8 +41,15 @@ runs:
     - name: Derive PR context
       if: github.event_name == 'pull_request'
       shell: bash
+      env:
+        # H1 (ADR-0013): the base ref is a branch name from the PR event, not
+        # repo file content, so it's trusted-side — but interpolating it
+        # directly into the run script is the script-injection shape. Pass it
+        # through the environment and reference it as "$BASE_REF" so its value
+        # can never be parsed as shell.
+        BASE_REF: ${{ github.event.pull_request.base.ref }}
       run: |
-        git fetch origin "${{ github.event.pull_request.base.ref }}" --depth=1
+        git fetch origin "$BASE_REF" --depth=1
         node "${{ github.action_path }}/action/pr-context-from-event.mjs" "$RUNNER_TEMP/duckadrift-pr-context.json"
 
     - name: Run duckadrift
@@ -51,11 +58,14 @@ runs:
       working-directory: ${{ inputs.working-directory }}
       env:
         GH_TOKEN: ${{ inputs.github-token }}
+        # H1 (ADR-0013): pass the adr-dir input through the environment rather
+        # than interpolating it directly into the run script.
+        ADR_DIR: ${{ inputs.adr-dir }}
       run: |
         set -e
         ARGS=(report . --out duckadrift-report.md)
-        if [ -n "${{ inputs.adr-dir }}" ]; then
-          ARGS+=(--adr-dir "${{ inputs.adr-dir }}")
+        if [ -n "$ADR_DIR" ]; then
+          ARGS+=(--adr-dir "$ADR_DIR")
         fi
         if [ -f "$RUNNER_TEMP/duckadrift-pr-context.json" ]; then
           ARGS+=(--pr-context "$RUNNER_TEMP/duckadrift-pr-context.json")

@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -38,41 +38,32 @@ describe("S0: buildErrorReport (the failing-report mechanism)", () => {
   });
 });
 
-// Behavioral proof against a real crash trigger. A broken symlink under the
-// ADR tree makes the walker's statSync throw (this is red on v0.1.0: no report
-// written -> Action passes green). Point-in-time: bucket 2's S2 will make the
-// walker tolerate symlinks, at which point this trigger stops crashing and the
-// test is retargeted in S2's PR. The mechanism unit tests above are the
-// permanent guard.
-describe("S0: a crash writes a failing report, never a missing one", () => {
-  let symlinkOk = false;
+// Behavioral proof against a real crash trigger: a malformed pr-context file.
+// loadPrContext JSON.parses it with no SetupError wrapping, so invalid JSON
+// throws a non-setup error mid-scan — exactly the class S0 must turn into a
+// loud failing report rather than a silent exit. A durable trigger, unlike the
+// broken symlink this test used before S2 taught the walker to tolerate
+// symlinks (that crash no longer happens; see walk-symlink.test.ts).
+describe("S0: an unexpected crash writes a failing report, never a missing one", () => {
   beforeAll(() => {
     rmSync(TMP, { recursive: true, force: true });
     mkdirSync(join(TMP, "docs", "adr"), { recursive: true });
     writeFileSync(
       join(TMP, "docs", "adr", "0001-ok.md"),
-      "---\nstatus: accepted\n---\n# ADR 0001\n\n## Context\nx\n\n## Decision\ny\n"
+      "---\nstatus: accepted\n---\n\n# ADR-0001\n\n## Context\nx\n\n## Decision\ny\n\n## Consequences\nz\n"
     );
-    try {
-      symlinkSync(join(TMP, "definitely", "missing"), join(TMP, "docs", "adr", "0002-broken.md"), "file");
-      symlinkOk = true;
-    } catch {
-      symlinkOk = false;
-    }
+    writeFileSync(join(TMP, "pr-context.json"), "{ this is not valid json");
   });
   afterAll(() => rmSync(TMP, { recursive: true, force: true }));
 
-  it("crash -> failing report.json (skips loudly if this OS can't make a symlink)", () => {
-    if (!symlinkOk) {
-      console.warn(
-        "S0 behavioral test SKIPPED: this environment cannot create a symlink. " +
-          "The buildErrorReport unit tests above still guard the mechanism."
-      );
-      return;
-    }
+  it("a crash mid-scan yields a failing report.json, not a missing one", () => {
     const mdPath = join(TMP, "rep.md");
     const jsonPath = join(TMP, "rep.json");
-    const exit = executeReport({ repoRoot: TMP, out: mdPath });
+    const exit = executeReport({
+      repoRoot: TMP,
+      out: mdPath,
+      prContextPath: join(TMP, "pr-context.json"),
+    });
     expect(exit).toBe(1);
     expect(existsSync(jsonPath)).toBe(true);
     const json = JSON.parse(readFileSync(jsonPath, "utf-8"));
