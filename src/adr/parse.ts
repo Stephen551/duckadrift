@@ -4,7 +4,14 @@ import type { AdrFrontmatter, AdrLink, AdrSection, ParsedAdr } from "./types.js"
 
 const FRONTMATTER_RE = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/;
 const HEADING_RE = /^(#{1,6})\s+(.*)$/;
-const LINK_RE = /\[([^\]]*)\]\(([^)]+)\)/g;
+// The link-destination group allows balanced parentheses, one level deep —
+// CommonMark permits them in a bare destination, and real paths use them
+// (`client(v2).ts`, a versioned filename). A plain `([^)]+)` stopped the
+// target at the first `)`, truncating `../src/client(v2).ts` to
+// `../src/client(v2` and fact-flagging a real file as dangling (C1,
+// ADR-0013). The two alternatives are disjoint (`[^()]` never starts with a
+// paren; `\([^()]*\)` always does), so there is no backtracking ambiguity.
+const LINK_RE = /\[([^\]]*)\]\(((?:[^()]|\([^()]*\))*)\)/g;
 const HTML_COMMENT_RE = /<!--[\s\S]*?-->/g;
 
 // HTML comments are template/instructional boilerplate, invisible when
