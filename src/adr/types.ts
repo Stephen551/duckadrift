@@ -56,6 +56,16 @@ export interface ParsedAdr {
   /** Parsed from the filename's numeric prefix; null if unparseable. */
   number: number | null;
   frontmatter: AdrFrontmatter;
+  /**
+   * Whether the ADR's YAML frontmatter parsed (S5, ADR-0013). "present" — a
+   * valid mapping (possibly empty). "malformed" — the `---` block is there but
+   * its content threw or parsed to something other than a mapping (a bare
+   * string, a list); before S5 this either crashed the run or, for the non-map
+   * case, was silently cast to an empty frontmatter and the broken ADR passed
+   * clean. "absent" — no `---` block at all, which may be a legitimate
+   * frontmatter-less dialect, so it is surfaced softly, not failed.
+   */
+  frontmatterState: "present" | "malformed" | "absent";
   title: string | null;
   sections: AdrSection[];
   links: AdrLink[];

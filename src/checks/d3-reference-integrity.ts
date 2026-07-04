@@ -26,6 +26,16 @@ const USERNAME_MENTION_RE = /^@[a-zA-Z0-9](?:-?[a-zA-Z0-9])*$/;
 // idioms share "exactly one `@`" but are otherwise structurally distinct.
 const EMAIL_RE = /^[^\s@/]+@[^\s@/]+\.[^\s@/]+$/;
 
+// Percent-decode a link target for on-disk resolution (C4). A malformed
+// escape can't be decoded — keep the raw target rather than throw.
+function decodeTarget(target: string): string {
+  try {
+    return decodeURIComponent(target);
+  } catch {
+    return target;
+  }
+}
+
 function dangleConsequence(target: string): string {
   return /\.md$/i.test(target)
     ? "A dangling ADR-to-ADR link breaks traceability for anyone following the decision trail."
@@ -111,24 +121,33 @@ export function d3ReferenceIntegrity(ctx: AdrLogContext): Finding[] {
       )
         continue;
 
+      // Markdown/GitHub percent-decode a link target before resolving it:
+      // "%20" is how a space in a filename is written in a link, and the file
+      // on disk has a real space, not the literal "%20" (C4, ADR-0013). Decode
+      // for the existence check only — a malformed escape (a stray "%") can't
+      // be decoded, so fall back to the raw target rather than throw. The
+      // claim below still shows the raw target the author actually wrote.
+      const resolveTarget = decodeTarget(target);
+
       // A leading "/" is GitHub's own repo-root-relative convention for a
       // link within the same repo (found running R5's opendatahub) — not an
       // OS-absolute path, which no legitimate ADR reference is ever written
       // as. Resolved on its own, before the ADR-dir/repo-root fallback pair
       // below: a leading "/" unambiguously signals "not relative to me."
-      const resolved = target.startsWith("/")
-        ? existsSync(resolve(ctx.repoRoot, target.replace(/^\/+/, "")))
+      const resolved = resolveTarget.startsWith("/")
+        ? existsSync(resolve(ctx.repoRoot, resolveTarget.replace(/^\/+/, "")))
         : // Primary: relative to the ADR's own directory (the markdown-
           // correct reading of a relative link). Fallback: relative to repo
           // root — a real, common ADR convention (cite code paths the way
           // you'd type them from the repo root), confirmed running against
           // a real repo during Gate G1 where every code citation used this
           // style.
-          existsSync(resolve(baseDir, target)) || existsSync(resolve(ctx.repoRoot, target));
+          existsSync(resolve(baseDir, resolveTarget)) ||
+          existsSync(resolve(ctx.repoRoot, resolveTarget));
 
       if (resolved) continue;
 
-      const foundPath = findByBasename(target);
+      const foundPath = findByBasename(resolveTarget);
       if (foundPath !== undefined) {
         findings.push({
           check: "D3",

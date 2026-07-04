@@ -1,8 +1,11 @@
 [
   {
     "check": "D4",
-    "claim": "`src/example.ts` references ADR-0001, which is Superseded (by ADR-0002).",
-    "evidence": [{ "file": "src/example.ts", "line": 1 }, { "adr": "0001-old-approach.md" }],
+    "claim": "`CHANGELOG.md` references ADR-0001, which is Superseded (by ADR-0002).",
+    "evidence": [
+      { "file": "CHANGELOG.md", "line": 3 },
+      { "adr": "0001-old.md" }
+    ],
     "consequence": "A file naming a superseded or rejected ADR may be relying on it as current or merely recording its history — a name match can't tell which, so this is surfaced for a human to judge rather than failed.",
     "advisory": true
   }

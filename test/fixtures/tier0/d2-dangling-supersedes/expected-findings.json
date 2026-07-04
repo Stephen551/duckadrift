@@ -1,0 +1,13 @@
+[
+  {
+    "check": "D2",
+    "claim": "ADR-0001 declares `supersedes: 0099`, but no ADR-0099 exists anywhere in the log.",
+    "evidence": [
+      {
+        "adr": "0001-x.md"
+      }
+    ],
+    "consequence": "A supersedes pointer to a number that exists nowhere names a decision this ADR claims to replace but that can't be found — the reference is broken and can't be verified.",
+    "advisory": true
+  }
+]

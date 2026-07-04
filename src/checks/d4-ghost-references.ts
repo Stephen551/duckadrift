@@ -33,14 +33,25 @@ export function d4GhostReferences(ctx: AdrLogContext): Finding[] {
 
         const supersededBy = parseAdrRef(target.frontmatter["superseded-by"]);
         const suffix = supersededBy !== null ? ` (by ${formatAdrRef(supersededBy)})` : "";
+        // A grep match proves the file names a dead ADR; it cannot prove the
+        // file treats that ADR as still-governing (C5, ADR-0013). A changelog
+        // or migration note documenting the supersession names the same
+        // number the same way a stale code citation would — the earlier
+        // "cites ADR-N as governing" wording asserted an intent a string
+        // match can't support, and failed CI on ordinary history notes. The
+        // claim now states only the provable fact — a reference to a dead ADR
+        // exists — and is advisory: surfaced for a human to judge stance,
+        // never blocking (ADR-0005, provable-state-not-provable-error).
         findings.push({
           check: "D4",
-          claim: `\`${file.relativePath}\` cites ${formatAdrRef(num)} as governing, but ${formatAdrRef(num)} is ${capitalize(status)}${suffix}.`,
+          claim: `\`${file.relativePath}\` references ${formatAdrRef(num)}, which is ${capitalize(status)}${suffix}.`,
           evidence: [
             { file: file.relativePath, line: idx + 1 },
             { adr: target.fileName },
           ],
-          consequence: "Code that cites a dead decision as live is following guidance the project has already retracted.",
+          consequence:
+            "A file naming a superseded or rejected ADR may be relying on it as current or merely recording its history — a name match can't tell which, so this is surfaced for a human to judge rather than failed.",
+          advisory: true,
         });
       }
     });

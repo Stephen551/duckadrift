@@ -1,0 +1,16 @@
+[
+  {
+    "check": "D1",
+    "claim": "ADR number 0002 appears in 2 different directories (`a/`, `z/`) — could be an intentional per-team numbering convention rather than a collision; declare `numbering: global` in `.duckadrift.yml` if this repo's numbers must be unique across the whole log.",
+    "evidence": [
+      {
+        "adr": "a/0002-team-a-old.md"
+      },
+      {
+        "adr": "z/0002-team-z-current.md"
+      }
+    ],
+    "consequence": "A number reused across directories may be an intentional per-directory namespace, or a genuine collision — declare `numbering: global` in `.duckadrift.yml` if this repo's numbers must be unique across the whole log.",
+    "advisory": true
+  }
+]
