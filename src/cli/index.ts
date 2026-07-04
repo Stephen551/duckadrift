@@ -1,11 +1,11 @@
 #!/usr/bin/env node
-import { writeFileSync } from "node:fs";
-import { relative, resolve } from "node:path";
+import { resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { loadAdrLog } from "../adr/load.js";
 import { runAllTierZeroChecks } from "../checks/index.js";
 import { SetupError } from "../errors.js";
-import { buildJsonReport, renderMarkdownReport } from "../report/write.js";
+import { renderMarkdownReport } from "../report/write.js";
+import { executeReport } from "./report.js";
 
 function printUsage(): void {
   console.log(
@@ -80,24 +80,7 @@ function runCheck(argv: string[]): void {
 }
 
 function runReport(argv: string[]): void {
-  const { repoRoot, prContextPath, out, adrDir } = parseCommonArgs(argv);
-  const ctx = loadAdrLog(repoRoot, prContextPath, adrDir);
-  const findings = runAllTierZeroChecks(ctx);
-
-  const markdown = renderMarkdownReport(findings, ctx.unrecognizedFiles);
-  const adrDirRelative = relative(repoRoot, ctx.adrDir).split("\\").join("/");
-  const json = buildJsonReport(findings, adrDirRelative, ctx.unrecognizedFiles);
-  const mdPath = out ?? resolve(repoRoot, "duckadrift-report.md");
-  const jsonPath = mdPath.replace(/\.md$/i, "") + ".json";
-
-  writeFileSync(mdPath, markdown, "utf-8");
-  writeFileSync(jsonPath, `${JSON.stringify(json, null, 2)}\n`, "utf-8");
-
-  const failing = findings.filter((f) => !f.advisory).length;
-  console.log(
-    `duckadrift: wrote ${mdPath} and ${jsonPath} (${findings.length} Tier 0 finding(s), ${failing} failing).`
-  );
-  process.exitCode = 0;
+  process.exitCode = executeReport(parseCommonArgs(argv));
 }
 
 function main(): void {

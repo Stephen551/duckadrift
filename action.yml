@@ -72,6 +72,18 @@ runs:
           exit 0
         fi
 
+        # Backstop for the silent-green failure (ADR-0013): the CLI writes a
+        # loud failing report on a normal crash, but a catastrophic one (OOM,
+        # SIGKILL) can leave no report at all. An abnormal exit with no report
+        # must fail red, never pass green on a scan that never ran. `report`
+        # exits 0 on every completed run regardless of findings, so a non-zero
+        # exit here is only ever a crash.
+        if [ "$DUCKADRIFT_EXIT" -ne 0 ] && [ ! -f duckadrift-report.json ]; then
+          echo "::error title=duckadrift::duckadrift exited abnormally (code $DUCKADRIFT_EXIT) without writing a report — failing the check rather than passing green on an incomplete scan."
+          echo "failing-count=0" >> "$GITHUB_OUTPUT"
+          exit 1
+        fi
+
         if [ -f duckadrift-report.md ]; then
           cat duckadrift-report.md >> "$GITHUB_STEP_SUMMARY"
         fi
