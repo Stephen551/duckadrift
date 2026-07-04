@@ -1,0 +1,22 @@
+[
+  {
+    "check": "D1",
+    "claim": "ADR-0001 has malformed frontmatter — the `---` block is present but is not valid YAML or is not a mapping of fields.",
+    "evidence": [
+      {
+        "adr": "0001-non-map.md"
+      }
+    ],
+    "consequence": "Unreadable frontmatter means status, governs, and review-by can't be parsed — the ADR is invisible to every check that reads them, so a broken record would otherwise pass as clean."
+  },
+  {
+    "check": "D1",
+    "claim": "ADR-0002 has malformed frontmatter — the `---` block is present but is not valid YAML or is not a mapping of fields.",
+    "evidence": [
+      {
+        "adr": "0002-bad-yaml.md"
+      }
+    ],
+    "consequence": "Unreadable frontmatter means status, governs, and review-by can't be parsed — the ADR is invisible to every check that reads them, so a broken record would otherwise pass as clean."
+  }
+]
