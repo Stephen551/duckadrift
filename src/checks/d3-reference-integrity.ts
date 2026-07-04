@@ -1,9 +1,24 @@
 import { existsSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { dirname, isAbsolute, relative, resolve } from "node:path";
 import { formatAdrRef } from "../adr/refs.js";
 import { walkAllPaths } from "../repo/walk.js";
 import type { AdrLogContext } from "../adr/types.js";
 import type { Finding } from "../types.js";
+
+/**
+ * Exists AND is inside the repository (S1, ADR-0013). Before this, D3 called
+ * existsSync on the resolved path with no containment, so a crafted link like
+ * `../../../../etc/passwd` traversed above the repo root and, if the target
+ * existed on the runner, was treated as a valid HEAD reference — D3 claims
+ * links resolve "at HEAD," and a file outside the checkout is not at HEAD. A
+ * target that resolves outside the repo root is treated as unresolved.
+ */
+function existsWithinRepo(base: string, target: string, repoRoot: string): boolean {
+  const abs = resolve(base, target);
+  const rel = relative(repoRoot, abs);
+  if (rel.startsWith("..") || isAbsolute(rel)) return false; // escaped the repo root
+  return existsSync(abs);
+}
 
 const EXTERNAL_LINK_RE = /^[a-z][a-z0-9+.-]*:/i;
 // `[Name](@handle)` is a GitHub-attribution-mention idiom, not a file or code
@@ -135,15 +150,16 @@ export function d3ReferenceIntegrity(ctx: AdrLogContext): Finding[] {
       // as. Resolved on its own, before the ADR-dir/repo-root fallback pair
       // below: a leading "/" unambiguously signals "not relative to me."
       const resolved = resolveTarget.startsWith("/")
-        ? existsSync(resolve(ctx.repoRoot, resolveTarget.replace(/^\/+/, "")))
+        ? existsWithinRepo(ctx.repoRoot, resolveTarget.replace(/^\/+/, ""), ctx.repoRoot)
         : // Primary: relative to the ADR's own directory (the markdown-
           // correct reading of a relative link). Fallback: relative to repo
           // root — a real, common ADR convention (cite code paths the way
           // you'd type them from the repo root), confirmed running against
           // a real repo during Gate G1 where every code citation used this
-          // style.
-          existsSync(resolve(baseDir, resolveTarget)) ||
-          existsSync(resolve(ctx.repoRoot, resolveTarget));
+          // style. Both are containment-checked (S1): a link that resolves
+          // above the repo root is not a HEAD reference.
+          existsWithinRepo(baseDir, resolveTarget, ctx.repoRoot) ||
+          existsWithinRepo(ctx.repoRoot, resolveTarget, ctx.repoRoot);
 
       if (resolved) continue;
 
