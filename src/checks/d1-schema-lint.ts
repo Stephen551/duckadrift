@@ -36,8 +36,10 @@ const NUMBERING_GAP_CONSEQUENCE =
 const ANNEX_SUFFIX_RE = /^-(?:annex|appendix|companion|addendum|supplement|part)-?[a-z0-9]*$/i;
 // The slug is whatever follows the number-and-hyphen prefix, before ".md" —
 // re-derived here (not reusing ADR_FILENAME_RE's capture) since D1 only has
-// the already-resolved fileName, not the raw match.
-const SLUG_RE = /^(?:[a-zA-Z]+-?)*\d+-(.+)\.md$/i;
+// the already-resolved fileName, not the raw match. Linear prefix, not the
+// nested `(?:[a-zA-Z]+-?)*` (S6, ADR-0013) — same catastrophic-backtracking
+// shape as ADR_FILENAME_RE, same fix.
+export const SLUG_RE = /^[a-zA-Z-]*\d+-(.+)\.md$/i;
 
 function slugOf(fileName: string): string | null {
   const base = fileName.split("/").pop()!;
