@@ -90,6 +90,56 @@ export interface JsonReport {
   adrDirRelative: string;
   /** Repo-root-relative paths under the ADR root that are neither the index nor a recognized ADR (ADR-0007). Always present, empty when clean. */
   unrecognizedFiles: string[];
+  /** True only on an error report: the scan threw before completing (ADR-0013). Absent on every normal report. */
+  incomplete?: true;
+  /** The error message, present only on an error report. */
+  error?: string;
+}
+
+/**
+ * The report written when the scan itself throws before it can complete
+ * (ADR-0013, the silent-green fix). `failingCount` is 1 by construction: an
+ * incomplete scan is a failure, never a clean pass the tool cannot stand
+ * behind. The Action reads `failingCount` and goes red; `tier0Findings` is
+ * empty so the annotation path emits nothing spurious. The watch may fail;
+ * it never stands down silently and green (the Pact).
+ */
+export function buildErrorReport(message: string): { markdown: string; json: JsonReport } {
+  // The message can carry user-controlled fragments (a filename, a link
+  // target). Neutralize backticks so the error markdown can't itself become
+  // the injection surface S3 closes elsewhere.
+  const safe = message.replace(/`/g, "'").replace(/\r?\n/g, " ").trim();
+  const checkCounts = Object.fromEntries(TIER_ZERO_CHECK_IDS.map((id) => [id, 0])) as Record<
+    TierZeroCheckId,
+    number
+  >;
+  const json: JsonReport = {
+    tier0Findings: [],
+    tier1: null,
+    checkCounts,
+    failingCount: 1,
+    advisoryCount: 0,
+    adrDirRelative: "",
+    unrecognizedFiles: [],
+    incomplete: true,
+    error: safe,
+  };
+  const markdown = [
+    "# duckadrift report",
+    "",
+    "Tier 0: scan did not complete",
+    "Tier 1: not run (M1 scope)",
+    "",
+    "## Scan failed",
+    "",
+    "duckadrift did not finish scanning this repository. It is failing the check",
+    "rather than reporting a clean pass it cannot stand behind — an incomplete",
+    "scan is never a silent green (the Pact).",
+    "",
+    `Error: ${safe}`,
+    "",
+  ].join("\n");
+  return { markdown, json };
 }
 
 export function buildJsonReport(
