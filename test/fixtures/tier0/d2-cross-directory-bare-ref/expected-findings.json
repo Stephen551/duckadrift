@@ -1,0 +1,16 @@
+[
+  {
+    "check": "D2",
+    "claim": "ADR-0001 declares `supersedes: 0003`, but no ADR-0003 exists in its own directory (`a/`); a same-numbered ADR exists in `z/`.",
+    "evidence": [
+      {
+        "adr": "a/0001-ref.md"
+      },
+      {
+        "adr": "z/0003-third.md"
+      }
+    ],
+    "consequence": "A bare ADR number is directory-scoped by default (ADR-0008), so this reference does not resolve to the same-numbered ADR in another directory — write an explicit path, or declare `numbering: global` if numbers are unique across the whole log and a cross-directory supersession is intended.",
+    "advisory": true
+  }
+]
