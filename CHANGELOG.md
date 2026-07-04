@@ -2,6 +2,27 @@
 
 All notable changes to duckadrift are documented here.
 
+## [0.1.2] — 2026-07-04
+
+This release completes two of the fork-safety hardening fixes from v0.1.1 that
+turned out to be narrower than intended. No configuration changes are needed.
+
+### Safe on untrusted pull requests (completing v0.1.1)
+
+- Link containment now covers symlinks. v0.1.1 stopped a crafted link from
+  climbing above the repository with `../`, but a link pointing through an
+  in-repo symlink whose target sits outside the repository could still resolve
+  to a file that isn't in your checkout. Such a link is now correctly treated as
+  unresolved. This completes the v0.1.1 note that a crafted link can no longer
+  reach files outside the repository — as of this release, that holds for the
+  symlink case too. A legitimate symlink that stays inside the repository still
+  resolves normally.
+- Two more report values are shown as inert code. v0.1.1 stopped crafted link
+  targets from injecting live content into the job summary and the tracking
+  issue; this release extends the same protection to two values it missed — a
+  directory name and an expired review-by date — so a backtick in either can no
+  longer break out and inject live markup.
+
 ## [0.1.1] — 2026-07-04
 
 This release removes false alarms on ordinary ADR logs and hardens duckadrift to run safely on pull requests from forks. No configuration changes are needed.
