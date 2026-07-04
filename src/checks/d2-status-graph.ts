@@ -54,7 +54,7 @@ export function d2StatusGraphIntegrity(ctx: AdrLogContext): Finding[] {
   const findings: Finding[] = [];
   const { resolve, byNumber } = makeResolver(ctx.adrs, ctx.numberingScope);
 
-  findings.push(...findCrossDirectoryBareRefs(ctx.adrs, ctx.numberingScope, resolve, byNumber));
+  findings.push(...findUnresolvedBareRefs(ctx.adrs, ctx.numberingScope, resolve, byNumber));
   findings.push(...findMissingSupersededByTargets(ctx.adrs, byNumber));
   findings.push(...findSupersessionCycles(ctx.adrs, resolve));
 
@@ -66,20 +66,28 @@ export function d2StatusGraphIntegrity(ctx: AdrLogContext): Finding[] {
 }
 
 /**
- * C2 (ADR-0013): a bare `supersedes`/`superseded-by` number that doesn't match
- * any ADR in its own directory, but does exist in another directory, is
- * surfaced as a loud advisory — never resolved to that other directory's ADR
- * as a fact-tier accusation, and never silently dropped. Only meaningful under
- * per-directory scope; a `numbering: global` log resolves such a number
- * log-wide by definition.
+ * C2 (ADR-0013): a bare `supersedes`/`superseded-by` number that doesn't
+ * resolve in its own directory is surfaced, never silently dropped. Two cases:
+ *
+ * - The number exists in *another* directory: a loud advisory naming both
+ *   directories — never resolved to that other directory's ADR as a fact-tier
+ *   accusation (the launch-headline false positive).
+ * - The number exists *nowhere* in the log: a dangling pointer. A dangling
+ *   `superseded-by` is already fact-flagged by findMissingSupersededByTargets;
+ *   a dangling `supersedes` was a silent no-op before this — now a loud
+ *   advisory. Silent-dropping a broken pointer in the release whose thesis is
+ *   "never silently drop" is the one hypocrisy this can't ship.
+ *
+ * Cross-directory resolution is only meaningful under per-directory scope; a
+ * `numbering: global` log resolves a bare number log-wide by definition, so
+ * only the dangling-nowhere case applies there.
  */
-function findCrossDirectoryBareRefs(
+function findUnresolvedBareRefs(
   adrs: ParsedAdr[],
   scope: NumberingScope,
   resolve: (from: ParsedAdr, num: number) => ParsedAdr | null,
   byNumber: Map<number, ParsedAdr>
 ): Finding[] {
-  if (scope === "global") return [];
   const findings: Finding[] = [];
   for (const adr of adrs) {
     if (adr.number === null) continue;
@@ -91,15 +99,32 @@ function findCrossDirectoryBareRefs(
     for (const { kind, num } of refs) {
       if (resolve(adr, num) !== null) continue; // resolves in its own directory — fine
       const elsewhere = byNumber.get(num);
-      if (!elsewhere) continue; // exists nowhere: superseded-by's own missing-target check owns that
-      findings.push({
-        check: "D2",
-        claim: `${formatAdrRef(adr.number)} declares \`${kind}: ${padAdrNumber(num)}\`, but no ${formatAdrRef(num)} exists in its own directory (${dirLabel(dirOf(adr.fileName))}); a same-numbered ADR exists in ${dirLabel(dirOf(elsewhere.fileName))}.`,
-        evidence: [{ adr: adr.fileName }, { adr: elsewhere.fileName }],
-        consequence:
-          "A bare ADR number is directory-scoped by default (ADR-0008), so this reference does not resolve to the same-numbered ADR in another directory — write an explicit path, or declare `numbering: global` if numbers are unique across the whole log and a cross-directory supersession is intended.",
-        advisory: true,
-      });
+      if (elsewhere) {
+        // Exists in another directory only. Under global scope resolve() would
+        // have found it, so this branch is per-directory-scope by construction.
+        findings.push({
+          check: "D2",
+          claim: `${formatAdrRef(adr.number)} declares \`${kind}: ${padAdrNumber(num)}\`, but no ${formatAdrRef(num)} exists in its own directory (${dirLabel(dirOf(adr.fileName))}); a same-numbered ADR exists in ${dirLabel(dirOf(elsewhere.fileName))}.`,
+          evidence: [{ adr: adr.fileName }, { adr: elsewhere.fileName }],
+          consequence:
+            "A bare ADR number is directory-scoped by default (ADR-0008), so this reference does not resolve to the same-numbered ADR in another directory — write an explicit path, or declare `numbering: global` if numbers are unique across the whole log and a cross-directory supersession is intended.",
+          advisory: true,
+        });
+        continue;
+      }
+      // Exists nowhere. superseded-by-nowhere is already fact-flagged as a
+      // dangling supersession pointer; surface a dangling supersedes here so it
+      // is never a silent no-op.
+      if (kind === "supersedes") {
+        findings.push({
+          check: "D2",
+          claim: `${formatAdrRef(adr.number)} declares \`supersedes: ${padAdrNumber(num)}\`, but no ${formatAdrRef(num)} exists anywhere in the log.`,
+          evidence: [{ adr: adr.fileName }],
+          consequence:
+            "A supersedes pointer to a number that exists nowhere names a decision this ADR claims to replace but that can't be found — the reference is broken and can't be verified.",
+          advisory: true,
+        });
+      }
     }
   }
   return findings;
