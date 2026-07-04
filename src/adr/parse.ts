@@ -90,6 +90,16 @@ function extractLinks(body: string): AdrLink[] {
 
 export function parseAdrFile(raw: string, filePath: string, fileName: string): ParsedAdr {
   const { frontmatter, body: rawBody } = splitFrontmatter(raw);
+  // A status is the same decision state regardless of case or surrounding
+  // space: "Accepted" — the most common ADR status and Nygard's own canonical
+  // spelling — is not a different status from "accepted" (C3, ADR-0013).
+  // Normalize once here so every downstream check sees one canonical form,
+  // rather than each comparing case-sensitively: before this, a capitalized
+  // status was fact-flagged invalid by D1 and made invisible to D2/D5/D6's
+  // "accepted" gate and D4's dead-status set all at once.
+  if (typeof frontmatter.status === "string") {
+    frontmatter.status = frontmatter.status.trim().toLowerCase();
+  }
   const body = stripHtmlComments(rawBody);
   const sections = parseSections(body);
   return {
