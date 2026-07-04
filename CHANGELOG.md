@@ -2,6 +2,33 @@
 
 All notable changes to duckadrift are documented here.
 
+## [0.1.1] — 2026-07-04
+
+This release removes false alarms on ordinary ADR logs and hardens duckadrift to run safely on pull requests from forks. No configuration changes are needed.
+
+### Fewer false alarms
+
+- A capitalized status like `Accepted` (the most common way to write one) is no longer flagged as invalid. Status values are now recognized regardless of case.
+- Links to files with spaces in their names (written with `%20`, the normal way) now resolve correctly instead of being reported as broken.
+- Links to files with parentheses in their names, like `client(v2).ts`, are no longer cut short and reported as broken.
+- A changelog or history note that mentions an old, superseded ADR no longer fails your build. A mention is not proof the code still relies on that decision, so it is now surfaced as a soft note instead.
+- Repos where each team keeps its own ADR numbering in its own folder are now handled correctly. An ADR that supersedes its own team's earlier decision is no longer accused of superseding an unrelated, same-numbered ADR in another team's folder. A number that only matches an ADR elsewhere, or matches nothing, is surfaced as a soft note rather than a wrong accusation.
+
+### Broken input is surfaced, never silently passed
+
+- An ADR with broken or unreadable front matter (the `---` block at the top) used to crash the run or, worse, slip through as clean. It is now reported as a finding. An ADR that legitimately records its status in a section instead of front matter is still accepted.
+- If duckadrift ever fails to finish scanning, the check now fails loudly instead of quietly passing green on an incomplete scan.
+
+### Safe on untrusted pull requests
+
+duckadrift was originally built to run on your own repository. As of v0.1.1 it is hardened to run safely on pull requests from forks, where the content is not yours.
+
+- A crafted file name can no longer pin a CPU and hang the job.
+- A broken symlink or a symlink loop in the ADR folder no longer crashes the run; symlinks are skipped.
+- A crafted link can no longer reach files outside the repository.
+- Crafted text in an ADR can no longer inject live links or HTML into the job summary or the tracking issue; all such values are shown as inert code.
+- A `governs:` value written as a single line instead of a list no longer crashes the run.
+
 ## [0.1.0] — 2026-07-03
 
 First public release. Tier 0: seven deterministic checks that verify an ADR log against the codebase it describes — schema/structure lint, status-graph integrity, reference integrity, ghost references, the governed-path gate, a staleness clock, and log/index drift. Zero network calls. Zero config to get useful output against a conventional `docs/adr` or `doc/adr` log.
