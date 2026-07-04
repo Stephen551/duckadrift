@@ -1,0 +1,15 @@
+[
+  {
+    "check": "D5",
+    "claim": "PR touches `src/auth.ts`, governed by Accepted ADR-0001, without modifying the ADR or carrying an `ADR-ACK: 0001` marker.",
+    "evidence": [
+      {
+        "adr": "0001-auth.md"
+      },
+      {
+        "file": "src/auth.ts"
+      }
+    ],
+    "consequence": "A silent change to a governed path bypasses the decision the team recorded to guard it."
+  }
+]
