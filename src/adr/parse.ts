@@ -14,6 +14,63 @@ const HEADING_RE = /^(#{1,6})\s+(.*)$/;
 const LINK_RE = /\[([^\]]*)\]\(((?:[^()]|\([^()]*\))*)\)/g;
 const HTML_COMMENT_RE = /<!--[\s\S]*?-->/g;
 
+// The single CommonMark-correct destination normalizer. LINK_RE captures
+// everything between the outer parens — a destination plus an optional title —
+// so the raw capture is not yet a resolvable path. Every link consumer (D3 via
+// `parsed.links`, D7 via `extractLinkTargets`) runs its captured destination
+// through this one function, so a hardening applied here reaches every check
+// instead of one copy. Before consolidation, D3 saw the raw capture (angle
+// brackets and titles left in, fact-flagging `<...>` and `path "title"` as
+// dangling) and D7 re-parsed the index with its own pre-C1 regex that truncated
+// a `foo(v2).md` filename at the first paren.
+//
+// CommonMark destination/title grammar (see the spec's "Links" section): a
+// destination is either `<...>` (may contain spaces; ends at the first `>`) or a
+// bare run with no unescaped whitespace and balanced parens; an optional title
+// follows whitespace as `"..."`, `'...'`, or `(...)`. So: unwrap `<...>`, drop a
+// whitespace-separated trailing title, keep balanced parens that have no
+// preceding whitespace (a versioned filename), and strip a `#fragment` — the
+// resolvable on-disk path is what every check needs.
+export function normalizeLinkDestination(raw: string): string {
+  let s = raw.trim();
+  if (s.startsWith("<")) {
+    // Angle-bracketed: the destination is the content up to the first `>` and
+    // may contain spaces; anything after `>` is a title, discarded.
+    const end = s.indexOf(">");
+    s = end === -1 ? s.slice(1) : s.slice(1, end);
+  } else {
+    // Bare destination, optionally followed by a title. Strip only a
+    // RECOGNIZABLE trailing title — whitespace then `"..."`, `'...'`, or
+    // `(...)`, anchored at the end — not everything after the first space.
+    // CommonMark requires a space-bearing destination to be angle-bracketed,
+    // but real-world markdown (and MkDocs) accepts a bare path with spaces —
+    // e.g. an image `![](common-config-images/EdgeX 3.x flowchart.png)`, three
+    // of which are in edgex-docs' ADR-0026. Truncating at the first space broke
+    // those real references (a no-regression-differential catch); a versioned
+    // filename like `client(v2).ts` has no whitespace-preceded trailing group
+    // and is left whole.
+    s = s.replace(/\s+("[^"]*"|'[^']*'|\([^)]*\))\s*$/, "");
+  }
+  // A fragment identifier is not part of the on-disk path (checks already
+  // ignored it downstream; stripping here keeps the normalized target honest).
+  const hash = s.indexOf("#");
+  if (hash !== -1) s = s.slice(0, hash);
+  return s;
+}
+
+// The one link-extraction helper. Runs LINK_RE per line and normalizes each
+// captured destination. D7 imports this for index content; ADR-body extraction
+// (`extractLinks`) shares the same normalizer so D3 and D7 can never re-diverge.
+export function extractLinkTargets(markdown: string): { target: string; line: number }[] {
+  const out: { target: string; line: number }[] = [];
+  markdown.split(/\r?\n/).forEach((line, idx) => {
+    for (const match of line.matchAll(LINK_RE)) {
+      out.push({ target: normalizeLinkDestination(match[2] ?? ""), line: idx + 1 });
+    }
+  });
+  return out;
+}
+
 // HTML comments are template/instructional boilerplate, invisible when
 // rendered — never real document content. Found running R5's edgex-docs:
 // a lingering example block inside <!-- --> (literal placeholder text,
@@ -123,7 +180,10 @@ function extractLinks(body: string): AdrLink[] {
   const lines = body.split(/\r?\n/);
   lines.forEach((line, idx) => {
     for (const match of line.matchAll(LINK_RE)) {
-      links.push({ text: match[1] ?? "", target: match[2] ?? "", line: idx + 1 });
+      // Normalize the destination so `parsed.links[].target` is the resolvable
+      // path — D3 reads this and gets angle-bracket/title/fragment handling for
+      // free, from the same normalizer D7 uses.
+      links.push({ text: match[1] ?? "", target: normalizeLinkDestination(match[2] ?? ""), line: idx + 1 });
     }
   });
   return links;

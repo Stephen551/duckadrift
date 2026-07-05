@@ -1,10 +1,10 @@
 import { existsSync } from "node:fs";
 import { relative, resolve } from "node:path";
+import { extractLinkTargets } from "../adr/parse.js";
 import type { AdrLogContext } from "../adr/types.js";
 import { code } from "../report/write.js";
 import type { Finding } from "../types.js";
 
-const LINK_RE = /\[[^\]]*\]\(([^)]+)\)/g;
 // An index entry lives in some list structure — a markdown table row
 // (`| ... |`) or a bullet/numbered list item (`* [...]`, `- [...]`, `1. [...]`)
 // — never in a plain prose paragraph. A "see also" link in the intro prose
@@ -18,10 +18,17 @@ const LINK_RE = /\[[^\]]*\]\(([^)]+)\)/g;
 const INDEX_ENTRY_LINE_RE = /^\s*(?:\||[-*+]\s|\d+\.\s)/;
 
 function indexEntryLinks(indexContent: string): string[] {
-  return indexContent
+  // Keep only index-entry lines (table rows / list items), then extract targets
+  // with the shared CommonMark-correct parser (parse.ts). Before consolidation
+  // this used a private pre-C1 regex that truncated `foo(v2).md` at the first
+  // paren, flagging a real parenthesized filename as unlisted — the same class
+  // of link-parsing bug the ADR-body path had already fixed and this copy had
+  // not. One parser now serves both.
+  const entryLines = indexContent
     .split(/\r?\n/)
     .filter((line) => INDEX_ENTRY_LINE_RE.test(line))
-    .flatMap((line) => [...line.matchAll(LINK_RE)].map((m) => m[1]!));
+    .join("\n");
+  return extractLinkTargets(entryLines).map((l) => l.target);
 }
 
 /** D7: log/index drift — only applies if an index file is present (PDR §2.3). */
