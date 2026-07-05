@@ -20,3 +20,4 @@ Architecture decisions for duckadrift itself, recorded in duckadrift's own vocab
 | [0014](0014-the-v0.1.1-post-audit.md) | The v0.1.1 post-audit — bucket two shipped unverified | Accepted | elevated |
 | [0015](0015-decision-section-plural-alias.md) | A decision section may be titled Decision or Decisions | Accepted | elevated |
 | [0016](0016-bare-mention-target-skip.md) | A bare @ link target is a mention, not a dangling reference | Accepted | elevated |
+| [0017](0017-clause-a-closure-and-corpus-correction.md) | Clause A closure, and the corpus correction it forced | Accepted | elevated |
