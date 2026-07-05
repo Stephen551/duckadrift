@@ -1,6 +1,6 @@
-import { existsSync } from "node:fs";
-import { relative, resolve } from "node:path";
+import { relative } from "node:path";
 import { extractLinkTargets } from "../adr/parse.js";
+import { escapesRepoRoot, existsWithinRepo } from "../adr/paths.js";
 import type { AdrLogContext } from "../adr/types.js";
 import { code } from "../report/write.js";
 import type { Finding } from "../types.js";
@@ -64,11 +64,25 @@ export function d7LogIndexDrift(ctx: AdrLogContext): Finding[] {
     // wrongly call it missing. Same two-step resolution as D3: ADR-dir-
     // relative first, repo-root-relative fallback.
     if (actualFiles.has(indexed)) continue;
-    if (existsSync(resolve(ctx.adrDir, indexed))) continue;
-    if (existsSync(resolve(ctx.repoRoot, indexed))) continue;
+    // Containment, not a raw existsSync (fix 5): an index entry that resolves
+    // outside the repo must never count as "exists," or a fork PR could read the
+    // runner's filesystem through this check's pass/fail. Both resolutions go
+    // through the shared existsWithinRepo, so present-outside and absent-outside
+    // produce the identical finding — the oracle leaks nothing.
+    if (existsWithinRepo(ctx.adrDir, indexed, ctx.repoRoot)) continue;
+    if (existsWithinRepo(ctx.repoRoot, indexed, ctx.repoRoot)) continue;
+    // Word it honestly. A target that escapes the repo root under both
+    // resolutions is an escape, not an in-directory miss — and the distinction
+    // is purely lexical (escapesRepoRoot touches no filesystem), so the claim is
+    // identical whether or not the outside file happens to exist.
+    const outsideRepo =
+      escapesRepoRoot(ctx.adrDir, indexed, ctx.repoRoot) &&
+      escapesRepoRoot(ctx.repoRoot, indexed, ctx.repoRoot);
     findings.push({
       check: "D7",
-      claim: `The ADR index lists ${code(indexed)}, which does not exist in the directory.`,
+      claim: outsideRepo
+        ? `The ADR index lists ${code(indexed)}, which resolves outside the repository.`
+        : `The ADR index lists ${code(indexed)}, which does not exist in the directory.`,
       evidence: [{ file: indexRelPath }],
       consequence: "An index that disagrees with the directory misleads anyone who trusts the index as the table of contents.",
     });

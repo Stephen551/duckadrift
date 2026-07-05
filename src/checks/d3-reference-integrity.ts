@@ -1,40 +1,10 @@
-import { existsSync, realpathSync } from "node:fs";
-import { dirname, isAbsolute, relative, resolve } from "node:path";
+import { dirname } from "node:path";
+import { existsWithinRepo } from "../adr/paths.js";
 import { formatAdrRef } from "../adr/refs.js";
 import { walkAllPaths } from "../repo/walk.js";
 import { code } from "../report/write.js";
 import type { AdrLogContext } from "../adr/types.js";
 import type { Finding } from "../types.js";
-
-/**
- * Exists AND is inside the repository (S1, ADR-0013). Before this, D3 called
- * existsSync on the resolved path with no containment, so a crafted link like
- * `../../../../etc/passwd` traversed above the repo root and, if the target
- * existed on the runner, was treated as a valid HEAD reference — D3 claims
- * links resolve "at HEAD," and a file outside the checkout is not at HEAD. A
- * target that resolves outside the repo root is treated as unresolved.
- */
-function existsWithinRepo(base: string, target: string, repoRoot: string): boolean {
-  const abs = resolve(base, target);
-  const rel = relative(repoRoot, abs);
-  if (rel.startsWith("..") || isAbsolute(rel)) return false; // escaped the repo root (lexical)
-  if (!existsSync(abs)) return false;
-  // The lexical check above only inspects the path text; existsSync follows
-  // symlinks. An in-repo symlink whose target is OUTSIDE the checkout has an
-  // all-in-repo lexical path (the `..` guard never trips) but resolves on disk
-  // to an out-of-repo real file — which is not "at HEAD" (S1 post-audit,
-  // ADR-0013). Canonicalize the resolved path AND the repo root, then re-check
-  // containment on the real paths. realpath runs only on the existsSync-true
-  // branch — i.e. only for links that actually resolve — so the added syscall
-  // is bounded to resolving links, not every link. A broken link or a symlink
-  // cycle makes realpath throw; treat that as unresolved, never a crash.
-  try {
-    const realRel = relative(realpathSync(repoRoot), realpathSync(abs));
-    return !realRel.startsWith("..") && !isAbsolute(realRel);
-  } catch {
-    return false;
-  }
-}
 
 const EXTERNAL_LINK_RE = /^[a-z][a-z0-9+.-]*:/i;
 // `[Name](@handle)` is a GitHub-attribution-mention idiom, not a file or code
