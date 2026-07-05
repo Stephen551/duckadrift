@@ -1,4 +1,5 @@
 import { dirname } from "node:path";
+import { decodeTarget } from "../adr/parse.js";
 import { existsWithinRepo } from "../adr/paths.js";
 import { formatAdrRef } from "../adr/refs.js";
 import { walkAllPaths } from "../repo/walk.js";
@@ -30,15 +31,6 @@ const USERNAME_MENTION_RE = /^@(?:[a-zA-Z0-9](?:-?[a-zA-Z0-9])*)?$/;
 // idioms share "exactly one `@`" but are otherwise structurally distinct.
 const EMAIL_RE = /^[^\s@/]+@[^\s@/]+\.[^\s@/]+$/;
 
-// Percent-decode a link target for on-disk resolution (C4). A malformed
-// escape can't be decoded — keep the raw target rather than throw.
-function decodeTarget(target: string): string {
-  try {
-    return decodeURIComponent(target);
-  } catch {
-    return target;
-  }
-}
 
 function dangleConsequence(target: string): string {
   return /\.md$/i.test(target)

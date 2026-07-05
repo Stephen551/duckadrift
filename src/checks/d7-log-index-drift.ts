@@ -1,5 +1,5 @@
 import { relative } from "node:path";
-import { extractLinkTargets } from "../adr/parse.js";
+import { decodeTarget, extractLinkTargets } from "../adr/parse.js";
 import { escapesRepoRoot, existsWithinRepo } from "../adr/paths.js";
 import type { AdrLogContext } from "../adr/types.js";
 import { code } from "../report/write.js";
@@ -39,7 +39,13 @@ export function d7LogIndexDrift(ctx: AdrLogContext): Finding[] {
 
   const indexedFiles = new Set<string>();
   for (const rawTarget of indexEntryLinks(ctx.indexContent)) {
-    const target = rawTarget.split("#")[0]!.trim().replace(/^\.?\//, "");
+    // Percent-decode with the same shared helper D3 uses (C1): an index entry
+    // `0001-a%20b.md` names the file `0001-a b.md` on disk, so both the forward
+    // existence check and the reverse "not listed" check must compare the
+    // decoded name against actualFiles / adr.fileName. Before this D7 skipped
+    // decoding and diverged from D3, flagging a real spaced-name file as both
+    // missing and unlisted.
+    const target = decodeTarget(rawTarget.split("#")[0]!.trim()).replace(/^\.?\//, "");
     if (/\.md$/i.test(target)) indexedFiles.add(target);
   }
 

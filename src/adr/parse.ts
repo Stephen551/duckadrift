@@ -86,6 +86,20 @@ export function normalizeLinkDestination(raw: string): string {
   return s;
 }
 
+// Percent-decode a link target for on-disk resolution (C4). "%20" is how a
+// space in a filename is written in a link; the file on disk has a real space.
+// A malformed escape (a stray "%") can't be decoded — keep the raw target
+// rather than throw. Shared by D3 and D7 so an index entry and an ADR-body link
+// to the same percent-encoded file resolve identically (C1): D7 used to skip
+// this and diverge, flagging a real `0001-a b.md` as both missing and unlisted.
+export function decodeTarget(target: string): string {
+  try {
+    return decodeURIComponent(target);
+  } catch {
+    return target;
+  }
+}
+
 // The one link-extraction helper. Runs LINK_RE per line and normalizes each
 // captured destination. D7 imports this for index content; ADR-body extraction
 // (`extractLinks`) shares the same normalizer so D3 and D7 can never re-diverge.
