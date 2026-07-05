@@ -2,6 +2,25 @@
 
 All notable changes to duckadrift are documented here.
 
+## [0.1.4] — 2026-07-04
+
+Two false positives found in the pre-publish audit, both fixed. No configuration changes are needed.
+
+### Fewer false alarms
+
+- A decision section titled `## Decisions` (plural) is no longer reported as missing. Both `## Decision` and `## Decisions` are recognized as the same section.
+- An author credit written as `[Name](@)` with the handle left blank is no longer reported as a broken link. A link target starting with `@` is a GitHub author mention, not a file reference, so it is skipped — the same as a filled-in `@handle`. Links to real files are still checked.
+
+## [0.1.3] — 2026-07-04
+
+Marketplace listing readiness. No configuration changes are needed.
+
+### Changed
+
+- The GitHub Marketplace listing now leads with what the tool does — enforcing your Architecture Decision Records against the codebase — and carries a title you can find by searching "ADR".
+- You can now pin the action to a floating major version: `uses: Stephen551/duckadrift@v0` tracks the latest 0.x release, so you get fixes without editing your workflow. Pin an exact tag for a reproducible build.
+- The README now spells out the calibration doctrine behind the tool: semantic checks will only ever interrupt you above a measured confidence level, never a hand-typed threshold, which is why they do not ship until they can be calibrated.
+
 ## [0.1.2] — 2026-07-04
 
 This release completes two of the fork-safety hardening fixes from v0.1.1 that
