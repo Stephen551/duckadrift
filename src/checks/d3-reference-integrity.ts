@@ -138,17 +138,32 @@ export function d3ReferenceIntegrity(ctx: AdrLogContext): Finding[] {
       // OS-absolute path, which no legitimate ADR reference is ever written
       // as. Resolved on its own, before the ADR-dir/repo-root fallback pair
       // below: a leading "/" unambiguously signals "not relative to me."
-      const resolved = resolveTarget.startsWith("/")
-        ? existsWithinRepo(ctx.repoRoot, resolveTarget.replace(/^\/+/, ""), ctx.repoRoot)
-        : // Primary: relative to the ADR's own directory (the markdown-
-          // correct reading of a relative link). Fallback: relative to repo
-          // root — a real, common ADR convention (cite code paths the way
-          // you'd type them from the repo root), confirmed running against
-          // a real repo during Gate G1 where every code citation used this
-          // style. Both are containment-checked (S1): a link that resolves
-          // above the repo root is not a HEAD reference.
-          existsWithinRepo(baseDir, resolveTarget, ctx.repoRoot) ||
-          existsWithinRepo(ctx.repoRoot, resolveTarget, ctx.repoRoot);
+      const resolveIn = (t: string): boolean =>
+        t.startsWith("/")
+          ? existsWithinRepo(ctx.repoRoot, t.replace(/^\/+/, ""), ctx.repoRoot)
+          : // Primary: relative to the ADR's own directory (the markdown-
+            // correct reading of a relative link). Fallback: relative to repo
+            // root — a real, common ADR convention (cite code paths the way
+            // you'd type them from the repo root), confirmed running against
+            // a real repo during Gate G1 where every code citation used this
+            // style. Both are containment-checked (S1): a link that resolves
+            // above the repo root is not a HEAD reference.
+            existsWithinRepo(baseDir, t, ctx.repoRoot) || existsWithinRepo(ctx.repoRoot, t, ctx.repoRoot);
+
+      let resolved = resolveIn(resolveTarget);
+
+      // G2: the title-strip (findings 1-2) can over-truncate a real path — a
+      // directory literally named `my folder (v2)` normalizes to `my folder`
+      // and would dangle. Only on the dangling branch, and only when the raw
+      // capture differs (a title was actually stripped), retry the raw target
+      // through the same containment. This can't turn a genuine dangle into a
+      // false pass: `nonexistent.md "a title"` differs too, but no file by that
+      // literal name exists, so it stays dangling. The raw form resolves only
+      // when the "title" was part of the filename all along.
+      if (!resolved) {
+        const rawResolveTarget = decodeTarget(link.rawTarget.split("#")[0]!.trim());
+        if (rawResolveTarget !== resolveTarget) resolved = resolveIn(rawResolveTarget);
+      }
 
       if (resolved) continue;
 

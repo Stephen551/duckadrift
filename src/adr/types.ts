@@ -38,7 +38,15 @@ export interface AdrSection {
 
 export interface AdrLink {
   text: string;
+  /** The CommonMark-normalized destination (angle brackets/title/fragment removed) — what checks resolve. */
   target: string;
+  /**
+   * The raw captured destination before normalization. D3 falls back to this on
+   * the dangling branch to disambiguate a stripped title from part of a real
+   * path: `[d](my folder (v2))` normalizes to `my folder`, but if the raw
+   * `my folder (v2)` resolves on disk, the parens were a filename, not a title.
+   */
+  rawTarget: string;
   line: number;
 }
 

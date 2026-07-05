@@ -210,8 +210,11 @@ function extractLinks(body: string): AdrLink[] {
     for (const match of line.matchAll(LINK_RE)) {
       // Normalize the destination so `parsed.links[].target` is the resolvable
       // path — D3 reads this and gets angle-bracket/title/fragment handling for
-      // free, from the same normalizer D7 uses.
-      links.push({ text: match[1] ?? "", target: normalizeLinkDestination(match[2] ?? ""), line: idx + 1 });
+      // free, from the same normalizer D7 uses. rawTarget keeps the pre-
+      // normalization capture so D3 can retry it on the dangling branch (G2),
+      // distinguishing a stripped title from parens that are part of a filename.
+      const raw = match[2] ?? "";
+      links.push({ text: match[1] ?? "", target: normalizeLinkDestination(raw), rawTarget: raw, line: idx + 1 });
     }
   });
   return links;
