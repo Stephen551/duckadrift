@@ -24,17 +24,22 @@ function writeRepo(files: Record<string, string>): string {
 }
 const adr = (body: string) =>
   `---\nstatus: accepted\n---\n\n# ADR-0001\n\n## Context\n${body}\n\n## Decision\ny\n\n## Consequences\nz\n`;
-const d3 = (dir: string) => runSingleCheck(dir, "D3").filter((f) => f.check === "D3").map((f) => f.claim);
+const d3full = (dir: string) => runSingleCheck(dir, "D3").filter((f) => f.check === "D3");
+const d3 = (dir: string) => d3full(dir).map((f) => f.claim);
 
-describe("G2: D3 does not over-truncate a real parenthesized path", () => {
+describe("G2/P1/GM1: D3 resolution ladder for the `X (suffix)` ambiguity class", () => {
   afterAll(() => rmSync(TMP, { recursive: true, force: true }));
 
-  it("resolves `my folder (v2)` when the directory exists (regression, red before fix)", () => {
+  it("surfaces `my folder (v2)` as an advisory ambiguity, not a silent pass (red before fix)", () => {
     const dir = writeRepo({
       "docs/adr/0001-a.md": adr("See [d](my folder (v2))"),
       "docs/adr/my folder (v2)/keep.txt": "x\n",
     });
-    expect(d3(dir)).toEqual([]);
+    const findings = d3full(dir);
+    expect(findings.length).toBe(1);
+    expect(findings[0]!.advisory).toBe(true);
+    expect(findings[0]!.claim).toContain("does not resolve at HEAD — but a file named");
+    expect(findings[0]!.claim).toContain("my folder (v2)");
   });
 
   it("control: a genuinely missing path still fires", () => {
@@ -53,5 +58,49 @@ describe("G2: D3 does not over-truncate a real parenthesized path", () => {
       "docs/adr/0001-x.md": adr("x"),
     });
     expect(d3(dir)).toEqual([]);
+  });
+
+  // P1 (Codex): a `missing.md (title)` link with a decoy file `missing.md (title)`
+  // and NO `missing.md` used to resolve SILENTLY on the raw form — a genuinely
+  // broken link sent to /dev/null (Pact violation). Now advisory: surfaced, not
+  // failed, not hidden.
+  it("P1: a broken link with a decoy raw-form file is advisory, not a silent pass (red before fix)", () => {
+    const dir = writeRepo({
+      "docs/adr/0001-x.md": adr("See [broken](missing.md (title))"),
+      "docs/adr/missing.md (title)": "x\n",
+    });
+    const findings = d3full(dir);
+    expect(findings.length).toBe(1);
+    expect(findings[0]!.advisory).toBe(true);
+    expect(findings[0]!.claim).toContain("missing.md");
+    expect(findings[0]!.claim).toContain("missing.md (title)");
+  });
+
+  it("P1 control: the same link with NO decoy file is a failing dangling finding", () => {
+    const dir = writeRepo({ "docs/adr/0001-x.md": adr("See [broken](missing.md (title))") });
+    const findings = d3full(dir);
+    expect(findings.length).toBe(1);
+    expect(findings[0]!.advisory).toBeUndefined();
+    expect(findings[0]!.claim).toContain("missing.md");
+  });
+});
+
+// GM1 (Gemini, regression): a site-relative link ending in `(v2)` whose real file
+// lives elsewhere (`docs/other/my folder (v2).md`, not in the ADR dir) HARD-FAILED
+// on this branch — findByBasename got only the normalized `my folder` and missed
+// the raw basename. It was advisory on v0.1.4. Step 4 now tries the raw basename
+// too, restoring the site-relative advisory.
+describe("GM1: D3 site-relative match considers the raw basename too", () => {
+  afterAll(() => rmSync(TMP, { recursive: true, force: true }));
+  it("finds `my folder (v2).md` elsewhere as an advisory site-relative match (red before fix)", () => {
+    const dir = writeRepo({
+      "docs/adr/0001-a.md": adr("See [d](my folder (v2))"),
+      "docs/other/my folder (v2).md": "# elsewhere\n",
+    });
+    const findings = d3full(dir);
+    expect(findings.length).toBe(1);
+    expect(findings[0]!.advisory).toBe(true);
+    expect(findings[0]!.claim).toContain("possibly site-relative — found at");
+    expect(findings[0]!.claim).toContain("docs/other/my folder (v2).md");
   });
 });

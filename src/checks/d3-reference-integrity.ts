@@ -142,28 +142,48 @@ export function d3ReferenceIntegrity(ctx: AdrLogContext): Finding[] {
             // above the repo root is not a HEAD reference.
             existsWithinRepo(baseDir, t, ctx.repoRoot) || existsWithinRepo(ctx.repoRoot, t, ctx.repoRoot);
 
-      let resolved = resolveIn(resolveTarget);
+      // The title-strip (findings 1-2) makes a bare `X (suffix)` ambiguous: the
+      // suffix may be a Markdown title over a broken link, or part of a real
+      // filename. Resolve as a ladder that considers the normalized AND the raw
+      // form on BOTH the direct and the site-relative paths, and surfaces the
+      // ambiguous case rather than silently resolving it (the Pact: no finding
+      // is sent to /dev/null). `ref` is the ADR label used in every claim.
+      const ref = adr.number !== null ? formatAdrRef(adr.number) : adr.fileName;
 
-      // G2: the title-strip (findings 1-2) can over-truncate a real path — a
-      // directory literally named `my folder (v2)` normalizes to `my folder`
-      // and would dangle. Only on the dangling branch, and only when the raw
-      // capture differs (a title was actually stripped), retry the raw target
-      // through the same containment. This can't turn a genuine dangle into a
-      // false pass: `nonexistent.md "a title"` differs too, but no file by that
-      // literal name exists, so it stays dangling. The raw form resolves only
-      // when the "title" was part of the filename all along.
-      if (!resolved) {
-        const rawResolveTarget = decodeTarget(link.rawTarget.split("#")[0]!.trim());
-        if (rawResolveTarget !== resolveTarget) resolved = resolveIn(rawResolveTarget);
+      // 1. Normalized target resolves directly — unambiguously clean.
+      if (resolveIn(resolveTarget)) continue;
+
+      // 2. The raw capture, decoded and fragment-stripped, differs from the
+      //    normalized target only when a trailing title was actually stripped.
+      const rawResolveTarget = decodeTarget(link.rawTarget.split("#")[0]!.trim());
+      const rawDiffers = rawResolveTarget !== resolveTarget;
+
+      // 3. The raw form resolves directly but the normalized one did not — the
+      //    trailing group is genuinely ambiguous (a real path like
+      //    `my folder (v2)`, or a title over a link that has a decoy file).
+      //    Advisory: neither a silent pass (G2, P1) nor a hard CI fail.
+      if (rawDiffers && resolveIn(rawResolveTarget)) {
+        findings.push({
+          check: "D3",
+          claim: `${ref} links to ${code(target)}, which does not resolve at HEAD — but a file named ${code(rawResolveTarget)} exists, so the link resolves if the trailing group is part of the filename rather than a Markdown title.`,
+          evidence: [{ adr: adr.fileName, line: link.line }],
+          consequence: "A bare destination ending in a parenthesized or quoted group is ambiguous — confirm whether the group is part of the path (angle-bracket it if so) or a title over a broken link.",
+          advisory: true,
+        });
+        continue;
       }
 
-      if (resolved) continue;
-
-      const foundPath = findByBasename(resolveTarget);
+      // 4. Site-relative basename match — try the normalized target, then the
+      //    raw one (GM1: `my folder (v2).md` living elsewhere is findable only by
+      //    the raw basename; the normalized `my folder` matches nothing).
+      const foundPath =
+        findByBasename(resolveTarget) ?? (rawDiffers ? findByBasename(rawResolveTarget) : undefined);
+      // 5. A file with that basename exists elsewhere in the tree — advisory
+      //    site-relative, unchanged.
       if (foundPath !== undefined) {
         findings.push({
           check: "D3",
-          claim: `${adr.number !== null ? formatAdrRef(adr.number) : adr.fileName} links to ${code(target)}, which does not resolve at HEAD (possibly site-relative — found at ${code(foundPath)}).`,
+          claim: `${ref} links to ${code(target)}, which does not resolve at HEAD (possibly site-relative — found at ${code(foundPath)}).`,
           evidence: [
             { adr: adr.fileName, line: link.line },
             { file: foundPath },
@@ -174,9 +194,10 @@ export function d3ReferenceIntegrity(ctx: AdrLogContext): Finding[] {
         continue;
       }
 
+      // 6. Nothing resolves under any form — a genuine dangling reference.
       findings.push({
         check: "D3",
-        claim: `${adr.number !== null ? formatAdrRef(adr.number) : adr.fileName} links to ${code(target)}, which does not resolve at HEAD.`,
+        claim: `${ref} links to ${code(target)}, which does not resolve at HEAD.`,
         evidence: [{ adr: adr.fileName, line: link.line }],
         consequence: dangleConsequence(target),
       });
