@@ -1,17 +1,6 @@
 [
   {
     "check": "D3",
-    "claim": "ADR-0001 links to `@`, which does not resolve at HEAD.",
-    "evidence": [
-      {
-        "adr": "0001-monorepo-decision.md",
-        "line": 11
-      }
-    ],
-    "consequence": "A dangling ADR-to-code link means the decision's cited implementation cannot be verified to exist."
-  },
-  {
-    "check": "D3",
     "claim": "ADR-0001 links to `@myscope/missing-plugin`, which does not resolve at HEAD.",
     "evidence": [
       {

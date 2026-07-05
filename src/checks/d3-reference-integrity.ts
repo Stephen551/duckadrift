@@ -45,10 +45,13 @@ const EXTERNAL_LINK_RE = /^[a-z][a-z0-9+.-]*:/i;
 // like `@backstage/core-plugin-api` — a real shape, since Backstage-style
 // monorepos are in this tool's own exam set — turning a would-be dangling
 // reference into a false negative instead of the false positive this was
-// built to fix. A bare `@` with nothing after it (found in the same corpus,
-// an evidently unfilled attribution slot) is correctly NOT a match here and
-// falls through to normal existence checking.
-const USERNAME_MENTION_RE = /^@[a-zA-Z0-9](?:-?[a-zA-Z0-9])*$/;
+// built to fix. The handle is optional: a bare `@` with nothing after it
+// (found in the same corpus, an unfilled attribution slot — `[Chris Sams](@)`)
+// is the same mention idiom with an empty handle, not a repo path, and was
+// still being existence-checked and false-flagged before v0.1.4's clause-A
+// pass. A scoped-package target still carries a `/`, so it is still not a match
+// here and stays existence-checked — the narrow skip, by design.
+const USERNAME_MENTION_RE = /^@(?:[a-zA-Z0-9](?:-?[a-zA-Z0-9])*)?$/;
 // `[Name](user@domain.tld)` is a bare-email attribution idiom (found running
 // R5's opendatahub: a reviewer table citing people this way instead of a
 // `mailto:` link), not a file or code reference. Excludes `/` throughout so

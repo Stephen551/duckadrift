@@ -35,7 +35,7 @@
   },
   {
     "check": "D1",
-    "claim": "ADR-0005 is missing the required `## Decision` section for its dialect.",
+    "claim": "ADR-0005 is missing the required `## Decision` or `## Decisions` section for its dialect.",
     "evidence": [
       {
         "adr": "0005-missing-decision-section.md"
