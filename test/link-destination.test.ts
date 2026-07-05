@@ -31,4 +31,19 @@ describe("normalizeLinkDestination: CommonMark destination -> resolvable path", 
     // Balanced parens WITH preceding whitespace are a title, not part of the path.
     expect(normalizeLinkDestination("worker.ts (the entrypoint)")).toBe("worker.ts");
   });
+
+  // Regression: the title-strip must stay LINEAR. The first cut used
+  // `/\s+(...)\s*$/`, which is O(n^2) on a long internal whitespace run followed
+  // by an unterminated title token — a fork-PR resource-exhaustion vector, since
+  // untrusted ADR body/index content reaches this (S6/ADR-0013 class). The
+  // linear implementation clears a 200k-char adversarial input in well under a
+  // bound the quadratic version (minutes) could never meet.
+  it("handles an adversarial whitespace+unterminated-title input in bounded time", () => {
+    const evil = `path${" ".repeat(200_000)}"unterminated`;
+    const start = performance.now();
+    const out = normalizeLinkDestination(evil);
+    const elapsedMs = performance.now() - start;
+    expect(out).toBe(evil); // no trailing title -> unchanged
+    expect(elapsedMs).toBeLessThan(250);
+  });
 });

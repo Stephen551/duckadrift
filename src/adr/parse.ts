@@ -14,6 +14,35 @@ const HEADING_RE = /^(#{1,6})\s+(.*)$/;
 const LINK_RE = /\[([^\]]*)\]\(((?:[^()]|\([^()]*\))*)\)/g;
 const HTML_COMMENT_RE = /<!--[\s\S]*?-->/g;
 
+const WHITESPACE_RE = /\s/;
+
+// Strip a recognizable trailing CommonMark title — whitespace then `"..."`,
+// `'...'`, or `(...)` at the end — in LINEAR time. The obvious regex for this,
+// `/\s+("[^"]*"|'[^']*'|\([^)]*\))\s*$/`, is O(n^2): on a long internal
+// whitespace run followed by an unterminated title token, `\s+` re-consumes and
+// backtracks the whole run from every start position — the catastrophic-
+// backtracking class S6/ADR-0013 hardened, and a fork-PR resource-exhaustion
+// vector since untrusted ADR content reaches this. Instead: find the last
+// non-space char; if it closes a title (`"`, `'`, `)`), locate the matching
+// opener with lastIndexOf and require a space before it. One trimEnd + one
+// lastIndexOf, no anchored scan over the full string.
+function stripTrailingTitle(s: string): string {
+  let end = s.length;
+  while (end > 0 && WHITESPACE_RE.test(s[end - 1]!)) end--;
+  if (end === 0) return s;
+  const last = s[end - 1]!;
+  let open: number;
+  if (last === '"' || last === "'") open = s.lastIndexOf(last, end - 2);
+  else if (last === ")") open = s.lastIndexOf("(", end - 2);
+  else return s; // the destination does not end with a title token
+  // Need an opener (open >= 0) with room for the required preceding whitespace,
+  // and that char before the opener must actually be whitespace.
+  if (open < 1 || !WHITESPACE_RE.test(s[open - 1]!)) return s;
+  let cut = open;
+  while (cut > 0 && WHITESPACE_RE.test(s[cut - 1]!)) cut--;
+  return s.slice(0, cut);
+}
+
 // The single CommonMark-correct destination normalizer. LINK_RE captures
 // everything between the outer parens — a destination plus an optional title —
 // so the raw capture is not yet a resolvable path. Every link consumer (D3 via
@@ -40,16 +69,15 @@ export function normalizeLinkDestination(raw: string): string {
     s = end === -1 ? s.slice(1) : s.slice(1, end);
   } else {
     // Bare destination, optionally followed by a title. Strip only a
-    // RECOGNIZABLE trailing title — whitespace then `"..."`, `'...'`, or
-    // `(...)`, anchored at the end — not everything after the first space.
-    // CommonMark requires a space-bearing destination to be angle-bracketed,
-    // but real-world markdown (and MkDocs) accepts a bare path with spaces —
-    // e.g. an image `![](common-config-images/EdgeX 3.x flowchart.png)`, three
-    // of which are in edgex-docs' ADR-0026. Truncating at the first space broke
-    // those real references (a no-regression-differential catch); a versioned
-    // filename like `client(v2).ts` has no whitespace-preceded trailing group
-    // and is left whole.
-    s = s.replace(/\s+("[^"]*"|'[^']*'|\([^)]*\))\s*$/, "");
+    // RECOGNIZABLE trailing title (linear, see stripTrailingTitle) — not
+    // everything after the first space. CommonMark requires a space-bearing
+    // destination to be angle-bracketed, but real-world markdown (and MkDocs)
+    // accepts a bare path with spaces — e.g. an image
+    // `![](common-config-images/EdgeX 3.x flowchart.png)`, three of which are in
+    // edgex-docs' ADR-0026. Truncating at the first space broke those real
+    // references (a no-regression-differential catch); a versioned filename like
+    // `client(v2).ts` has no whitespace-preceded trailing group and is kept.
+    s = stripTrailingTitle(s);
   }
   // A fragment identifier is not part of the on-disk path (checks already
   // ignored it downstream; stripping here keeps the normalized target honest).
