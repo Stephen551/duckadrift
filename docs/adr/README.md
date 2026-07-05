@@ -18,3 +18,5 @@ Architecture decisions for duckadrift itself, recorded in duckadrift's own vocab
 | [0012](0012-what-1.0-means.md) | What 1.0 means | Accepted | elevated |
 | [0013](0013-the-v0.1.0-adversarial-audit.md) | The v0.1.0 adversarial audit, and what it exposed | Accepted | elevated |
 | [0014](0014-the-v0.1.1-post-audit.md) | The v0.1.1 post-audit — bucket two shipped unverified | Accepted | elevated |
+| [0015](0015-decision-section-plural-alias.md) | A decision section may be titled Decision or Decisions | Accepted | elevated |
+| [0016](0016-bare-mention-target-skip.md) | A bare @ link target is a mention, not a dangling reference | Accepted | elevated |
