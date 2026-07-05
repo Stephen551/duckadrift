@@ -47,9 +47,14 @@ export const REQUIRED_SECTIONS: Record<Dialect, readonly string[]> = {
 
 // A required section is satisfied by any of its aliases — real ADR logs
 // rename "Context" to "Problem" or "Problem Statement" without meaning
-// anything different by it (ADR-0004).
+// anything different by it (ADR-0004). A decision section is titled `Decision`
+// or `Decisions` (plural) interchangeably — found running an external ADR log
+// in the pre-publish clause-A pass, where four ADRs used `## Decisions` and were
+// false-flagged as having no decision section (v0.1.4). MADR's decision heading
+// is `decision outcome`, kept as its own required section below, unaffected.
 export const SECTION_ALIASES: Record<string, readonly string[]> = {
   context: ["context", "problem", "problem statement"],
+  decision: ["decision", "decisions"],
 };
 
 export function sectionSatisfied(required: string, presentHeadings: ReadonlySet<string>): boolean {
