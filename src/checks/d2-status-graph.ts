@@ -155,38 +155,64 @@ function findMissingSupersededByTargets(adrs: ParsedAdr[], byNumber: Map<number,
   return findings;
 }
 
+// A readable identity for a graph node. Root-level ADRs read exactly as before
+// (`ADR-0001`); a subdirectory ADR carries its directory so a genuine
+// cross-directory case (only possible under `numbering: global`) still names the
+// right file. The directory is fenced through code() — it is attacker-authorable
+// (S3, ADR-0016 lineage).
+function adrGraphLabel(adr: ParsedAdr): string {
+  const dir = dirOf(adr.fileName);
+  return dir === "" ? formatAdrRef(adr.number!) : `${formatAdrRef(adr.number!)} in ${code(`${dir}/`)}`;
+}
+
+// A pair key over directory-scoped identity (fileName), not bare number, so two
+// independent supersession relationships that happen to reuse the same numbers
+// in different directories are never collapsed into one (fix 4, the class Codex
+// hit on the cycle path). fileName is unique across the whole log.
+function pairKeyByFile(a: ParsedAdr, b: ParsedAdr): string {
+  // Collision-safe over fileNames that may contain spaces or other separators
+  // (edgex-docs has ADR filenames with spaces). JSON of the sorted pair is a
+  // canonical, unambiguous key — no delimiter a real path could forge.
+  return JSON.stringify([a.fileName, b.fileName].sort());
+}
+
 function findSupersessionCycles(
   adrs: ParsedAdr[],
   resolve: (from: ParsedAdr, num: number) => ParsedAdr | null
 ): Finding[] {
   const findings: Finding[] = [];
-  const edges = new Map<number, number>();
-  const nodeByNumber = new Map<number, ParsedAdr>();
+  // Key the graph by directory-scoped identity (fileName), not bare number. The
+  // targets are resolved dir-scoped (ADR-0008), but storing edges by bare number
+  // collapsed identically-numbered ADRs in different directories into one node,
+  // fabricating a cycle out of two unrelated one-way per-directory chains (fix 4,
+  // the per-directory-cycle-conflation adversarial fixture).
+  const edges = new Map<string, string>();
+  const nodeByFile = new Map<string, ParsedAdr>();
   for (const adr of adrs) {
     if (adr.number === null) continue;
     const target = parseAdrRef(adr.frontmatter["superseded-by"]);
     if (target === null) continue;
     const resolved = resolve(adr, target);
     if (resolved === null || resolved.number === null) continue;
-    edges.set(adr.number, resolved.number);
-    nodeByNumber.set(adr.number, adr);
-    nodeByNumber.set(resolved.number, resolved);
+    edges.set(adr.fileName, resolved.fileName);
+    nodeByFile.set(adr.fileName, adr);
+    nodeByFile.set(resolved.fileName, resolved);
   }
 
-  const reported = new Set<number>();
+  const reported = new Set<string>();
   for (const start of edges.keys()) {
     if (reported.has(start)) continue;
-    const path: number[] = [];
-    let current: number | undefined = start;
+    const path: string[] = [];
+    let current: string | undefined = start;
     while (current !== undefined) {
       const loopIndex = path.indexOf(current);
       if (loopIndex !== -1) {
         const cycle = path.slice(loopIndex);
-        for (const n of cycle) reported.add(n);
+        for (const f of cycle) reported.add(f);
         findings.push({
           check: "D2",
-          claim: `Supersession cycle detected: ${cycle.map((n) => formatAdrRef(n)).join(" -> ")} -> ${formatAdrRef(cycle[0]!)}.`,
-          evidence: cycle.map((n) => ({ adr: nodeByNumber.get(n)!.fileName })),
+          claim: `Supersession cycle detected: ${cycle.map((f) => adrGraphLabel(nodeByFile.get(f)!)).join(" -> ")} -> ${adrGraphLabel(nodeByFile.get(cycle[0]!)!)}.`,
+          evidence: cycle.map((f) => ({ adr: nodeByFile.get(f)!.fileName })),
           consequence:
             "A cycle in the status graph means no ADR in the loop is the final, currently-governing decision.",
         });
@@ -199,15 +225,16 @@ function findSupersessionCycles(
   return findings;
 }
 
-function pairKey(a: number, b: number): string {
-  return a < b ? `${a}:${b}` : `${b}:${a}`;
-}
-
 function findMutualSupersession(
   adrs: ParsedAdr[],
   resolve: (from: ParsedAdr, num: number) => ParsedAdr | null
 ): { mutual: Finding[]; mutualPairs: Set<string> } {
   const findings: Finding[] = [];
+  // Keyed by fileName pair, not bare number (fix 4, sibling of the cycle bug):
+  // two distinct within-directory mutual pairs that reuse the same numbers in
+  // different directories are separate findings, not one deduped away — and
+  // `mutualPairs` flows into findStaleSupersession, so a bare-number key there
+  // would let a team-b pair suppress a genuine team-a stale finding.
   const mutualPairs = new Set<string>();
   const reportedPairs = new Set<string>();
 
@@ -217,11 +244,11 @@ function findMutualSupersession(
       const target = resolve(adr, targetNum);
       if (!target || target.number === null || target.frontmatter.status !== "accepted") continue;
       const back = parseAdrRefList(target.frontmatter.supersedes).some(
-        (n) => resolve(target, n)?.number === adr.number
+        (n) => resolve(target, n)?.fileName === adr.fileName
       );
       if (!back) continue;
 
-      const key = pairKey(adr.number, target.number);
+      const key = pairKeyByFile(adr, target);
       mutualPairs.add(key);
       if (reportedPairs.has(key)) continue;
       reportedPairs.add(key);
@@ -229,7 +256,7 @@ function findMutualSupersession(
       const [lo, hi] = adr.number < target.number ? [adr, target] : [target, adr];
       findings.push({
         check: "D2",
-        claim: `${formatAdrRef(lo.number!)} and ${formatAdrRef(hi.number!)} are both Accepted and each claims to supersede the other.`,
+        claim: `${adrGraphLabel(lo)} and ${adrGraphLabel(hi)} are both Accepted and each claims to supersede the other.`,
         evidence: [{ adr: lo.fileName }, { adr: hi.fileName }],
         consequence: "Mutual supersession between two live decisions leaves no single decision in force.",
       });
@@ -249,12 +276,15 @@ function findStaleSupersession(
     if (adr.number === null || adr.frontmatter.status !== "accepted") continue;
     for (const targetNum of parseAdrRefList(adr.frontmatter.supersedes)) {
       if (targetNum <= adr.number) continue;
-      if (mutualPairs.has(pairKey(adr.number, targetNum))) continue;
       const target = resolve(adr, targetNum);
       if (!target || target.frontmatter.status !== "accepted") continue;
+      // Skip pairs already reported as mutual, matched by fileName identity so a
+      // same-numbered mutual pair in another directory can't suppress this one
+      // (fix 4). resolve() runs first now so the fileName key is available.
+      if (mutualPairs.has(pairKeyByFile(adr, target))) continue;
       findings.push({
         check: "D2",
-        claim: `${formatAdrRef(adr.number)} (Accepted) claims to supersede the later ${formatAdrRef(targetNum)}, which is still Accepted.`,
+        claim: `${adrGraphLabel(adr)} (Accepted) claims to supersede the later ${adrGraphLabel(target)}, which is still Accepted.`,
         evidence: [{ adr: adr.fileName }, { adr: target.fileName }],
         consequence:
           "An earlier decision cannot supersede a later one that was never updated — one status is stale.",
