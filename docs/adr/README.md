@@ -21,3 +21,4 @@ Architecture decisions for duckadrift itself, recorded in duckadrift's own vocab
 | [0015](0015-decision-section-plural-alias.md) | A decision section may be titled Decision or Decisions | Accepted | elevated |
 | [0016](0016-bare-mention-target-skip.md) | A bare @ link target is a mention, not a dangling reference | Accepted | elevated |
 | [0017](0017-clause-a-closure-and-corpus-correction.md) | Clause A closure, and the corpus correction it forced | Accepted | elevated |
+| [0018](0018-the-adversarial-consolidation-round.md) | The adversarial-consolidation round, and the ambiguity class it surfaced | Accepted | elevated |
