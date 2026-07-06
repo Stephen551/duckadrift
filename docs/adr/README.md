@@ -24,3 +24,4 @@ Architecture decisions for duckadrift itself, recorded in duckadrift's own vocab
 | [0018](0018-the-adversarial-consolidation-round.md) | The adversarial-consolidation round, and the ambiguity class it surfaced | Accepted | elevated |
 | [0019](0019-the-standing-pre-tag-adversarial-gate.md) | The standing pre-tag adversarial gate | Accepted | critical |
 | [0020](0020-the-resolution-module.md) | The resolution module — one parser, one resolver ladder | Accepted | elevated |
+| [0021](0021-the-full-surface-adversarial-pass.md) | The full-surface adversarial pass, and the class it closed | Accepted | elevated |
