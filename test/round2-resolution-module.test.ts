@@ -149,17 +149,21 @@ describe("Class 2 — index-entry matching (D7 through the resolver)", () => {
     expect(d7(dir)).toEqual([]);
   });
 
-  it("F5: D3 and D7 reach the same disposition on the same `%2F…` target (parity)", () => {
+  it("F5 (NEW-D): a %2F entry citing a repo-root path that doesn't exist is stale in D7, while D3 keeps a site-relative advisory", () => {
     const dir = writeRepo({
       "docs/adr/0001-a.md": adr("0001", "See [b](%2F0002-b.md)"),
       "docs/adr/0002-b.md": adr("0002", "body"),
       "docs/adr/README.md": "# Index\n\n- [a](0001-a.md)\n- [b](%2F0002-b.md)\n",
     });
-    // Before the module D3 gave a site-relative advisory while D7 silently
-    // resolved via a leading-slash strip — divergence. Now both run the one
-    // resolver: D7 counts 0002-b.md as listed (no "not listed" finding), and D3
-    // surfaces the same site-relative disposition. Parity = neither diverges.
-    expect(d7(dir).some((f) => f.claim.includes("0002-b.md") && /not listed/.test(f.claim))).toBe(false);
+    // `%2F0002-b.md` decodes to repo-root `/0002-b.md`, which does not exist (the
+    // file is docs/adr/0002-b.md). NEW-D drops D7's whole-repo same-basename
+    // fallback, so this entry is stale and 0002-b.md is correctly "not listed" —
+    // D7's listed-check is a hard gate, so the cited path itself must exist. D3's
+    // advisory tier keeps the site-relative leniency (it found the basename
+    // elsewhere), so D3 and D7 intentionally diverge on this reference: an
+    // advisory is not a gate. Both still run the one shared resolveReference
+    // ladder — only the basename step differs, by design.
+    expect(d7(dir).some((f) => f.claim.includes("0002-b.md") && /not listed/.test(f.claim))).toBe(true);
     expect(d3(dir).some((f) => f.claim.includes("0002-b.md"))).toBe(true);
   });
 });

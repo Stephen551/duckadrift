@@ -1,6 +1,6 @@
 import { dirname } from "node:path";
 import { decodeTarget } from "../adr/parse.js";
-import { EXTERNAL_SCHEME_RE, makeBasenameFinder, resolveReference } from "../adr/resolve.js";
+import { isExternalReference, makeBasenameFinder, resolveReference } from "../adr/resolve.js";
 import { formatAdrRef } from "../adr/refs.js";
 import { code } from "../report/write.js";
 import type { AdrLogContext } from "../adr/types.js";
@@ -80,7 +80,7 @@ export function d3ReferenceIntegrity(ctx: AdrLogContext): Finding[] {
       const target = link.target;
       if (
         target === "" ||
-        EXTERNAL_SCHEME_RE.test(target) ||
+        isExternalReference(target) || // RV-2: the full shared primitive (scheme + protocol-relative `//`), matching D7
         USERNAME_MENTION_RE.test(target) ||
         EMAIL_RE.test(target)
       )

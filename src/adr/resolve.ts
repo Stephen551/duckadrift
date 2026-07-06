@@ -49,7 +49,11 @@ export function makeBasenameFinder(repoRoot: string): (target: string) => string
 // with an external scheme is not an on-disk path and is never resolved or
 // existence-checked (D3 has always skipped these; D7 used to reconcile them
 // against the directory — the B-1 clause-A false positive).
-export const EXTERNAL_SCHEME_RE = /^[a-z][a-z0-9+.-]*:/i;
+// At least TWO characters before the colon (RV-1): a real URL scheme is
+// multi-character, while a one-letter "scheme" is a Windows drive letter —
+// `C:/Users/…/leaked.md` is a leaked local path, not an external URL, and must
+// be resolved and flagged, not skipped.
+export const EXTERNAL_SCHEME_RE = /^[a-z][a-z0-9+.-]+:/i;
 
 /**
  * True for a reference the checks skip rather than resolve on disk: an explicit

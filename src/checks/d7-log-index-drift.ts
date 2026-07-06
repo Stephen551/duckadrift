@@ -1,7 +1,7 @@
 import { relative, sep } from "node:path";
 import { decodeTarget, scanLinks } from "../adr/parse.js";
-import { escapesRepoRoot } from "../adr/paths.js";
-import { isExternalReference, makeBasenameFinder, resolveReference } from "../adr/resolve.js";
+import { escapesRepoRoot, resolveWithinRepo } from "../adr/paths.js";
+import { isExternalReference, resolveReference } from "../adr/resolve.js";
 import type { AdrLogContext, ParsedAdr } from "../adr/types.js";
 import { code } from "../report/write.js";
 import type { Finding } from "../types.js";
@@ -10,33 +10,32 @@ import type { Finding } from "../types.js";
 // (`| ... |`) or a bullet/numbered list item (`* [...]`, `- [...]`, `1. [...]`)
 // — never in a plain prose paragraph. A "see also" link in the intro prose
 // is neither (ADR-0004: a real project's index cites an unrelated doc in its
-// opening paragraph, which an unscoped scan misread as a stale entry).
-// Table-only was itself too narrow: found running R5's
-// cosmos-sdk/edgex-docs/opendatahub, whose real indexes are bullet lists,
-// not tables — scanning tables only found zero entries and flagged every
-// real ADR as "missing from the index," the opposite failure from the same
-// root cause (assuming one index shape is the only one that exists).
+// opening paragraph, which an unscoped scan misread as a stale entry). This is
+// now a POST-parse classifier on a link's start line, not a pre-parse line
+// filter: the index is parsed whole (NEW-A) so a valid multi-line CommonMark
+// link parses correctly, then a link is kept as an entry iff its start line
+// carries a list/table marker. (A pre-parse `.join` of only marker lines dropped
+// the continuation line of `* [id](\n  path)`, broke the link, and falsely
+// reported the ADR unlisted. Fully dropping the marker check would need the gfm
+// mdast extension to keep table-index support — a new dependency — so the check
+// stays, but off the parse path.)
 const INDEX_ENTRY_LINE_RE = /^\s*(?:\||[-*+]\s|\d+\.\s)/;
 
 /**
- * Internal index entries, via the shared scanner (target + rawTarget). An entry
- * is any link on an index-list line whose target is an on-disk path — external
- * references (a URL scheme, protocol-relative) are dropped here, exactly as D3
- * skips external links, so the last ad-hoc piece of D7 (a `/\.md$/` filter) no
- * longer decides membership. That filter was wrong two ways: it *passed* an
- * external `.md` URL (reconciled against the directory → B-1 false positive) and
- * *excluded* an extensionless site-relative entry like `0002-b` (so the ADR it
- * lists was falsely "not listed" → B-2). Whether an entry points at something
- * real is now the resolver's call, not the filename's shape. A pure-anchor link
- * (`#section`, empty target) is not an entry.
+ * Internal index entries, via the shared mdast scanner (target + rawTarget).
+ * External references (a URL scheme, protocol-relative) are dropped here exactly
+ * as D3 drops external links; a pure-anchor/empty target is not an entry.
+ * Whether an entry points at something real is the resolver's call downstream,
+ * not the filename's shape (the old `/\.md$/` filter was the B-1/B-2 bug).
  */
 function indexEntries(indexContent: string): { target: string; rawTarget: string }[] {
-  const entryLines = indexContent
-    .split(/\r?\n/)
-    .filter((line) => INDEX_ENTRY_LINE_RE.test(line))
-    .join("\n");
-  return scanLinks(entryLines)
+  const lines = indexContent.split(/\r?\n/);
+  return scanLinks(indexContent)
     .filter((l) => !l.malformed && l.target !== "" && !isExternalReference(l.target))
+    .filter((l) => {
+      const startLine = lines[l.line - 1];
+      return startLine !== undefined && INDEX_ENTRY_LINE_RE.test(startLine);
+    })
     .map((l) => ({ target: l.target, rawTarget: l.rawTarget }));
 }
 
@@ -61,7 +60,23 @@ export function d7LogIndexDrift(ctx: AdrLogContext): Finding[] {
   for (const adr of ctx.adrs) {
     adrByRepoPath.set(relative(ctx.repoRoot, adr.filePath).split(sep).join("/"), adr);
   }
-  const findByBasename = makeBasenameFinder(ctx.repoRoot);
+  // NEW-D: D7's "does this entry resolve?" is strict — the cited path itself must
+  // exist (relative to the ADR/index dir or the repo root), with `.md` inference
+  // for the extensionless site-relative case only (B-2: `0002-b` -> 0002-b.md).
+  // The whole-repo same-basename fallback D3 uses for its advisory is dropped
+  // here: an entry pointing at `old/site/path/0001-a.md` whose basename happens
+  // to match a real `0001-a.md` at a DIFFERENT path is a stale entry, not a
+  // resolution — the ADR it should list is then correctly reported "not listed."
+  const inferExtension = (target: string): string | undefined => {
+    const stripped = target.replace(/\/+$/, "");
+    const base = stripped.split("/").pop() ?? "";
+    if (base === "" || /\.[a-z0-9]+$/i.test(base)) return undefined; // already has an extension
+    const withMd = `${stripped}.md`;
+    return withMd.startsWith("/")
+      ? resolveWithinRepo(ctx.repoRoot, withMd.replace(/^\/+/, ""), ctx.repoRoot)
+      : resolveWithinRepo(ctx.adrDir, withMd, ctx.repoRoot) ??
+        resolveWithinRepo(ctx.repoRoot, withMd, ctx.repoRoot);
+  };
 
   const listed = new Set<string>(); // adr.fileName values an entry resolved to
   const reportedUnresolved = new Set<string>();
@@ -71,7 +86,7 @@ export function d7LogIndexDrift(ctx: AdrLogContext): Finding[] {
       target: entry.target,
       rawTarget: entry.rawTarget,
       repoRoot: ctx.repoRoot,
-      findByBasename,
+      findByBasename: inferExtension,
     });
     if (result.status !== "dangling" && result.resolvedPath !== undefined) {
       // Resolved — to an ADR (mark it listed) or to a non-ADR companion file
