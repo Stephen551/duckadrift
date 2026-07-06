@@ -22,7 +22,13 @@ const BOLD_STATUS_RE = /^\s*[-*]?\s*\*\*Status:?\*\*/im;
 export function detectDialect(sections: AdrSection[]): Dialect {
   const headings = sections.map((s) => s.heading.toLowerCase().trim());
 
-  if (headings.some((h) => MADR_MARKERS.some((marker) => h.includes(marker)))) {
+  // Require ≥2 distinct MADR markers, the same evidentiary bar Nygard uses below
+  // (B-11). A single `## Considered Options` heading in an otherwise Nygard or
+  // mixed-style ADR is not enough to claim the MADR template — the old
+  // any-one-marker `includes` mis-detected madr and emitted spurious
+  // "missing Context And Problem Statement / Decision Outcome" advisories.
+  const madrHits = MADR_MARKERS.filter((marker) => headings.some((h) => h.includes(marker))).length;
+  if (madrHits >= 2) {
     return "madr";
   }
 

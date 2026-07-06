@@ -2,7 +2,7 @@
 // Builds a duckadrift PR-context file (--pr-context) from the GitHub Actions
 // pull_request event payload. Not part of the CLI (src/) — the CLI knows
 // nothing about GitHub; this is the Action wrapper's own translation layer.
-import { execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
 
 const eventPath = process.env.GITHUB_EVENT_PATH;
@@ -31,7 +31,11 @@ if (!baseRef) {
   process.exit(1);
 }
 
-const changedFiles = execSync(`git diff --name-only "origin/${baseRef}...HEAD"`, {
+// execFileSync with an args array — no shell, so `baseRef` is passed to git as a
+// single literal argument and can never be interpreted as shell syntax (B-3: a
+// `$IFS`-style, git-ref-valid payload in a branch name executed on the runner
+// under the old shell-string execSync).
+const changedFiles = execFileSync("git", ["diff", "--name-only", `origin/${baseRef}...HEAD`], {
   encoding: "utf-8",
 })
   .split(/\r?\n/)
