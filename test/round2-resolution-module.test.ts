@@ -101,6 +101,43 @@ describe("Parser round — spec-compliant extraction (NEW-1/2/3, reference-style
   });
 });
 
+describe("Parser completeness — the reference-bearing node set (BUG-1/BUG-2)", () => {
+  afterAll(() => rmSync(TMP, { recursive: true, force: true }));
+
+  it("BUG-1: an image link to a missing file is a dangling finding (image was silently dropped)", () => {
+    // Regression: the mdast walk covered only link/linkReference, so an image
+    // link — a file reference D3 must check — produced no finding at all.
+    const dir = writeRepo({ "docs/adr/0001-a.md": adr("0001", "![diagram](missing.png)") });
+    const claims = d3(dir).map((f) => f.claim);
+    expect(claims.length).toBe(1);
+    expect(claims[0]).toContain("missing.png");
+  });
+
+  it("BUG-1 control: a present local image resolves; an external image URL skips like an external link", () => {
+    const dir = writeRepo({
+      "docs/adr/0001-a.md": adr("0001", "![here](diagram.png) and ![remote](https://cdn.example.com/x.png)"),
+      "docs/adr/diagram.png": "x\n",
+    });
+    expect(d3(dir)).toEqual([]);
+  });
+
+  it("BUG-1: an imageReference to a missing file resolves via its definition and fires dangling", () => {
+    const dir = writeRepo({ "docs/adr/0001-a.md": adr("0001", "![diagram][r]\n\n[r]: missing.png") });
+    const claims = d3(dir).map((f) => f.claim);
+    expect(claims.length).toBe(1);
+    expect(claims[0]).toContain("missing.png");
+  });
+
+  it("BUG-2: a reference-style def pointing at an escaped-# filename resolves — no dangling FP", () => {
+    // The constraint-A fragment helper only covered inline links, so a ref-style
+    // link whose DEFINITION points to `foo\#bar.md#sec` fell to naive strip-from-#
+    // → a dangling FP on `foo`. The helper now applies to whichever node carries
+    // the url (inline node OR definition).
+    const dir = writeRepo({ "docs/adr/0001-a.md": adr("0001", "See [t][r]\n\n[r]: ../../foo\\#bar.md#sec"), "foo#bar.md": "x\n" });
+    expect(d3(dir)).toEqual([]);
+  });
+});
+
 describe("Class 2 — index-entry matching (D7 through the resolver)", () => {
   afterAll(() => rmSync(TMP, { recursive: true, force: true }));
 

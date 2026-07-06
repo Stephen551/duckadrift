@@ -27,6 +27,8 @@ describe("§4 extraction contract — extractLinkTargets", () => {
     ['[t](path "title")', ["path"]], // title stripped
     ["[t](foo(v2).md)", ["foo(v2).md"]], // versioned filename kept
     ["[l](<https://example.com>)", ["https://example.com"]], // autolink-style; external, skipped by D3 downstream
+    ["![a](missing.png)", ["missing.png"]], // BUG-1: an image link is a file reference — extracted, not dropped
+    ["![a](../../foo\\#bar.md#sec)", ["../../foo#bar.md"]], // BUG-1 + constraint A: image inline dest, escaped-# literal, fragment stripped
   ];
   for (const [input, expected] of rows) {
     it(`${JSON.stringify(input)} -> ${JSON.stringify(expected)}`, () => {
@@ -36,6 +38,17 @@ describe("§4 extraction contract — extractLinkTargets", () => {
 
   it("REF: a reference-style link resolves via its definition (new capability)", () => {
     expect(one("[t][r]\n\n[r]: 0001-foo.md")).toEqual(["0001-foo.md"]);
+  });
+
+  it("BUG-1: an imageReference resolves via its definition — image is in the reference-bearing node set", () => {
+    expect(one("![a][r]\n\n[r]: diagram.png")).toEqual(["diagram.png"]);
+  });
+
+  it("BUG-2: a definition destination gets the escape-aware fragment strip, not naive cut-from-#", () => {
+    // The url source for constraint A is whichever node carries it — inline node
+    // OR definition. A ref-def pointing at `foo\#bar.md#sec` must yield the file
+    // `foo#bar.md`, never the dangling `foo` (naive strip-from-first-#).
+    expect(one("[t][r]\n\n[r]: ../../foo\\#bar.md#sec")).toEqual(["../../foo#bar.md"]);
   });
 
   it("an autolink yields its url, not a following parenthesized word (differential catch)", () => {

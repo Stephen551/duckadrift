@@ -1,6 +1,6 @@
 import { parse as parseYaml } from "yaml";
 import { fromMarkdown } from "mdast-util-from-markdown";
-import type { Link, LinkReference, RootContent } from "mdast";
+import type { Image, ImageReference, Link, LinkReference, RootContent } from "mdast";
 import { detectDialect } from "./dialect.js";
 import type { AdrFrontmatter, AdrLink, AdrSection, ParsedAdr } from "./types.js";
 
@@ -60,18 +60,37 @@ function stripUnescapedFragment(rawDest: string): string {
   return rawDest;
 }
 
-// The raw bytes of a BARE inline destination, sliced from source, or undefined
-// for an angle-bracketed dest (whose `url` the parser already resolves cleanly).
-// mdast exposes link and label-child positions but not the destination's own
-// span, so it is derived: past the label's `]` and `(`, then to the first
-// unescaped whitespace (a title separator) or the closing `)` at paren depth 0.
-// The link is already parser-validated, so this scan only ever runs on a
-// well-formed destination (no NEW-1/2/3 boundary hazards reach here).
-function bareInlineDest(text: string, node: Link): string | undefined {
-  const kids = node.children;
-  let p = kids.length ? kids[kids.length - 1]!.position!.end.offset! : node.position!.start.offset! + 1;
-  while (p < text.length && text[p] !== "(") p++;
-  p++; // past '('
+// Skip the `[label]` (or image `![alt]`) at the start of a node's source,
+// returning the offset just past the matching `]`. Bracket-matched (escape- and
+// nesting-aware) rather than relying on label-child positions — mdast gives
+// those for links but NOT for images (whose alt is a plain string), so one
+// bracket walk serves link and image uniformly and handles a bracketed label
+// (NEW-1). The node is parser-validated, so the brackets are balanced.
+function skipLabel(text: string, startOffset: number): number {
+  let i = startOffset;
+  if (text[i] === "!") i++; // image
+  i++; // past '['
+  let depth = 1;
+  while (i < text.length && depth > 0) {
+    if (text[i] === "\\") {
+      i += 2;
+      continue;
+    }
+    if (text[i] === "[") depth++;
+    else if (text[i] === "]") depth--;
+    i++;
+  }
+  return i; // just past the matching ']'
+}
+
+// The raw bytes of a BARE destination, sliced from source starting at `start`,
+// or undefined for an angle-bracketed dest (whose `url` the parser resolves
+// cleanly). Reads to the first unescaped whitespace (a title separator) or the
+// closing `)` at paren depth 0. Used for inline link/image destinations and for
+// reference definitions — the one span the parser doesn't expose that the
+// escape-aware fragment strip (constraint A) needs.
+function rawBareDest(text: string, start: number): string | undefined {
+  let p = start;
   while (p < text.length && WHITESPACE_RE.test(text[p]!)) p++;
   if (text[p] === "<") return undefined; // angle form — use node.url
   let depth = 0;
@@ -105,12 +124,38 @@ function bareInlineDest(text: string, node: Link): string | undefined {
   return dest;
 }
 
-// Fragment-strip a url whose escapes are already resolved (angle dest or a
-// reference definition) — the raw source isn't available, so strip at the first
-// `#`. An escaped `#` in these forms is vanishingly rare.
-function stripFragmentFromUrl(url: string): string {
+// The resolvable target + rawTarget for a url-bearing node, escape-aware
+// (constraint A) when the raw bare destination is available, else falling back
+// to the parser's already-resolved url. `rawStart` is the source offset where
+// the destination begins (past `](` for an inline link/image, past `]:` for a
+// definition); undefined means the caller has no source position (never happens
+// for a real node, but keeps the fallback total).
+function targetsFor(text: string, rawStart: number | undefined, url: string): { target: string; rawTarget: string } {
+  const raw = rawStart === undefined ? undefined : rawBareDest(text, rawStart);
+  if (raw !== undefined) {
+    return { rawTarget: resolveEscapes(raw), target: resolveEscapes(stripUnescapedFragment(raw)) };
+  }
   const h = url.indexOf("#");
-  return h === -1 ? url : url.slice(0, h);
+  return { rawTarget: url, target: h === -1 ? url : url.slice(0, h) };
+}
+
+// The destination start offset of an INLINE node (`[label](` or `![alt](`) —
+// past the label and the `(`. Undefined for an autolink `<url>` (a `link` node
+// with no `(dest)` form), which uses its url directly (a following `(...)` must
+// not be mis-scanned — the edgex `<…> (registration required)` catch).
+function inlineDestStart(text: string, startOffset: number): number | undefined {
+  if (text[startOffset] !== "[" && text[startOffset] !== "!") return undefined; // autolink
+  let i = skipLabel(text, startOffset);
+  if (text[i] !== "(") return undefined; // not a `[label](dest)` shape
+  return i + 1;
+}
+
+// The destination start offset of a reference DEFINITION (`[id]: dest`) — past
+// the label and the `:`.
+function definitionDestStart(text: string, startOffset: number): number {
+  let i = skipLabel(text, startOffset);
+  while (i < text.length && text[i] !== ":") i++;
+  return i + 1; // rawBareDest skips the leading whitespace
 }
 
 // The one link extractor — a spec-compliant CommonMark parse (mdast /
@@ -125,46 +170,36 @@ function stripFragmentFromUrl(url: string): string {
 // link extraction has exactly one implementation.
 export function scanLinks(text: string): ScannedLink[] {
   const tree = fromMarkdown(text);
-  const definitions = new Map<string, string>();
-  const linkNodes: Array<Link | LinkReference> = [];
+  // Every reference-bearing node type mdast produces, enumerated so no third
+  // kind is silently dropped: inline links AND images (an image link is a file
+  // reference D3 must check — BUG-1), and their reference-style forms resolved
+  // through definitions. The escape-aware fragment helper is applied to
+  // whichever node carries the url — the inline node or the definition (BUG-2).
+  const definitions = new Map<string, { target: string; rawTarget: string }>();
+  const refNodes: Array<Link | Image | LinkReference | ImageReference> = [];
   const walk = (node: RootContent | typeof tree): void => {
-    if (node.type === "definition" && !definitions.has(node.identifier)) definitions.set(node.identifier, node.url);
-    if (node.type === "link" || node.type === "linkReference") linkNodes.push(node);
+    if (node.type === "definition" && !definitions.has(node.identifier)) {
+      definitions.set(node.identifier, targetsFor(text, definitionDestStart(text, node.position!.start.offset!), node.url));
+    }
+    if (node.type === "link" || node.type === "image" || node.type === "linkReference" || node.type === "imageReference") {
+      refNodes.push(node);
+    }
     if ("children" in node) for (const child of node.children) walk(child as RootContent);
   };
   walk(tree);
 
   const out: ScannedLink[] = [];
-  for (const node of linkNodes) {
-    let target: string;
-    let rawTarget: string;
-    if (node.type === "link") {
-      // Both `[label](dest)` inline links and `<url>` autolinks are `link` nodes.
-      // Only an inline link (source starts with `[`) has a raw destination to
-      // slice for constraint A; an autolink's dest is its `url` (which D3 then
-      // skips as external). Guarding this avoids scanning past an autolink to a
-      // following `(...)` and extracting garbage (an edgex-docs autolink followed
-      // by `(registration required)` — a differential catch).
-      const isInline = node.position !== undefined && text[node.position.start.offset!] === "[";
-      const raw = isInline ? bareInlineDest(text, node) : undefined;
-      if (raw !== undefined) {
-        // Bare inline dest: resolve escapes ourselves so the fragment strip is
-        // escape-aware (constraint A). This equals the parser's url otherwise.
-        rawTarget = resolveEscapes(raw);
-        target = resolveEscapes(stripUnescapedFragment(raw));
-      } else {
-        // Angle dest: the parser's url is already unwrapped and escape-resolved.
-        rawTarget = node.url;
-        target = stripFragmentFromUrl(node.url);
-      }
+  for (const node of refNodes) {
+    let targets: { target: string; rawTarget: string };
+    if (node.type === "link" || node.type === "image") {
+      targets = targetsFor(text, inlineDestStart(text, node.position!.start.offset!), node.url);
     } else {
-      // Reference-style link: destination comes from the matching definition.
-      const url = definitions.get(node.identifier);
-      if (url === undefined) continue; // unresolved reference — not a link
-      rawTarget = url;
-      target = stripFragmentFromUrl(url);
+      // linkReference / imageReference — the destination is the definition's.
+      const def = definitions.get(node.identifier);
+      if (def === undefined) continue; // unresolved reference — not a link
+      targets = def;
     }
-    out.push({ label: "", target, rawTarget, line: node.position?.start.line ?? 1, malformed: false });
+    out.push({ label: "", target: targets.target, rawTarget: targets.rawTarget, line: node.position?.start.line ?? 1, malformed: false });
   }
   return out;
 }
