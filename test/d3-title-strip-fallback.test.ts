@@ -30,16 +30,24 @@ const d3 = (dir: string) => d3full(dir).map((f) => f.claim);
 describe("G2/P1/GM1: D3 resolution ladder for the `X (suffix)` ambiguity class", () => {
   afterAll(() => rmSync(TMP, { recursive: true, force: true }));
 
-  it("surfaces `my folder (v2)` as an advisory ambiguity, not a silent pass (red before fix)", () => {
+  it("a space-bearing bare dest `my folder (v2)` is not a valid link — dropped (constraint B deferred)", () => {
+    // Re-scoped for the CommonMark parser: `my folder (v2)` has spaces in a bare
+    // destination, which strict CommonMark rejects — there is no link, so no
+    // finding. The ambiguity-ladder advisory the scanner produced is retired;
+    // the LIMITS guidance is to angle-bracket a space-bearing path.
     const dir = writeRepo({
       "docs/adr/0001-a.md": adr("See [d](my folder (v2))"),
       "docs/adr/my folder (v2)/keep.txt": "x\n",
     });
-    const findings = d3full(dir);
-    expect(findings.length).toBe(1);
-    expect(findings[0]!.advisory).toBe(true);
-    expect(findings[0]!.claim).toContain("does not resolve at HEAD — but a file named");
-    expect(findings[0]!.claim).toContain("my folder (v2)");
+    expect(d3(dir)).toEqual([]);
+  });
+
+  it("an angle-bracketed space-bearing path resolves (the constraint-B remedy)", () => {
+    const dir = writeRepo({
+      "docs/adr/0001-a.md": adr("See [d](<my folder (v2)/keep.txt>)"),
+      "docs/adr/my folder (v2)/keep.txt": "x\n",
+    });
+    expect(d3(dir)).toEqual([]);
   });
 
   it("control: a genuinely missing path still fires", () => {
@@ -60,20 +68,20 @@ describe("G2/P1/GM1: D3 resolution ladder for the `X (suffix)` ambiguity class",
     expect(d3(dir)).toEqual([]);
   });
 
-  // P1 (Codex): a `missing.md (title)` link with a decoy file `missing.md (title)`
-  // and NO `missing.md` used to resolve SILENTLY on the raw form — a genuinely
-  // broken link sent to /dev/null (Pact violation). Now advisory: surfaced, not
-  // failed, not hidden.
-  it("P1: a broken link with a decoy raw-form file is advisory, not a silent pass (red before fix)", () => {
+  // P1 (Codex): `[broken](missing.md (title))` — the CommonMark parser correctly
+  // reads ` (title)` as a paren TITLE over the destination `missing.md`, so a
+  // decoy file literally named `missing.md (title)` is irrelevant (a scanner
+  // artifact) and the link to `missing.md` is a genuine dangling finding, not a
+  // silent pass. The Pact holds by construction: the title is parsed, not guessed.
+  it("P1: a paren-title over a missing path is a dangling finding, decoy file ignored", () => {
     const dir = writeRepo({
       "docs/adr/0001-x.md": adr("See [broken](missing.md (title))"),
       "docs/adr/missing.md (title)": "x\n",
     });
     const findings = d3full(dir);
     expect(findings.length).toBe(1);
-    expect(findings[0]!.advisory).toBe(true);
+    expect(findings[0]!.advisory).toBeUndefined();
     expect(findings[0]!.claim).toContain("missing.md");
-    expect(findings[0]!.claim).toContain("missing.md (title)");
   });
 
   it("P1 control: the same link with NO decoy file is a failing dangling finding", () => {
@@ -85,22 +93,18 @@ describe("G2/P1/GM1: D3 resolution ladder for the `X (suffix)` ambiguity class",
   });
 });
 
-// GM1 (Gemini, regression): a site-relative link ending in `(v2)` whose real file
-// lives elsewhere (`docs/other/my folder (v2).md`, not in the ADR dir) HARD-FAILED
-// on this branch — findByBasename got only the normalized `my folder` and missed
-// the raw basename. It was advisory on v0.1.4. Step 4 now tries the raw basename
-// too, restoring the site-relative advisory.
-describe("GM1: D3 site-relative match considers the raw basename too", () => {
+// GM1: under the CommonMark parser, `[d](my folder (v2))` is not a valid link
+// (space in a bare destination), so nothing is extracted and there is no finding
+// — regardless of where a same-named file lives. The site-relative raw-basename
+// path is unexercised for space-bearing dests (constraint B); a real
+// space-bearing path must be angle-bracketed.
+describe("GM1: a space-bearing site-relative dest is dropped, not laddered", () => {
   afterAll(() => rmSync(TMP, { recursive: true, force: true }));
-  it("finds `my folder (v2).md` elsewhere as an advisory site-relative match (red before fix)", () => {
+  it("`[d](my folder (v2))` with the file elsewhere yields no finding", () => {
     const dir = writeRepo({
       "docs/adr/0001-a.md": adr("See [d](my folder (v2))"),
       "docs/other/my folder (v2).md": "# elsewhere\n",
     });
-    const findings = d3full(dir);
-    expect(findings.length).toBe(1);
-    expect(findings[0]!.advisory).toBe(true);
-    expect(findings[0]!.claim).toContain("possibly site-relative — found at");
-    expect(findings[0]!.claim).toContain("docs/other/my folder (v2).md");
+    expect(d3(dir)).toEqual([]);
   });
 });

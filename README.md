@@ -120,6 +120,7 @@ Stated plainly, because a drift-detection tool that oversells itself has failed 
 
 - **Dialect detection is a guess unless you declare it.** The consequence is exactly the advisory downgrade described above, nothing worse. A `dialect:` line in `.duckadrift.yml` removes the guess.
 - **D5 and D6 need declarations to have teeth.** `governs:` globs and `review-by:` dates are opt-in frontmatter. An ADR log that declares neither gives those two checks nothing to enforce; the other five run regardless.
+- **A link path with spaces must be angle-bracketed.** Reference checking parses links with a spec-compliant CommonMark parser, and CommonMark does not allow unescaped spaces in a bare link destination — `[x](my design (v2).md)` is read as a link to `my design` with a title, not a file with spaces. Write `[x](<my design (v2).md>)` and the full path resolves. A bare path with spaces is not checked (never mis-flagged, never falsely resolved).
 - **No semantic checks in this release.** Contradiction between two decisions, code drifting from a decision's substance, decisions made in code but never recorded: detecting those requires judgment, not string matching. That is Tier 1, planned for a later release. It will never fail CI the way Tier 0 does, because a probabilistic finding blocking a merge would violate the sentence at the top of this README.
 - **Solo and Team setup presets are not live.** They configure the Tier 1 semantic backend and activate when Tier 1 ships. There is nothing to set up today.
 

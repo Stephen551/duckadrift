@@ -65,12 +65,39 @@ describe("Class 1 — the destination grammar (scanner)", () => {
     expect(claims[0]).not.toContain("foo\\");
   });
 
-  it("F4: an unclosed `<` angle is a malformed-link advisory, non-failing (no phantom dangle)", () => {
+  it("F4: an unclosed `<` angle is not a valid link — no finding (spec parser drops it)", () => {
+    // Re-scoped for the CommonMark parser: an unclosed angle is simply not a
+    // link, so there is no phantom target and no finding (the scanner's
+    // malformed-advisory is retired). §4 contract row: (no link).
     const dir = writeRepo({ "docs/adr/0001-a.md": adr("0001", "[x](<missing.md)") });
-    const findings = d3(dir);
-    expect(findings.length).toBe(1);
-    expect(findings[0]!.advisory).toBe(true);
-    expect(findings[0]!.claim).toMatch(/malformed link destination/);
+    expect(d3(dir)).toEqual([]);
+  });
+});
+
+describe("Parser round — spec-compliant extraction (NEW-1/2/3, reference-style)", () => {
+  afterAll(() => rmSync(TMP, { recursive: true, force: true }));
+
+  it("NEW-1: a bracketed label link resolves — not dropped", () => {
+    const dir = writeRepo({ "docs/adr/0001-a.md": adr("0001", "See [the [ADR] doc](0002-b.md)"), "docs/adr/0002-b.md": adr("0002", "x") });
+    expect(d3(dir)).toEqual([]);
+  });
+
+  it("NEW-3: a backslash before a non-punct char is literal (a file named `a\\nb.md`)", () => {
+    // The scanner over-unescaped, turning `a\nb.md` into `anb.md` — a clause-A FP.
+    const dir = writeRepo({ "docs/adr/0001-a.md": adr("0001", "See [x](a\\nb.md)"), "docs/adr/a\\nb.md": "x\n" });
+    expect(d3(dir)).toEqual([]);
+  });
+
+  it("reference-style: a broken reference-style link is a dangling finding (new capability)", () => {
+    const dir = writeRepo({ "docs/adr/0001-a.md": adr("0001", "See [the doc][ref]\n\n[ref]: missing.md") });
+    const claims = d3(dir).map((f) => f.claim);
+    expect(claims.length).toBe(1);
+    expect(claims[0]).toContain("missing.md");
+  });
+
+  it("reference-style: a resolving reference-style link is clean", () => {
+    const dir = writeRepo({ "docs/adr/0001-a.md": adr("0001", "See [the doc][ref]\n\n[ref]: 0002-b.md"), "docs/adr/0002-b.md": adr("0002", "x") });
+    expect(d3(dir)).toEqual([]);
   });
 });
 

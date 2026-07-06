@@ -1,4 +1,6 @@
 import { parse as parseYaml } from "yaml";
+import { fromMarkdown } from "mdast-util-from-markdown";
+import type { Link, LinkReference, RootContent } from "mdast";
 import { detectDialect } from "./dialect.js";
 import type { AdrFrontmatter, AdrLink, AdrSection, ParsedAdr } from "./types.js";
 
@@ -7,118 +9,81 @@ const HEADING_RE = /^(#{1,6})\s+(.*)$/;
 const HTML_COMMENT_RE = /<!--[\s\S]*?-->/g;
 
 const WHITESPACE_RE = /\s/;
+// CommonMark backslash escaping: a backslash before ASCII punctuation escapes
+// that character (the backslash is dropped); before anything else the backslash
+// is literal (NEW-3 — the scanner wrongly dropped it, a clause-A FP on a file
+// named `foo\nbar.md`).
+const ASCII_PUNCT_RE = /[!-/:-@[-`{-~]/;
 
-// Strip a recognizable trailing CommonMark title — whitespace then `"..."`,
-// `'...'`, or `(...)` at the end — in LINEAR time. The obvious regex for this,
-// `/\s+("[^"]*"|'[^']*'|\([^)]*\))\s*$/`, is O(n^2): on a long internal
-// whitespace run followed by an unterminated title token, `\s+` re-consumes and
-// backtracks the whole run from every start position — the catastrophic-
-// backtracking class S6/ADR-0013 hardened, and a fork-PR resource-exhaustion
-// vector since untrusted ADR content reaches this. Instead: find the last
-// non-space char; if it closes a title (`"`, `'`, `)`), locate the matching
-// opener with lastIndexOf and require a space before it. One trimEnd + one
-// lastIndexOf, no anchored scan over the full string.
-function stripTrailingTitle(s: string): string {
-  let end = s.length;
-  while (end > 0 && WHITESPACE_RE.test(s[end - 1]!)) end--;
-  if (end === 0) return s;
-  const last = s[end - 1]!;
-  let open: number;
-  if (last === '"' || last === "'") open = s.lastIndexOf(last, end - 2);
-  else if (last === ")") open = s.lastIndexOf("(", end - 2);
-  else return s; // the destination does not end with a title token
-  // Need an opener (open >= 0) with room for the required preceding whitespace,
-  // and that char before the opener must actually be whitespace.
-  if (open < 1 || !WHITESPACE_RE.test(s[open - 1]!)) return s;
-  let cut = open;
-  while (cut > 0 && WHITESPACE_RE.test(s[cut - 1]!)) cut--;
-  return s.slice(0, cut);
-}
-
-// The result of parsing one CommonMark link destination.
+// The result of extracting one link.
 export interface ScannedLink {
   label: string;
-  /** The on-disk-resolvable path: escapes resolved, angle unwrapped, trailing title stripped, unescaped fragment removed. "" when malformed. */
+  /** The on-disk-resolvable path: escapes resolved (CommonMark rules), fragment removed. */
   target: string;
-  /** As `target` but with the trailing title kept — feeds the D3 ladder's raw-vs-normalized step. "" when malformed. */
+  /** As `target` but with the trailing title/paren-group kept — feeds the D3 ladder's raw rung (now rarely exercised). */
   rawTarget: string;
   line: number;
-  /** True for an unclosed `<…>` destination — not a valid link, surfaced (F4) rather than silently turned into a phantom target. */
+  /** Retained for the AdrLink shape; a spec parser never yields a malformed link (it drops one), so this is always false. */
   malformed: boolean;
 }
 
-interface DestResult {
-  target: string;
-  rawTarget: string;
-  malformed: boolean;
-  end: number;
-}
-
-// Parse one CommonMark link destination beginning at `start` (the char after
-// the link's `(`), in a single linear pass. A regex structurally cannot do this
-// — destinations permit backslash-escaped delimiters and arbitrarily nested
-// balanced parens, neither a regular language — which was the root of the
-// escaped-delimiter false positives (F1/F2), the nested-paren silent drop
-// (F3/G4B), and the angle mishandling (G4A/F4). Being a scan and not a
-// backtracking pattern, it also carries no catastrophic-backtracking surface
-// (S6/ADR-0013). Returns the normalized `target`, the pre-title-strip
-// `rawTarget`, whether the destination is malformed, and `end` (index just past
-// the link's closing `)`), so the scanner can continue.
-function readDestination(s: string, start: number): DestResult {
-  let i = start;
-  // Whitespace between `(` and the destination is not part of it (CommonMark).
-  while (i < s.length && WHITESPACE_RE.test(s[i]!)) i++;
-  if (s[i] === "<") {
-    // Angle form: read to the first UNESCAPED `>`. `\>` is a literal `>`. An
-    // angle destination that never closes is malformed — not a link — so emit no
-    // target (F4); still advance past the region so scanning continues.
-    i++;
-    let content = "";
-    let fragPos = -1;
-    let closed = false;
-    while (i < s.length) {
-      const c = s[i]!;
-      if (c === "\\" && i + 1 < s.length) {
-        content += s[i + 1]!;
-        i += 2;
-        continue;
-      }
-      if (c === ">") {
-        closed = true;
-        i++;
-        break;
-      }
-      if (c === "\n") break;
-      if (c === "#" && fragPos === -1) fragPos = content.length;
-      content += c;
+// Resolve CommonMark backslash escapes: `\<ascii-punct>` → the punctuation
+// char; `\<anything-else>` → both characters kept (NEW-3). This matches
+// mdast's own destination resolution, so a bare inline dest processed here
+// equals the parser's `url` — we use it to recover the fragment escape-aware.
+function resolveEscapes(s: string): string {
+  let out = "";
+  for (let i = 0; i < s.length; i++) {
+    if (s[i] === "\\" && i + 1 < s.length && ASCII_PUNCT_RE.test(s[i + 1]!)) {
+      out += s[i + 1]!;
       i++;
+    } else {
+      out += s[i]!;
     }
-    if (!closed) {
-      const j = s.indexOf(")", start);
-      return { target: "", rawTarget: "", malformed: true, end: j === -1 ? s.length : j + 1 };
-    }
-    // A title may follow the `>` up to the link's `)`; discard it.
-    const j = s.indexOf(")", i);
-    const end = j === -1 ? s.length : j + 1;
-    const noFrag = fragPos === -1 ? content : content.slice(0, fragPos);
-    return { target: noFrag, rawTarget: noFrag, malformed: false, end };
   }
+  return out;
+}
 
-  // Bare form: track paren depth and escapes. `\<punct>` → the escaped char is
-  // literal (an escaped `)` or `#` does not delimit — F1/F2). `(` deepens, `)`
-  // at depth 0 closes the link (nested parens are kept — F3/G4B). Record the
-  // first UNESCAPED `#` as the fragment start.
+// Strip a trailing `#fragment` from a RAW (pre-escape-resolution) destination,
+// cutting at the first UNESCAPED `#`. An escaped `\#` is a literal `#` in the
+// filename and is kept (constraint A): a spec parser resolves `\#`→`#` and loses
+// the distinction, so the fragment must be found in the raw source, not the
+// resolved url.
+function stripUnescapedFragment(rawDest: string): string {
+  for (let i = 0; i < rawDest.length; i++) {
+    if (rawDest[i] === "\\") {
+      i++;
+      continue;
+    }
+    if (rawDest[i] === "#") return rawDest.slice(0, i);
+  }
+  return rawDest;
+}
+
+// The raw bytes of a BARE inline destination, sliced from source, or undefined
+// for an angle-bracketed dest (whose `url` the parser already resolves cleanly).
+// mdast exposes link and label-child positions but not the destination's own
+// span, so it is derived: past the label's `]` and `(`, then to the first
+// unescaped whitespace (a title separator) or the closing `)` at paren depth 0.
+// The link is already parser-validated, so this scan only ever runs on a
+// well-formed destination (no NEW-1/2/3 boundary hazards reach here).
+function bareInlineDest(text: string, node: Link): string | undefined {
+  const kids = node.children;
+  let p = kids.length ? kids[kids.length - 1]!.position!.end.offset! : node.position!.start.offset! + 1;
+  while (p < text.length && text[p] !== "(") p++;
+  p++; // past '('
+  while (p < text.length && WHITESPACE_RE.test(text[p]!)) p++;
+  if (text[p] === "<") return undefined; // angle form — use node.url
   let depth = 0;
   let dest = "";
-  let fragPos = -1;
-  let closed = false;
-  while (i < s.length) {
-    const c = s[i]!;
-    if (c === "\\" && i + 1 < s.length) {
-      dest += s[i + 1]!;
+  for (let i = p; i < text.length; ) {
+    const c = text[i]!;
+    if (c === "\\") {
+      dest += c + (text[i + 1] ?? "");
       i += 2;
       continue;
     }
+    if (WHITESPACE_RE.test(c)) break; // a title follows whitespace
     if (c === "(") {
       depth++;
       dest += c;
@@ -132,55 +97,82 @@ function readDestination(s: string, start: number): DestResult {
         i++;
         continue;
       }
-      closed = true;
-      i++;
-      break;
+      break; // link close
     }
-    if (c === "#" && fragPos === -1) fragPos = dest.length;
     dest += c;
     i++;
   }
-  // Trailing whitespace before the link's `)` is not part of the destination
-  // (internal spaces — the edgex image case — are kept by trimEnd).
-  const noFrag = (fragPos === -1 ? dest : dest.slice(0, fragPos)).trimEnd();
-  // Strip only a recognizable trailing title (linear, S6-safe) — a bare path
-  // with spaces and no trailing title is kept (the edgex image case).
-  return { target: stripTrailingTitle(noFrag), rawTarget: noFrag, malformed: false, end: closed ? i : s.length };
+  return dest;
 }
 
-// The one link scanner. Finds each `[label](destination)` inline link per line
-// and yields the parsed destination. D3 reads this via `parsed.links` and D7 via
-// `extractLinkTargets`, so link parsing has exactly one implementation and the
-// checks cannot diverge on it.
+// Fragment-strip a url whose escapes are already resolved (angle dest or a
+// reference definition) — the raw source isn't available, so strip at the first
+// `#`. An escaped `#` in these forms is vanishingly rare.
+function stripFragmentFromUrl(url: string): string {
+  const h = url.indexOf("#");
+  return h === -1 ? url : url.slice(0, h);
+}
+
+// The one link extractor — a spec-compliant CommonMark parse (mdast /
+// micromark). It replaces the hand-rolled scanner, whose bespoke re-
+// implementation of the grammar leaked three ways on the standing gate's probe
+// (over-escape FP, dropped bracketed label, lenient unterminated paren) and
+// never handled reference-style links or autolinks. The parser is correct on
+// the grammar by construction. Two tool conventions sit on top, preserved
+// explicitly: the escape-aware `#fragment` strip (constraint A, via the raw bare
+// dest) and — deferred — space-bearing bare paths, which a strict parser drops
+// (constraint B; documented as a LIMITS entry). D3 and D7 both read this, so
+// link extraction has exactly one implementation.
 export function scanLinks(text: string): ScannedLink[] {
+  const tree = fromMarkdown(text);
+  const definitions = new Map<string, string>();
+  const linkNodes: Array<Link | LinkReference> = [];
+  const walk = (node: RootContent | typeof tree): void => {
+    if (node.type === "definition" && !definitions.has(node.identifier)) definitions.set(node.identifier, node.url);
+    if (node.type === "link" || node.type === "linkReference") linkNodes.push(node);
+    if ("children" in node) for (const child of node.children) walk(child as RootContent);
+  };
+  walk(tree);
+
   const out: ScannedLink[] = [];
-  text.split(/\r?\n/).forEach((line, idx) => {
-    let i = 0;
-    while (i < line.length) {
-      if (line[i] !== "[") {
-        i++;
-        continue;
+  for (const node of linkNodes) {
+    let target: string;
+    let rawTarget: string;
+    if (node.type === "link") {
+      // Both `[label](dest)` inline links and `<url>` autolinks are `link` nodes.
+      // Only an inline link (source starts with `[`) has a raw destination to
+      // slice for constraint A; an autolink's dest is its `url` (which D3 then
+      // skips as external). Guarding this avoids scanning past an autolink to a
+      // following `(...)` and extracting garbage (an edgex-docs autolink followed
+      // by `(registration required)` — a differential catch).
+      const isInline = node.position !== undefined && text[node.position.start.offset!] === "[";
+      const raw = isInline ? bareInlineDest(text, node) : undefined;
+      if (raw !== undefined) {
+        // Bare inline dest: resolve escapes ourselves so the fragment strip is
+        // escape-aware (constraint A). This equals the parser's url otherwise.
+        rawTarget = resolveEscapes(raw);
+        target = resolveEscapes(stripUnescapedFragment(raw));
+      } else {
+        // Angle dest: the parser's url is already unwrapped and escape-resolved.
+        rawTarget = node.url;
+        target = stripFragmentFromUrl(node.url);
       }
-      const close = line.indexOf("]", i + 1);
-      if (close === -1) break; // no label close on this line
-      if (line[close + 1] !== "(") {
-        i = close + 1; // `[...]` not followed by `(` — not an inline link
-        continue;
-      }
-      const d = readDestination(line, close + 2);
-      out.push({ label: line.slice(i + 1, close), target: d.target, rawTarget: d.rawTarget, line: idx + 1, malformed: d.malformed });
-      i = d.end;
+    } else {
+      // Reference-style link: destination comes from the matching definition.
+      const url = definitions.get(node.identifier);
+      if (url === undefined) continue; // unresolved reference — not a link
+      rawTarget = url;
+      target = stripFragmentFromUrl(url);
     }
-  });
+    out.push({ label: "", target, rawTarget, line: node.position?.start.line ?? 1, malformed: false });
+  }
   return out;
 }
 
-// Normalize a single raw destination string (the bytes a caller already has
-// between the parens) to its resolvable path — the same core the scanner runs,
-// wrapped for the unit contract and any single-string caller. Appending a `)`
-// gives readDestination the link-close sentinel it scans to.
+// Normalize a single raw destination string — wrap it as an inline link and run
+// the one extractor, for the unit contract and any single-string caller.
 export function normalizeLinkDestination(raw: string): string {
-  return readDestination(`${raw})`, 0).target;
+  return scanLinks(`[x](${raw})`)[0]?.target ?? "";
 }
 
 // Percent-decode a link target for on-disk resolution (C4). "%20" is how a
