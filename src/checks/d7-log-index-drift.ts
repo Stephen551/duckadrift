@@ -1,7 +1,8 @@
-import { relative } from "node:path";
-import { decodeTarget, extractLinkTargets } from "../adr/parse.js";
-import { escapesRepoRoot, existsWithinRepo } from "../adr/paths.js";
-import type { AdrLogContext } from "../adr/types.js";
+import { relative, sep } from "node:path";
+import { decodeTarget, scanLinks } from "../adr/parse.js";
+import { escapesRepoRoot } from "../adr/paths.js";
+import { makeBasenameFinder, resolveReference } from "../adr/resolve.js";
+import type { AdrLogContext, ParsedAdr } from "../adr/types.js";
 import { code } from "../report/write.js";
 import type { Finding } from "../types.js";
 
@@ -17,18 +18,15 @@ import type { Finding } from "../types.js";
 // root cause (assuming one index shape is the only one that exists).
 const INDEX_ENTRY_LINE_RE = /^\s*(?:\||[-*+]\s|\d+\.\s)/;
 
-function indexEntryLinks(indexContent: string): string[] {
-  // Keep only index-entry lines (table rows / list items), then extract targets
-  // with the shared CommonMark-correct parser (parse.ts). Before consolidation
-  // this used a private pre-C1 regex that truncated `foo(v2).md` at the first
-  // paren, flagging a real parenthesized filename as unlisted — the same class
-  // of link-parsing bug the ADR-body path had already fixed and this copy had
-  // not. One parser now serves both.
+/** Index entries that name a markdown file, via the shared scanner (target + rawTarget). */
+function indexEntries(indexContent: string): { target: string; rawTarget: string }[] {
   const entryLines = indexContent
     .split(/\r?\n/)
     .filter((line) => INDEX_ENTRY_LINE_RE.test(line))
     .join("\n");
-  return extractLinkTargets(entryLines).map((l) => l.target);
+  return scanLinks(entryLines)
+    .filter((l) => !l.malformed && /\.md$/i.test(l.target))
+    .map((l) => ({ target: l.target, rawTarget: l.rawTarget }));
 }
 
 /** D7: log/index drift — only applies if an index file is present (PDR §2.3). */
@@ -37,65 +35,63 @@ export function d7LogIndexDrift(ctx: AdrLogContext): Finding[] {
   const findings: Finding[] = [];
   const indexRelPath = relative(ctx.repoRoot, ctx.indexPath).split("\\").join("/");
 
-  const indexedFiles = new Set<string>();
-  for (const rawTarget of indexEntryLinks(ctx.indexContent)) {
-    // Percent-decode with the same shared helper D3 uses (C1): an index entry
-    // `0001-a%20b.md` names the file `0001-a b.md` on disk, so both the forward
-    // existence check and the reverse "not listed" check must compare the
-    // decoded name against actualFiles / adr.fileName. Before this D7 skipped
-    // decoding and diverged from D3, flagging a real spaced-name file as both
-    // missing and unlisted.
-    const target = decodeTarget(rawTarget.split("#")[0]!.trim()).replace(/^\.?\//, "");
-    if (/\.md$/i.test(target)) indexedFiles.add(target);
+  const entries = indexEntries(ctx.indexContent);
+  // A README that isn't a per-ADR index (links zero decisions — a policy page,
+  // or one pointing elsewhere for the real TOC) should not make the tool assert
+  // every ADR is missing. Zero recognized entries → not functioning as an index.
+  if (entries.length === 0) return [];
+
+  // Map each ADR to its repo-relative path, so an index entry that resolves to
+  // that path counts the ADR as listed — this is the consolidation: D7 answers
+  // "is this listed?" by resolving the entry through the one shared resolver
+  // (G1: a path-form entry `../adr/0001-foo.md` now resolves to the file), not
+  // by basename-set membership with an ad-hoc slash strip that diverged from D3.
+  const adrByRepoPath = new Map<string, ParsedAdr>();
+  for (const adr of ctx.adrs) {
+    adrByRepoPath.set(relative(ctx.repoRoot, adr.filePath).split(sep).join("/"), adr);
   }
+  const findByBasename = makeBasenameFinder(ctx.repoRoot);
 
-  // A README.md living in the ADR directory is not necessarily a per-ADR
-  // index — found running R5: some are policy pages ("how to write an ADR")
-  // that link zero individual decisions, or explicitly point elsewhere for
-  // the real table of contents. Zero recognized entries is a strong signal
-  // this file isn't functioning as an index at all; asserting "every ADR is
-  // missing from it" would be confidently wrong, not a real drift finding.
-  // (A genuinely stale index — some entries, none matching current files —
-  // still has indexedFiles.size > 0 and is still checked normally below.)
-  if (indexedFiles.size === 0) return [];
-
-  const actualFiles = new Set(ctx.adrs.map((a) => a.fileName));
-
-  for (const indexed of indexedFiles) {
-    // "Exists" means exists on disk, not "is itself an ADR" — found running
-    // R5's terraform-provider-proxmox: a numbered "Reading Order" list (now
-    // matched by the widened list-item scan) legitimately cites a companion
-    // reference doc living in the same directory. It's a real file, just not
-    // ADR_FILENAME_RE-shaped, so checking membership in ctx.adrs alone would
-    // wrongly call it missing. Same two-step resolution as D3: ADR-dir-
-    // relative first, repo-root-relative fallback.
-    if (actualFiles.has(indexed)) continue;
-    // Containment, not a raw existsSync (fix 5): an index entry that resolves
-    // outside the repo must never count as "exists," or a fork PR could read the
-    // runner's filesystem through this check's pass/fail. Both resolutions go
-    // through the shared existsWithinRepo, so present-outside and absent-outside
-    // produce the identical finding — the oracle leaks nothing.
-    if (existsWithinRepo(ctx.adrDir, indexed, ctx.repoRoot)) continue;
-    if (existsWithinRepo(ctx.repoRoot, indexed, ctx.repoRoot)) continue;
-    // Word it honestly. A target that escapes the repo root under both
-    // resolutions is an escape, not an in-directory miss — and the distinction
-    // is purely lexical (escapesRepoRoot touches no filesystem), so the claim is
-    // identical whether or not the outside file happens to exist.
+  const listed = new Set<string>(); // adr.fileName values an entry resolved to
+  const reportedUnresolved = new Set<string>();
+  for (const entry of entries) {
+    const result = resolveReference({
+      baseDir: ctx.adrDir,
+      target: entry.target,
+      rawTarget: entry.rawTarget,
+      repoRoot: ctx.repoRoot,
+      findByBasename,
+    });
+    if (result.status !== "dangling" && result.resolvedPath !== undefined) {
+      // Resolved — to an ADR (mark it listed) or to a non-ADR companion file
+      // (real, not drift). Same disposition D3 reaches on the same target (F5).
+      const adr = adrByRepoPath.get(result.resolvedPath);
+      if (adr) listed.add(adr.fileName);
+      continue;
+    }
+    // The index lists something that resolves to nothing in the repo.
+    const displayed = decodeTarget(entry.target).replace(/^\.?\//, "");
+    if (reportedUnresolved.has(displayed)) continue;
+    reportedUnresolved.add(displayed);
+    // Honest wording, containment-safe: a target that escapes the repo root
+    // under both resolutions is an escape, not an in-directory miss — and
+    // escapesRepoRoot is purely lexical, so the claim is identical whether or
+    // not an outside file happens to exist (no filesystem-probe leak).
     const outsideRepo =
-      escapesRepoRoot(ctx.adrDir, indexed, ctx.repoRoot) &&
-      escapesRepoRoot(ctx.repoRoot, indexed, ctx.repoRoot);
+      escapesRepoRoot(ctx.adrDir, displayed, ctx.repoRoot) &&
+      escapesRepoRoot(ctx.repoRoot, displayed, ctx.repoRoot);
     findings.push({
       check: "D7",
       claim: outsideRepo
-        ? `The ADR index lists ${code(indexed)}, which resolves outside the repository.`
-        : `The ADR index lists ${code(indexed)}, which does not exist in the directory.`,
+        ? `The ADR index lists ${code(displayed)}, which resolves outside the repository.`
+        : `The ADR index lists ${code(displayed)}, which does not exist in the directory.`,
       evidence: [{ file: indexRelPath }],
       consequence: "An index that disagrees with the directory misleads anyone who trusts the index as the table of contents.",
     });
   }
 
   for (const adr of ctx.adrs) {
-    if (indexedFiles.has(adr.fileName)) continue;
+    if (listed.has(adr.fileName)) continue;
     findings.push({
       check: "D7",
       claim: `${code(adr.fileName)} exists in the directory but is not listed in the ADR index.`,

@@ -1,8 +1,23 @@
+import { dirname, relative, sep } from "node:path";
 import { formatAdrRef, padAdrNumber } from "../adr/refs.js";
 import { parseAdrRef, parseAdrRefList } from "../adr/refs.js";
+import { makeBasenameFinder, resolveReference } from "../adr/resolve.js";
 import { code } from "../report/write.js";
 import type { AdrLogContext, NumberingScope, ParsedAdr } from "../adr/types.js";
 import type { Finding } from "../types.js";
+
+/** A supersession reference is EITHER a bare number OR an explicit path (G3). */
+function isPathRef(v: unknown): v is string {
+  return typeof v === "string" && (v.includes("/") || /\.md$/i.test(v));
+}
+/** Raw `supersedes` values (numbers and/or paths), preserving both forms. */
+function rawSupersedes(adr: ParsedAdr): Array<string | number> {
+  const v = adr.frontmatter.supersedes;
+  if (v === undefined) return [];
+  return Array.isArray(v) ? v : [v];
+}
+/** A resolver over BOTH forms — the number path is `makeResolver` (dir-scoped, unchanged); the path form goes through the shared resolveReference (G3). */
+type RefResolver = (from: ParsedAdr, raw: string | number) => ParsedAdr | null;
 
 /** The directory an ADR lives in, relative to the ADR root ("" for a root-level ADR). */
 function dirOf(fileName: string): string {
@@ -60,14 +75,75 @@ export function d2StatusGraphIntegrity(ctx: AdrLogContext): Finding[] {
   const findings: Finding[] = [];
   const { resolve, byNumber } = makeResolver(ctx.adrs, ctx.numberingScope);
 
+  // A supersession ref may be a bare number (dir-scoped, ADR-0008) or an
+  // explicit path — the exact remedy D2's own advisory tells the author to
+  // write. The number-only parser dropped the path silently, so no cycle,
+  // mutual, or stale check ran on a relationship the author declared (G3). Route
+  // path refs through the shared resolver, mapping the resolved file to its ADR.
+  const adrByRepoPath = new Map<string, ParsedAdr>();
+  for (const adr of ctx.adrs) {
+    adrByRepoPath.set(relative(ctx.repoRoot, adr.filePath).split(sep).join("/"), adr);
+  }
+  const findByBasename = makeBasenameFinder(ctx.repoRoot);
+  const resolvePathRef = (from: ParsedAdr, pathStr: string): ParsedAdr | null => {
+    const result = resolveReference({
+      baseDir: dirname(from.filePath),
+      target: pathStr,
+      rawTarget: pathStr,
+      repoRoot: ctx.repoRoot,
+      findByBasename,
+    });
+    if (result.status !== "dangling" && result.resolvedPath !== undefined) {
+      return adrByRepoPath.get(result.resolvedPath) ?? null;
+    }
+    return null;
+  };
+  const resolveRef: RefResolver = (from, raw) => {
+    if (isPathRef(raw)) return resolvePathRef(from, raw);
+    const num = parseAdrRef(raw);
+    return num === null ? null : resolve(from, num);
+  };
+
   findings.push(...findUnresolvedBareRefs(ctx.adrs, ctx.numberingScope, resolve, byNumber));
   findings.push(...findMissingSupersededByTargets(ctx.adrs, byNumber));
-  findings.push(...findSupersessionCycles(ctx.adrs, resolve));
+  findings.push(...findBrokenPathRefs(ctx.adrs, resolvePathRef));
+  findings.push(...findSupersessionCycles(ctx.adrs, resolveRef));
 
-  const { mutual, mutualPairs } = findMutualSupersession(ctx.adrs, resolve);
+  const { mutual, mutualPairs } = findMutualSupersession(ctx.adrs, resolveRef);
   findings.push(...mutual);
-  findings.push(...findStaleSupersession(ctx.adrs, resolve, mutualPairs));
+  findings.push(...findStaleSupersession(ctx.adrs, resolveRef, mutualPairs));
 
+  return findings;
+}
+
+/**
+ * A path-form supersession ref that resolves to no ADR is reported, never
+ * silently dropped (G3). The self-refuting advisory D2 prints on an unresolved
+ * bare number — "write an explicit path" — now either works (the path resolves
+ * and drives the graph) or fails loudly here.
+ */
+function findBrokenPathRefs(
+  adrs: ParsedAdr[],
+  resolvePathRef: (from: ParsedAdr, pathStr: string) => ParsedAdr | null
+): Finding[] {
+  const findings: Finding[] = [];
+  for (const adr of adrs) {
+    const refs: { kind: string; path: string }[] = [];
+    const sb = adr.frontmatter["superseded-by"];
+    if (isPathRef(sb)) refs.push({ kind: "superseded-by", path: sb });
+    for (const v of rawSupersedes(adr)) if (isPathRef(v)) refs.push({ kind: "supersedes", path: v });
+    for (const { kind, path } of refs) {
+      if (resolvePathRef(adr, path) !== null) continue;
+      const ref = adr.number !== null ? formatAdrRef(adr.number) : adr.fileName;
+      findings.push({
+        check: "D2",
+        claim: `${ref} declares \`${kind}: ${path}\`, which does not resolve to an ADR in the log.`,
+        evidence: [{ adr: adr.fileName }],
+        consequence:
+          "A supersession reference written as an explicit path must point at a real ADR — this one resolves to nothing, so the relationship it declares can't be verified.",
+      });
+    }
+  }
   return findings;
 }
 
@@ -176,23 +252,21 @@ function pairKeyByFile(a: ParsedAdr, b: ParsedAdr): string {
   return JSON.stringify([a.fileName, b.fileName].sort());
 }
 
-function findSupersessionCycles(
-  adrs: ParsedAdr[],
-  resolve: (from: ParsedAdr, num: number) => ParsedAdr | null
-): Finding[] {
+function findSupersessionCycles(adrs: ParsedAdr[], resolveRef: RefResolver): Finding[] {
   const findings: Finding[] = [];
   // Key the graph by directory-scoped identity (fileName), not bare number. The
   // targets are resolved dir-scoped (ADR-0008), but storing edges by bare number
   // collapsed identically-numbered ADRs in different directories into one node,
   // fabricating a cycle out of two unrelated one-way per-directory chains (fix 4,
-  // the per-directory-cycle-conflation adversarial fixture).
+  // the per-directory-cycle-conflation adversarial fixture). A `superseded-by`
+  // written as an explicit path now resolves and drives the graph too (G3).
   const edges = new Map<string, string>();
   const nodeByFile = new Map<string, ParsedAdr>();
   for (const adr of adrs) {
     if (adr.number === null) continue;
-    const target = parseAdrRef(adr.frontmatter["superseded-by"]);
-    if (target === null) continue;
-    const resolved = resolve(adr, target);
+    const sb = adr.frontmatter["superseded-by"];
+    if (sb === undefined) continue;
+    const resolved = resolveRef(adr, sb);
     if (resolved === null || resolved.number === null) continue;
     edges.set(adr.fileName, resolved.fileName);
     nodeByFile.set(adr.fileName, adr);
@@ -227,25 +301,24 @@ function findSupersessionCycles(
 
 function findMutualSupersession(
   adrs: ParsedAdr[],
-  resolve: (from: ParsedAdr, num: number) => ParsedAdr | null
+  resolveRef: RefResolver
 ): { mutual: Finding[]; mutualPairs: Set<string> } {
   const findings: Finding[] = [];
   // Keyed by fileName pair, not bare number (fix 4, sibling of the cycle bug):
   // two distinct within-directory mutual pairs that reuse the same numbers in
   // different directories are separate findings, not one deduped away — and
   // `mutualPairs` flows into findStaleSupersession, so a bare-number key there
-  // would let a team-b pair suppress a genuine team-a stale finding.
+  // would let a team-b pair suppress a genuine team-a stale finding. Path-form
+  // refs resolve through the same resolver (G3).
   const mutualPairs = new Set<string>();
   const reportedPairs = new Set<string>();
 
   for (const adr of adrs) {
     if (adr.number === null || adr.frontmatter.status !== "accepted") continue;
-    for (const targetNum of parseAdrRefList(adr.frontmatter.supersedes)) {
-      const target = resolve(adr, targetNum);
+    for (const rawRef of rawSupersedes(adr)) {
+      const target = resolveRef(adr, rawRef);
       if (!target || target.number === null || target.frontmatter.status !== "accepted") continue;
-      const back = parseAdrRefList(target.frontmatter.supersedes).some(
-        (n) => resolve(target, n)?.fileName === adr.fileName
-      );
+      const back = rawSupersedes(target).some((r) => resolveRef(target, r)?.fileName === adr.fileName);
       if (!back) continue;
 
       const key = pairKeyByFile(adr, target);
@@ -268,19 +341,23 @@ function findMutualSupersession(
 
 function findStaleSupersession(
   adrs: ParsedAdr[],
-  resolve: (from: ParsedAdr, num: number) => ParsedAdr | null,
+  resolveRef: RefResolver,
   mutualPairs: Set<string>
 ): Finding[] {
   const findings: Finding[] = [];
   for (const adr of adrs) {
     if (adr.number === null || adr.frontmatter.status !== "accepted") continue;
-    for (const targetNum of parseAdrRefList(adr.frontmatter.supersedes)) {
-      if (targetNum <= adr.number) continue;
-      const target = resolve(adr, targetNum);
-      if (!target || target.frontmatter.status !== "accepted") continue;
+    for (const rawRef of rawSupersedes(adr)) {
+      const target = resolveRef(adr, rawRef);
+      // "Earlier supersedes later" compares the resolved target's number — for a
+      // bare number the target's number equals the declared one (dir-scoped), so
+      // this is identical to the old declared-number compare; a path ref uses the
+      // real target's number.
+      if (!target || target.number === null || target.number <= adr.number) continue;
+      if (target.frontmatter.status !== "accepted") continue;
       // Skip pairs already reported as mutual, matched by fileName identity so a
       // same-numbered mutual pair in another directory can't suppress this one
-      // (fix 4). resolve() runs first now so the fileName key is available.
+      // (fix 4).
       if (mutualPairs.has(pairKeyByFile(adr, target))) continue;
       findings.push({
         check: "D2",
