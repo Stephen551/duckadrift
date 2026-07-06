@@ -22,3 +22,4 @@ Architecture decisions for duckadrift itself, recorded in duckadrift's own vocab
 | [0016](0016-bare-mention-target-skip.md) | A bare @ link target is a mention, not a dangling reference | Accepted | elevated |
 | [0017](0017-clause-a-closure-and-corpus-correction.md) | Clause A closure, and the corpus correction it forced | Accepted | elevated |
 | [0018](0018-the-adversarial-consolidation-round.md) | The adversarial-consolidation round, and the ambiguity class it surfaced | Accepted | elevated |
+| [0019](0019-the-standing-pre-tag-adversarial-gate.md) | The standing pre-tag adversarial gate | Accepted | critical |
