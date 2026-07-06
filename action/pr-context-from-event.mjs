@@ -35,9 +35,16 @@ if (!baseRef) {
 // single literal argument and can never be interpreted as shell syntax (B-3: a
 // `$IFS`-style, git-ref-valid payload in a branch name executed on the runner
 // under the old shell-string execSync).
-const changedFiles = execFileSync("git", ["diff", "--name-only", `origin/${baseRef}...HEAD`], {
-  encoding: "utf-8",
-})
+// `-c core.quotepath=false` (NEW-B): git's default quotepath emits a non-ASCII
+// path as an octal-escaped, double-quoted string (`"docs/adr/0001-\303\251.md"`),
+// which D5's exact-identity "the PR modified the ADR" match then fails against
+// the real UTF-8 filename — firing the flagship gate on a genuinely touched ADR.
+// Disabling it at the source keeps changedFiles as raw UTF-8, no unquoter in D5.
+const changedFiles = execFileSync(
+  "git",
+  ["-c", "core.quotepath=false", "diff", "--name-only", `origin/${baseRef}...HEAD`],
+  { encoding: "utf-8" }
+)
   .split(/\r?\n/)
   .map((line) => line.trim())
   .filter(Boolean);

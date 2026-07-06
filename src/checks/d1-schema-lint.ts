@@ -196,17 +196,18 @@ export function d1SchemaLint(ctx: AdrLogContext): Finding[] {
   };
 
   // ADR-0008: a gap is computed within the numbering namespace. Under
-  // `numbering: global` that is the whole log. Under the per-directory default it
-  // is each directory independently — but ONLY when the log actually numbers
+  // `numbering: global` that is the whole log. Under per-directory it is each
+  // directory independently — unconditionally when the user *declared*
+  // `numbering: per-directory` (NEW-C: an explicit declaration is an assertion,
+  // not a guess, so it is honored even with no cross-directory reuse), and
+  // otherwise (the auto/undeclared default) ONLY when the log actually numbers
   // per-directory, signalled by a number reused across two or more directories
-  // (the same ambiguity ADR-0008 hinges duplicate-tier on). Absent that reuse the
-  // numbers form one global sequence merely organized into topic folders
-  // (edgex-docs: 0001 in the root, 0002 in device-service/, 0003 in core/, … a
-  // contiguous 1..N), where per-folder gap detection would flag every number that
-  // simply lives in a sibling folder — a large false-positive class. So: global
-  // scope, or per-directory scope with no cross-directory reuse → global gaps;
-  // per-directory scope *with* reuse → per-directory gaps, catching a genuine
-  // per-team log's directory-local gap (B-7).
+  // (the same ambiguity ADR-0008 hinges duplicate-tier on, the B-7 director
+  // ruling). Absent both, the numbers form one global sequence merely organized
+  // into topic folders (edgex-docs: 0001 in the root, 0002 in device-service/,
+  // 0003 in core/, … a contiguous 1..N), where per-folder gap detection would
+  // flag every number that simply lives in a sibling folder — a large
+  // false-positive class.
   if (ctx.numberingScope === "global") {
     globalScopeGaps();
   } else {
@@ -226,7 +227,7 @@ export function d1SchemaLint(ctx: AdrLogContext): Finding[] {
       dirsByNumber.set(adr.number, dirs);
     }
     const perTeamNamespacing = [...dirsByNumber.values()].some((dirs) => dirs.size > 1);
-    if (perTeamNamespacing) {
+    if (ctx.numberingScopeDeclared || perTeamNamespacing) {
       for (const m of byDirNumber.values()) emitGaps(m);
     } else {
       globalScopeGaps();

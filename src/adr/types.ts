@@ -122,6 +122,14 @@ export interface AdrLogContext {
    */
   numberingScope: NumberingScope;
   /**
+   * True when the user explicitly declared `numbering:` in `.duckadrift.yml`.
+   * A *declared* `per-directory` forces per-directory gap scoping
+   * unconditionally; the auto/undeclared default is gated on cross-directory
+   * number reuse (the ADR-0008 namespacing signal, B-7). Distinguishing the two
+   * is why the bare `numberingScope` value is not enough (NEW-C).
+   */
+  numberingScopeDeclared: boolean;
+  /**
    * Resolved from `.duckadrift.yml`'s `numbering_gaps:` key; defaults to
    * "advisory" when not declared (ADR-0010). Always a definite value — the
    * defaulting happens once, at load time, not per-check.

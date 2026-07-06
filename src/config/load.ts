@@ -1,6 +1,7 @@
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { parse as parseYaml } from "yaml";
+import { SetupError } from "../errors.js";
 import { MAX_FILE_SIZE_BYTES } from "../repo/walk.js";
 import type { Dialect, NumberingGapsMode, NumberingScope } from "../adr/types.js";
 
@@ -21,13 +22,25 @@ export function loadConfig(repoRoot: string): DuckadriftConfig {
   const configPath = join(repoRoot, ".duckadrift.yml");
   if (!existsSync(configPath)) return {};
 
+  // A `.duckadrift.yml` that is not a regular file — most often a directory of
+  // that name (NEW-E) — passes an existsSync/statSync-size check but throws
+  // EISDIR on readFileSync. Treat any non-file as no config: defaults with a
+  // loud notice, never a crash (the Pact — degrade visibly, don't abort).
+  const stat = statSync(configPath);
+  if (!stat.isFile()) {
+    console.error(
+      "duckadrift: .duckadrift.yml is not a regular file — ignoring it and proceeding with defaults."
+    );
+    return {};
+  }
+
   // The same size cap the repo walk applies to every scanned file (B-10). The
   // config is repo content, so on a fork PR it is attacker-authorable; reading
   // it uncapped crashed the tool at V8's string limit before it could produce a
   // report. An oversized config is a user error — degrade to defaults with a
   // loud notice (the Pact: the watch may fail visibly, never crash silent), not
   // a hard abort mid-scan.
-  if (statSync(configPath).size > MAX_FILE_SIZE_BYTES) {
+  if (stat.size > MAX_FILE_SIZE_BYTES) {
     console.error(
       `duckadrift: .duckadrift.yml exceeds ${MAX_FILE_SIZE_BYTES} bytes — ignoring it and proceeding with defaults.`
     );
@@ -35,7 +48,16 @@ export function loadConfig(repoRoot: string): DuckadriftConfig {
   }
 
   const raw = readFileSync(configPath, "utf-8");
-  const parsed = (parseYaml(raw) ?? {}) as Record<string, unknown>;
+  // Malformed YAML (NEW-F, e.g. `dialect: [`) must be a loud usage error, never
+  // an uncaught throw that aborts the scan silent. SetupError maps to exit 2 —
+  // the same "your config, not our finding" class as a bad --adr-dir.
+  let parsed: Record<string, unknown>;
+  try {
+    parsed = (parseYaml(raw) ?? {}) as Record<string, unknown>;
+  } catch (err) {
+    const reason = (err instanceof Error ? err.message : String(err)).split("\n")[0]!.trim();
+    throw new SetupError(`invalid .duckadrift.yml: ${reason}`);
+  }
   const config: DuckadriftConfig = {};
 
   const dialect = parsed.dialect;

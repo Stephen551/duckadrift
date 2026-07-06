@@ -102,8 +102,11 @@ export function loadAdrLog(
     for (const adr of adrs) adr.dialect = config.dialect;
   }
   // Defaults to per-directory (ADR-0008) — a repo declares "global" only if
-  // its numbers really must be unique across the whole ADR root.
+  // its numbers really must be unique across the whole ADR root. The declared
+  // flag is threaded separately: a declared per-directory forces per-dir gap
+  // scoping, while the default is reuse-gated (NEW-C, D1).
   const numberingScope = config.numbering ?? "per-directory";
+  const numberingScopeDeclared = config.numbering !== undefined;
   // Defaults to advisory (ADR-0010) — a repo declares "fail" only if it
   // wants numbering gaps caught as errors, not just surfaced.
   const numberingGapsMode = config.numbering_gaps ?? "advisory";
@@ -118,6 +121,7 @@ export function loadAdrLog(
     prContext: loadPrContext(prContextPath),
     dialectDeclared,
     numberingScope,
+    numberingScopeDeclared,
     numberingGapsMode,
   };
 }
