@@ -1,5 +1,5 @@
 import { existsSync, realpathSync } from "node:fs";
-import { isAbsolute, relative, resolve } from "node:path";
+import { isAbsolute, relative, resolve, sep } from "node:path";
 
 /**
  * Does `target` (resolved against `base`) lexically escape `repoRoot`? Pure path
@@ -30,13 +30,25 @@ export function escapesRepoRoot(base: string, target: string, repoRoot: string):
  * makes it throw, treated as unresolved rather than a crash.
  */
 export function existsWithinRepo(base: string, target: string, repoRoot: string): boolean {
-  if (escapesRepoRoot(base, target, repoRoot)) return false; // escaped the repo root (lexical)
+  return resolveWithinRepo(base, target, repoRoot) !== undefined;
+}
+
+/**
+ * Like `existsWithinRepo`, but returns the resolved path repo-relative (forward
+ * slashes) when the target exists and is contained, else undefined. The
+ * shared resolver uses this so D7 can map an index entry to the ADR file it
+ * resolves to, not merely learn that it exists. Containment is identical to
+ * `existsWithinRepo` (which now delegates here) — the S1 realpath guard stays.
+ */
+export function resolveWithinRepo(base: string, target: string, repoRoot: string): string | undefined {
+  if (escapesRepoRoot(base, target, repoRoot)) return undefined; // escaped the repo root (lexical)
   const abs = resolve(base, target);
-  if (!existsSync(abs)) return false;
+  if (!existsSync(abs)) return undefined;
   try {
     const realRel = relative(realpathSync(repoRoot), realpathSync(abs));
-    return !realRel.startsWith("..") && !isAbsolute(realRel);
+    if (realRel.startsWith("..") || isAbsolute(realRel)) return undefined;
   } catch {
-    return false;
+    return undefined;
   }
+  return relative(repoRoot, abs).split(sep).join("/");
 }
