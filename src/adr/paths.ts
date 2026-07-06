@@ -14,6 +14,19 @@ export function escapesRepoRoot(base: string, target: string, repoRoot: string):
 }
 
 /**
+ * Is `child` the directory `parent` itself, or a path strictly under it? A
+ * boundary-aware containment test — `relative()`-based, rejecting a `..`-escape
+ * — not a substring `startsWith`, which treats `docs/adr-extra` as inside
+ * `docs/adr` (the B-8 D4 false negative: a ghost reference in a sibling
+ * directory sharing a name prefix was wrongly excluded from the scan). Pure path
+ * math, same boundary logic as `escapesRepoRoot`.
+ */
+export function isPathInside(parent: string, child: string): boolean {
+  const rel = relative(parent, child);
+  return rel === "" || (!rel.startsWith("..") && !isAbsolute(rel));
+}
+
+/**
  * Exists AND is inside the repository (S1, ADR-0013). The one containment
  * primitive both D3 and D7 import — before this it lived module-private in D3,
  * and D7's index-existence check was a raw `existsSync(resolve(...))` with no

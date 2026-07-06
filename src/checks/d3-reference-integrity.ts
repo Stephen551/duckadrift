@@ -1,12 +1,10 @@
 import { dirname } from "node:path";
 import { decodeTarget } from "../adr/parse.js";
-import { makeBasenameFinder, resolveReference } from "../adr/resolve.js";
+import { EXTERNAL_SCHEME_RE, makeBasenameFinder, resolveReference } from "../adr/resolve.js";
 import { formatAdrRef } from "../adr/refs.js";
 import { code } from "../report/write.js";
 import type { AdrLogContext } from "../adr/types.js";
 import type { Finding } from "../types.js";
-
-const EXTERNAL_LINK_RE = /^[a-z][a-z0-9+.-]*:/i;
 // `[Name](@handle)` is a GitHub-attribution-mention idiom, not a file or code
 // reference — found running R5's opendatahub, whose Authors table cites
 // reviewers this way. Matches a bare GitHub-username-shaped target ONLY: no
@@ -82,7 +80,7 @@ export function d3ReferenceIntegrity(ctx: AdrLogContext): Finding[] {
       const target = link.target;
       if (
         target === "" ||
-        EXTERNAL_LINK_RE.test(target) ||
+        EXTERNAL_SCHEME_RE.test(target) ||
         USERNAME_MENTION_RE.test(target) ||
         EMAIL_RE.test(target)
       )

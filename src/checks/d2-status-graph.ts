@@ -137,7 +137,12 @@ function findBrokenPathRefs(
       const ref = adr.number !== null ? formatAdrRef(adr.number) : adr.fileName;
       findings.push({
         check: "D2",
-        claim: `${ref} declares \`${kind}: ${path}\`, which does not resolve to an ADR in the log.`,
+        // `path` is an ADR-authored frontmatter value — a backtick (or `](url)`)
+        // in it would break the open-coded span and inject markdown into the
+        // report/job summary (B-9). Route it through the hardened code() helper,
+        // the same fence dirLabel/adrGraphLabel already use; the rendered span is
+        // unchanged for a backtick-free value.
+        claim: `${ref} declares ${code(`${kind}: ${path}`)}, which does not resolve to an ADR in the log.`,
         evidence: [{ adr: adr.fileName }],
         consequence:
           "A supersession reference written as an explicit path must point at a real ADR — this one resolves to nothing, so the relationship it declares can't be verified.",

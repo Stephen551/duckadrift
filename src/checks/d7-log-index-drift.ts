@@ -1,7 +1,7 @@
 import { relative, sep } from "node:path";
 import { decodeTarget, scanLinks } from "../adr/parse.js";
 import { escapesRepoRoot } from "../adr/paths.js";
-import { makeBasenameFinder, resolveReference } from "../adr/resolve.js";
+import { isExternalReference, makeBasenameFinder, resolveReference } from "../adr/resolve.js";
 import type { AdrLogContext, ParsedAdr } from "../adr/types.js";
 import { code } from "../report/write.js";
 import type { Finding } from "../types.js";
@@ -18,14 +18,25 @@ import type { Finding } from "../types.js";
 // root cause (assuming one index shape is the only one that exists).
 const INDEX_ENTRY_LINE_RE = /^\s*(?:\||[-*+]\s|\d+\.\s)/;
 
-/** Index entries that name a markdown file, via the shared scanner (target + rawTarget). */
+/**
+ * Internal index entries, via the shared scanner (target + rawTarget). An entry
+ * is any link on an index-list line whose target is an on-disk path — external
+ * references (a URL scheme, protocol-relative) are dropped here, exactly as D3
+ * skips external links, so the last ad-hoc piece of D7 (a `/\.md$/` filter) no
+ * longer decides membership. That filter was wrong two ways: it *passed* an
+ * external `.md` URL (reconciled against the directory → B-1 false positive) and
+ * *excluded* an extensionless site-relative entry like `0002-b` (so the ADR it
+ * lists was falsely "not listed" → B-2). Whether an entry points at something
+ * real is now the resolver's call, not the filename's shape. A pure-anchor link
+ * (`#section`, empty target) is not an entry.
+ */
 function indexEntries(indexContent: string): { target: string; rawTarget: string }[] {
   const entryLines = indexContent
     .split(/\r?\n/)
     .filter((line) => INDEX_ENTRY_LINE_RE.test(line))
     .join("\n");
   return scanLinks(entryLines)
-    .filter((l) => !l.malformed && /\.md$/i.test(l.target))
+    .filter((l) => !l.malformed && l.target !== "" && !isExternalReference(l.target))
     .map((l) => ({ target: l.target, rawTarget: l.rawTarget }));
 }
 

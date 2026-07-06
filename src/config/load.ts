@@ -1,6 +1,7 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { parse as parseYaml } from "yaml";
+import { MAX_FILE_SIZE_BYTES } from "../repo/walk.js";
 import type { Dialect, NumberingGapsMode, NumberingScope } from "../adr/types.js";
 
 const DECLARABLE_DIALECTS = new Set<Dialect>(["nygard", "madr"]);
@@ -19,6 +20,19 @@ export interface DuckadriftConfig {
 export function loadConfig(repoRoot: string): DuckadriftConfig {
   const configPath = join(repoRoot, ".duckadrift.yml");
   if (!existsSync(configPath)) return {};
+
+  // The same size cap the repo walk applies to every scanned file (B-10). The
+  // config is repo content, so on a fork PR it is attacker-authorable; reading
+  // it uncapped crashed the tool at V8's string limit before it could produce a
+  // report. An oversized config is a user error — degrade to defaults with a
+  // loud notice (the Pact: the watch may fail visibly, never crash silent), not
+  // a hard abort mid-scan.
+  if (statSync(configPath).size > MAX_FILE_SIZE_BYTES) {
+    console.error(
+      `duckadrift: .duckadrift.yml exceeds ${MAX_FILE_SIZE_BYTES} bytes — ignoring it and proceeding with defaults.`
+    );
+    return {};
+  }
 
   const raw = readFileSync(configPath, "utf-8");
   const parsed = (parseYaml(raw) ?? {}) as Record<string, unknown>;

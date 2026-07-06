@@ -44,6 +44,22 @@ export function makeBasenameFinder(repoRoot: string): (target: string) => string
   };
 }
 
+// A URL scheme (`https:`, `mailto:`, …). The one external-reference primitive,
+// shared so D3's link skip and D7's index-entry skip can't drift: a reference
+// with an external scheme is not an on-disk path and is never resolved or
+// existence-checked (D3 has always skipped these; D7 used to reconcile them
+// against the directory — the B-1 clause-A false positive).
+export const EXTERNAL_SCHEME_RE = /^[a-z][a-z0-9+.-]*:/i;
+
+/**
+ * True for a reference the checks skip rather than resolve on disk: an explicit
+ * URL scheme, or a protocol-relative `//host/…` URL. Shared by D3 (link targets)
+ * and D7 (index entries) so "what counts as external" has exactly one answer.
+ */
+export function isExternalReference(target: string): boolean {
+  return EXTERNAL_SCHEME_RE.test(target) || target.startsWith("//");
+}
+
 export type ResolveStatus =
   | "resolved"
   | "raw-only-advisory"
