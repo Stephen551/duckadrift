@@ -41,13 +41,16 @@ export interface AdrLink {
   /** The CommonMark-normalized destination (angle brackets/title/fragment removed) — what checks resolve. */
   target: string;
   /**
-   * The raw captured destination before normalization. D3 falls back to this on
-   * the dangling branch to disambiguate a stripped title from part of a real
-   * path: `[d](my folder (v2))` normalizes to `my folder`, but if the raw
-   * `my folder (v2)` resolves on disk, the parens were a filename, not a title.
+   * The destination with the trailing title kept (escapes resolved, fragment
+   * stripped). D3 falls back to this on the dangling branch to disambiguate a
+   * stripped title from part of a real path: `[d](my folder (v2))` normalizes to
+   * `my folder`, but if the raw `my folder (v2)` resolves on disk, the parens
+   * were a filename, not a title.
    */
   rawTarget: string;
   line: number;
+  /** True for an unclosed `<…>` destination — not a valid link; D3 surfaces it as a malformed-link advisory rather than a phantom dangling finding (F4). */
+  malformed?: boolean;
 }
 
 export interface ParsedAdr {

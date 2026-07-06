@@ -4,14 +4,6 @@ import type { AdrFrontmatter, AdrLink, AdrSection, ParsedAdr } from "./types.js"
 
 const FRONTMATTER_RE = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/;
 const HEADING_RE = /^(#{1,6})\s+(.*)$/;
-// The link-destination group allows balanced parentheses, one level deep —
-// CommonMark permits them in a bare destination, and real paths use them
-// (`client(v2).ts`, a versioned filename). A plain `([^)]+)` stopped the
-// target at the first `)`, truncating `../src/client(v2).ts` to
-// `../src/client(v2` and fact-flagging a real file as dangling (C1,
-// ADR-0013). The two alternatives are disjoint (`[^()]` never starts with a
-// paren; `\([^()]*\)` always does), so there is no backtracking ambiguity.
-const LINK_RE = /\[([^\]]*)\]\(((?:[^()]|\([^()]*\))*)\)/g;
 const HTML_COMMENT_RE = /<!--[\s\S]*?-->/g;
 
 const WHITESPACE_RE = /\s/;
@@ -43,47 +35,152 @@ function stripTrailingTitle(s: string): string {
   return s.slice(0, cut);
 }
 
-// The single CommonMark-correct destination normalizer. LINK_RE captures
-// everything between the outer parens — a destination plus an optional title —
-// so the raw capture is not yet a resolvable path. Every link consumer (D3 via
-// `parsed.links`, D7 via `extractLinkTargets`) runs its captured destination
-// through this one function, so a hardening applied here reaches every check
-// instead of one copy. Before consolidation, D3 saw the raw capture (angle
-// brackets and titles left in, fact-flagging `<...>` and `path "title"` as
-// dangling) and D7 re-parsed the index with its own pre-C1 regex that truncated
-// a `foo(v2).md` filename at the first paren.
-//
-// CommonMark destination/title grammar (see the spec's "Links" section): a
-// destination is either `<...>` (may contain spaces; ends at the first `>`) or a
-// bare run with no unescaped whitespace and balanced parens; an optional title
-// follows whitespace as `"..."`, `'...'`, or `(...)`. So: unwrap `<...>`, drop a
-// whitespace-separated trailing title, keep balanced parens that have no
-// preceding whitespace (a versioned filename), and strip a `#fragment` — the
-// resolvable on-disk path is what every check needs.
-export function normalizeLinkDestination(raw: string): string {
-  let s = raw.trim();
-  if (s.startsWith("<")) {
-    // Angle-bracketed: the destination is the content up to the first `>` and
-    // may contain spaces; anything after `>` is a title, discarded.
-    const end = s.indexOf(">");
-    s = end === -1 ? s.slice(1) : s.slice(1, end);
-  } else {
-    // Bare destination, optionally followed by a title. Strip only a
-    // RECOGNIZABLE trailing title (linear, see stripTrailingTitle) — not
-    // everything after the first space. CommonMark requires a space-bearing
-    // destination to be angle-bracketed, but real-world markdown (and MkDocs)
-    // accepts a bare path with spaces — e.g. an image
-    // `![](common-config-images/EdgeX 3.x flowchart.png)`, three of which are in
-    // edgex-docs' ADR-0026. Truncating at the first space broke those real
-    // references (a no-regression-differential catch); a versioned filename like
-    // `client(v2).ts` has no whitespace-preceded trailing group and is kept.
-    s = stripTrailingTitle(s);
+// The result of parsing one CommonMark link destination.
+export interface ScannedLink {
+  label: string;
+  /** The on-disk-resolvable path: escapes resolved, angle unwrapped, trailing title stripped, unescaped fragment removed. "" when malformed. */
+  target: string;
+  /** As `target` but with the trailing title kept — feeds the D3 ladder's raw-vs-normalized step. "" when malformed. */
+  rawTarget: string;
+  line: number;
+  /** True for an unclosed `<…>` destination — not a valid link, surfaced (F4) rather than silently turned into a phantom target. */
+  malformed: boolean;
+}
+
+interface DestResult {
+  target: string;
+  rawTarget: string;
+  malformed: boolean;
+  end: number;
+}
+
+// Parse one CommonMark link destination beginning at `start` (the char after
+// the link's `(`), in a single linear pass. A regex structurally cannot do this
+// — destinations permit backslash-escaped delimiters and arbitrarily nested
+// balanced parens, neither a regular language — which was the root of the
+// escaped-delimiter false positives (F1/F2), the nested-paren silent drop
+// (F3/G4B), and the angle mishandling (G4A/F4). Being a scan and not a
+// backtracking pattern, it also carries no catastrophic-backtracking surface
+// (S6/ADR-0013). Returns the normalized `target`, the pre-title-strip
+// `rawTarget`, whether the destination is malformed, and `end` (index just past
+// the link's closing `)`), so the scanner can continue.
+function readDestination(s: string, start: number): DestResult {
+  let i = start;
+  // Whitespace between `(` and the destination is not part of it (CommonMark).
+  while (i < s.length && WHITESPACE_RE.test(s[i]!)) i++;
+  if (s[i] === "<") {
+    // Angle form: read to the first UNESCAPED `>`. `\>` is a literal `>`. An
+    // angle destination that never closes is malformed — not a link — so emit no
+    // target (F4); still advance past the region so scanning continues.
+    i++;
+    let content = "";
+    let fragPos = -1;
+    let closed = false;
+    while (i < s.length) {
+      const c = s[i]!;
+      if (c === "\\" && i + 1 < s.length) {
+        content += s[i + 1]!;
+        i += 2;
+        continue;
+      }
+      if (c === ">") {
+        closed = true;
+        i++;
+        break;
+      }
+      if (c === "\n") break;
+      if (c === "#" && fragPos === -1) fragPos = content.length;
+      content += c;
+      i++;
+    }
+    if (!closed) {
+      const j = s.indexOf(")", start);
+      return { target: "", rawTarget: "", malformed: true, end: j === -1 ? s.length : j + 1 };
+    }
+    // A title may follow the `>` up to the link's `)`; discard it.
+    const j = s.indexOf(")", i);
+    const end = j === -1 ? s.length : j + 1;
+    const noFrag = fragPos === -1 ? content : content.slice(0, fragPos);
+    return { target: noFrag, rawTarget: noFrag, malformed: false, end };
   }
-  // A fragment identifier is not part of the on-disk path (checks already
-  // ignored it downstream; stripping here keeps the normalized target honest).
-  const hash = s.indexOf("#");
-  if (hash !== -1) s = s.slice(0, hash);
-  return s;
+
+  // Bare form: track paren depth and escapes. `\<punct>` → the escaped char is
+  // literal (an escaped `)` or `#` does not delimit — F1/F2). `(` deepens, `)`
+  // at depth 0 closes the link (nested parens are kept — F3/G4B). Record the
+  // first UNESCAPED `#` as the fragment start.
+  let depth = 0;
+  let dest = "";
+  let fragPos = -1;
+  let closed = false;
+  while (i < s.length) {
+    const c = s[i]!;
+    if (c === "\\" && i + 1 < s.length) {
+      dest += s[i + 1]!;
+      i += 2;
+      continue;
+    }
+    if (c === "(") {
+      depth++;
+      dest += c;
+      i++;
+      continue;
+    }
+    if (c === ")") {
+      if (depth > 0) {
+        depth--;
+        dest += c;
+        i++;
+        continue;
+      }
+      closed = true;
+      i++;
+      break;
+    }
+    if (c === "#" && fragPos === -1) fragPos = dest.length;
+    dest += c;
+    i++;
+  }
+  // Trailing whitespace before the link's `)` is not part of the destination
+  // (internal spaces — the edgex image case — are kept by trimEnd).
+  const noFrag = (fragPos === -1 ? dest : dest.slice(0, fragPos)).trimEnd();
+  // Strip only a recognizable trailing title (linear, S6-safe) — a bare path
+  // with spaces and no trailing title is kept (the edgex image case).
+  return { target: stripTrailingTitle(noFrag), rawTarget: noFrag, malformed: false, end: closed ? i : s.length };
+}
+
+// The one link scanner. Finds each `[label](destination)` inline link per line
+// and yields the parsed destination. D3 reads this via `parsed.links` and D7 via
+// `extractLinkTargets`, so link parsing has exactly one implementation and the
+// checks cannot diverge on it.
+export function scanLinks(text: string): ScannedLink[] {
+  const out: ScannedLink[] = [];
+  text.split(/\r?\n/).forEach((line, idx) => {
+    let i = 0;
+    while (i < line.length) {
+      if (line[i] !== "[") {
+        i++;
+        continue;
+      }
+      const close = line.indexOf("]", i + 1);
+      if (close === -1) break; // no label close on this line
+      if (line[close + 1] !== "(") {
+        i = close + 1; // `[...]` not followed by `(` — not an inline link
+        continue;
+      }
+      const d = readDestination(line, close + 2);
+      out.push({ label: line.slice(i + 1, close), target: d.target, rawTarget: d.rawTarget, line: idx + 1, malformed: d.malformed });
+      i = d.end;
+    }
+  });
+  return out;
+}
+
+// Normalize a single raw destination string (the bytes a caller already has
+// between the parens) to its resolvable path — the same core the scanner runs,
+// wrapped for the unit contract and any single-string caller. Appending a `)`
+// gives readDestination the link-close sentinel it scans to.
+export function normalizeLinkDestination(raw: string): string {
+  return readDestination(`${raw})`, 0).target;
 }
 
 // Percent-decode a link target for on-disk resolution (C4). "%20" is how a
@@ -100,17 +197,13 @@ export function decodeTarget(target: string): string {
   }
 }
 
-// The one link-extraction helper. Runs LINK_RE per line and normalizes each
-// captured destination. D7 imports this for index content; ADR-body extraction
-// (`extractLinks`) shares the same normalizer so D3 and D7 can never re-diverge.
+// The one link-extraction helper. Runs the shared scanner; D7 imports this for
+// index content, and ADR-body extraction (`extractLinks`) shares the same
+// scanner so D3 and D7 can never re-diverge. Malformed links carry no target.
 export function extractLinkTargets(markdown: string): { target: string; line: number }[] {
-  const out: { target: string; line: number }[] = [];
-  markdown.split(/\r?\n/).forEach((line, idx) => {
-    for (const match of line.matchAll(LINK_RE)) {
-      out.push({ target: normalizeLinkDestination(match[2] ?? ""), line: idx + 1 });
-    }
-  });
-  return out;
+  return scanLinks(markdown)
+    .filter((l) => !l.malformed)
+    .map((l) => ({ target: l.target, line: l.line }));
 }
 
 // HTML comments are template/instructional boilerplate, invisible when
@@ -218,20 +311,17 @@ function extractTitle(sections: AdrSection[]): string | null {
 }
 
 function extractLinks(body: string): AdrLink[] {
-  const links: AdrLink[] = [];
-  const lines = body.split(/\r?\n/);
-  lines.forEach((line, idx) => {
-    for (const match of line.matchAll(LINK_RE)) {
-      // Normalize the destination so `parsed.links[].target` is the resolvable
-      // path — D3 reads this and gets angle-bracket/title/fragment handling for
-      // free, from the same normalizer D7 uses. rawTarget keeps the pre-
-      // normalization capture so D3 can retry it on the dangling branch (G2),
-      // distinguishing a stripped title from parens that are part of a filename.
-      const raw = match[2] ?? "";
-      links.push({ text: match[1] ?? "", target: normalizeLinkDestination(raw), rawTarget: raw, line: idx + 1 });
-    }
-  });
-  return links;
+  // One scanner produces `parsed.links`; D3 reads target (resolvable path),
+  // rawTarget (pre-title-strip, for the ambiguity ladder), and malformed (an
+  // unclosed angle destination it surfaces as an advisory rather than a phantom
+  // dangling finding — F4).
+  return scanLinks(body).map((l) => ({
+    text: l.label,
+    target: l.target,
+    rawTarget: l.rawTarget,
+    line: l.line,
+    malformed: l.malformed,
+  }));
 }
 
 export function parseAdrFile(raw: string, filePath: string, fileName: string): ParsedAdr {
