@@ -13,8 +13,12 @@ drift apart:
   before each commit, reading forbidden names from `.privacy-denylist.local` (gitignored — the
   names never land in the repo). It can be skipped with `--no-verify`, which is why the second
   layer exists.
-- **CI (the net).** `.github/workflows/privacy-guard.yml` runs the same scanner over the whole
-  tree on every push and same-repo PR, reading names from the `PRIVACY_DENYLIST` repo secret.
+- **Commit-msg hook (local).** `.git/hooks/commit-msg` runs the same scanner over the commit
+  message, with the same allowlist — a name acceptable in a committed file is acceptable in the
+  message that added it, and vice versa.
+- **CI (the net).** `.github/workflows/privacy-guard.yml` runs the same scanner over every
+  public-history surface — file content, filenames, and the pushed commit messages — on every
+  push and same-repo PR, reading names from the `PRIVACY_DENYLIST` repo secret.
   It runs server-side, cannot be `--no-verify`'d away, and — unlike a local hook — is
   reviewable and testable in the repo. In CI mode the scanner redacts any matched name from
   the log, so a public Actions log never echoes a private name.
