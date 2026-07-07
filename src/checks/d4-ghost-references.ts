@@ -1,4 +1,5 @@
 import { formatAdrRef, parseAdrRef } from "../adr/refs.js";
+import { isPathInside } from "../adr/paths.js";
 import type { AdrLogContext } from "../adr/types.js";
 import { walkRepoFiles } from "../repo/walk.js";
 import { code } from "../report/write.js";
@@ -21,7 +22,9 @@ export function d4GhostReferences(ctx: AdrLogContext): Finding[] {
 
   // Only code/comments/docs OUTSIDE the ADR log itself — an ADR's own prose
   // legitimately names the decisions it supersedes; that's D2's job, not D4's.
-  const files = walkRepoFiles(ctx.repoRoot).filter((f) => !f.absolutePath.startsWith(ctx.adrDir));
+  // Boundary-aware, not a substring test: `startsWith(adrDir)` also matched a
+  // sibling `docs/adr-extra/` and wrongly skipped its ghost references (B-8).
+  const files = walkRepoFiles(ctx.repoRoot).filter((f) => !isPathInside(ctx.adrDir, f.absolutePath));
 
   for (const file of files) {
     const lines = file.content.split(/\r?\n/);

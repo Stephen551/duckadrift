@@ -21,3 +21,8 @@ Architecture decisions for duckadrift itself, recorded in duckadrift's own vocab
 | [0015](0015-decision-section-plural-alias.md) | A decision section may be titled Decision or Decisions | Accepted | elevated |
 | [0016](0016-bare-mention-target-skip.md) | A bare @ link target is a mention, not a dangling reference | Accepted | elevated |
 | [0017](0017-clause-a-closure-and-corpus-correction.md) | Clause A closure, and the corpus correction it forced | Accepted | elevated |
+| [0018](0018-the-adversarial-consolidation-round.md) | The adversarial-consolidation round, and the ambiguity class it surfaced | Accepted | elevated |
+| [0019](0019-the-standing-pre-tag-adversarial-gate.md) | The standing pre-tag adversarial gate | Accepted | critical |
+| [0020](0020-the-resolution-module.md) | The resolution module — one parser, one resolver ladder | Accepted | elevated |
+| [0021](0021-the-full-surface-adversarial-pass.md) | The full-surface adversarial pass, and the class it closed | Accepted | elevated |
+| [0022](0022-the-pre-tag-clause-a-confirmation.md) | The v0.1.5 pre-tag clause-A confirmation and corpus-roster correction | Accepted | elevated |

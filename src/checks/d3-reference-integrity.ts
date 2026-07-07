@@ -1,42 +1,10 @@
-import { existsSync, realpathSync } from "node:fs";
-import { dirname, isAbsolute, relative, resolve } from "node:path";
+import { dirname } from "node:path";
+import { decodeTarget } from "../adr/parse.js";
+import { isExternalReference, makeBasenameFinder, resolveReference } from "../adr/resolve.js";
 import { formatAdrRef } from "../adr/refs.js";
-import { walkAllPaths } from "../repo/walk.js";
 import { code } from "../report/write.js";
 import type { AdrLogContext } from "../adr/types.js";
 import type { Finding } from "../types.js";
-
-/**
- * Exists AND is inside the repository (S1, ADR-0013). Before this, D3 called
- * existsSync on the resolved path with no containment, so a crafted link like
- * `../../../../etc/passwd` traversed above the repo root and, if the target
- * existed on the runner, was treated as a valid HEAD reference — D3 claims
- * links resolve "at HEAD," and a file outside the checkout is not at HEAD. A
- * target that resolves outside the repo root is treated as unresolved.
- */
-function existsWithinRepo(base: string, target: string, repoRoot: string): boolean {
-  const abs = resolve(base, target);
-  const rel = relative(repoRoot, abs);
-  if (rel.startsWith("..") || isAbsolute(rel)) return false; // escaped the repo root (lexical)
-  if (!existsSync(abs)) return false;
-  // The lexical check above only inspects the path text; existsSync follows
-  // symlinks. An in-repo symlink whose target is OUTSIDE the checkout has an
-  // all-in-repo lexical path (the `..` guard never trips) but resolves on disk
-  // to an out-of-repo real file — which is not "at HEAD" (S1 post-audit,
-  // ADR-0013). Canonicalize the resolved path AND the repo root, then re-check
-  // containment on the real paths. realpath runs only on the existsSync-true
-  // branch — i.e. only for links that actually resolve — so the added syscall
-  // is bounded to resolving links, not every link. A broken link or a symlink
-  // cycle makes realpath throw; treat that as unresolved, never a crash.
-  try {
-    const realRel = relative(realpathSync(repoRoot), realpathSync(abs));
-    return !realRel.startsWith("..") && !isAbsolute(realRel);
-  } catch {
-    return false;
-  }
-}
-
-const EXTERNAL_LINK_RE = /^[a-z][a-z0-9+.-]*:/i;
 // `[Name](@handle)` is a GitHub-attribution-mention idiom, not a file or code
 // reference — found running R5's opendatahub, whose Authors table cites
 // reviewers this way. Matches a bare GitHub-username-shaped target ONLY: no
@@ -60,15 +28,6 @@ const USERNAME_MENTION_RE = /^@(?:[a-zA-Z0-9](?:-?[a-zA-Z0-9])*)?$/;
 // idioms share "exactly one `@`" but are otherwise structurally distinct.
 const EMAIL_RE = /^[^\s@/]+@[^\s@/]+\.[^\s@/]+$/;
 
-// Percent-decode a link target for on-disk resolution (C4). A malformed
-// escape can't be decoded — keep the raw target rather than throw.
-function decodeTarget(target: string): string {
-  try {
-    return decodeURIComponent(target);
-  } catch {
-    return target;
-  }
-}
 
 function dangleConsequence(target: string): string {
   return /\.md$/i.test(target)
@@ -93,103 +52,72 @@ const SITE_RELATIVE_CONSEQUENCE =
 /** D3: reference integrity — PDR §2.3. */
 export function d3ReferenceIntegrity(ctx: AdrLogContext): Finding[] {
   const findings: Finding[] = [];
-  // Lazy and cached: only built the first time a link actually fails to
-  // resolve, reused for every dangling link after that in this same call —
-  // not one repo-wide walk per link.
-  let basenameIndex: Map<string, string> | null = null;
-  let indexDirIndex: Map<string, string> | null = null;
-  function buildIndices(): void {
-    if (basenameIndex) return;
-    basenameIndex = new Map();
-    indexDirIndex = new Map();
-    for (const f of walkAllPaths(ctx.repoRoot)) {
-      const segments = f.relativePath.split("/");
-      const base = segments[segments.length - 1]!;
-      if (!basenameIndex.has(base)) basenameIndex.set(base, f.relativePath);
-      // MkDocs/Docusaurus per-page-directory convention: a bare slug link
-      // can map to <slug>/index.md, not <slug>.md — found alongside the
-      // trailing-slash gap below, the other half of the same idiom.
-      if (base.toLowerCase() === "index.md" && segments.length >= 2) {
-        const parentDir = segments[segments.length - 2]!;
-        if (!indexDirIndex.has(parentDir)) indexDirIndex.set(parentDir, f.relativePath);
-      }
-    }
-  }
-
-  function findByBasename(target: string): string | undefined {
-    buildIndices();
-    // The dominant MkDocs/Docusaurus idiom (found running R5's edgex-docs,
-    // caught in verifier review): a site-relative link is written without
-    // an extension and often with a trailing slash — "../../adr/foo/", not
-    // "foo.md". A raw split("/").pop() on a trailing-slash target returns
-    // "" (nothing follows the last slash), which can never match anything.
-    // Strip the trailing slash first, then — if the resulting slug has no
-    // extension of its own — try the two source shapes that idiom actually
-    // maps to: "<slug>.md" and "<slug>/index.md".
-    const stripped = target.replace(/\/+$/, "");
-    const slug = stripped.split("/").pop()!;
-    if (slug === "") return undefined;
-
-    const direct = basenameIndex!.get(slug);
-    if (direct !== undefined) return direct;
-
-    if (!/\.[a-z0-9]+$/i.test(slug)) {
-      const withMd = basenameIndex!.get(`${slug}.md`);
-      if (withMd !== undefined) return withMd;
-      const asIndexDir = indexDirIndex!.get(slug);
-      if (asIndexDir !== undefined) return asIndexDir;
-    }
-
-    return undefined;
-  }
+  const findByBasename = makeBasenameFinder(ctx.repoRoot);
 
   for (const adr of ctx.adrs) {
     const baseDir = dirname(adr.filePath);
     for (const link of adr.links) {
-      const target = link.target.split("#")[0]!.trim();
+      const ref = adr.number !== null ? formatAdrRef(adr.number) : adr.fileName;
+
+      // A malformed destination — an unclosed `<` angle bracket — is not a valid
+      // CommonMark link. Surface it as a low-severity advisory rather than
+      // inventing a phantom target (`missing.md`) and hard-failing on it (F4).
+      if (link.malformed) {
+        findings.push({
+          check: "D3",
+          claim: `${ref} has a malformed link destination on line ${link.line} — an unclosed \`<\` angle bracket, which is not a valid CommonMark link.`,
+          evidence: [{ adr: adr.fileName, line: link.line }],
+          consequence:
+            "A malformed link destination does not render as a link and cannot be resolved — confirm the intended target and close or remove the angle bracket.",
+          advisory: true,
+        });
+        continue;
+      }
+
+      // The scanner already resolved escapes and stripped the title and fragment,
+      // so `link.target` is the resolvable path — no per-check re-parsing (an
+      // escaped `\#` is part of the path, not a fragment: F2).
+      const target = link.target;
       if (
         target === "" ||
-        EXTERNAL_LINK_RE.test(target) ||
+        isExternalReference(target) || // RV-2: the full shared primitive (scheme + protocol-relative `//`), matching D7
         USERNAME_MENTION_RE.test(target) ||
         EMAIL_RE.test(target)
       )
         continue;
 
-      // Markdown/GitHub percent-decode a link target before resolving it:
-      // "%20" is how a space in a filename is written in a link, and the file
-      // on disk has a real space, not the literal "%20" (C4, ADR-0013). Decode
-      // for the existence check only — a malformed escape (a stray "%") can't
-      // be decoded, so fall back to the raw target rather than throw. The
-      // claim below still shows the raw target the author actually wrote.
-      const resolveTarget = decodeTarget(target);
+      // The one shared resolver — parse-normalized in, disposition out. D3's
+      // behavior is unchanged (the differential proves it); the ladder just lives
+      // in one place now, called by D7 and D2 too.
+      const result = resolveReference({
+        baseDir,
+        target,
+        rawTarget: link.rawTarget,
+        repoRoot: ctx.repoRoot,
+        findByBasename,
+      });
 
-      // A leading "/" is GitHub's own repo-root-relative convention for a
-      // link within the same repo (found running R5's opendatahub) — not an
-      // OS-absolute path, which no legitimate ADR reference is ever written
-      // as. Resolved on its own, before the ADR-dir/repo-root fallback pair
-      // below: a leading "/" unambiguously signals "not relative to me."
-      const resolved = resolveTarget.startsWith("/")
-        ? existsWithinRepo(ctx.repoRoot, resolveTarget.replace(/^\/+/, ""), ctx.repoRoot)
-        : // Primary: relative to the ADR's own directory (the markdown-
-          // correct reading of a relative link). Fallback: relative to repo
-          // root — a real, common ADR convention (cite code paths the way
-          // you'd type them from the repo root), confirmed running against
-          // a real repo during Gate G1 where every code citation used this
-          // style. Both are containment-checked (S1): a link that resolves
-          // above the repo root is not a HEAD reference.
-          existsWithinRepo(baseDir, resolveTarget, ctx.repoRoot) ||
-          existsWithinRepo(ctx.repoRoot, resolveTarget, ctx.repoRoot);
+      if (result.status === "resolved") continue;
 
-      if (resolved) continue;
-
-      const foundPath = findByBasename(resolveTarget);
-      if (foundPath !== undefined) {
+      if (result.status === "raw-only-advisory") {
         findings.push({
           check: "D3",
-          claim: `${adr.number !== null ? formatAdrRef(adr.number) : adr.fileName} links to ${code(target)}, which does not resolve at HEAD (possibly site-relative — found at ${code(foundPath)}).`,
+          claim: `${ref} links to ${code(target)}, which does not resolve at HEAD — but a file named ${code(decodeTarget(link.rawTarget))} exists, so the link resolves if the trailing group is part of the filename rather than a Markdown title.`,
+          evidence: [{ adr: adr.fileName, line: link.line }],
+          consequence:
+            "A bare destination ending in a parenthesized or quoted group is ambiguous — confirm whether the group is part of the path (angle-bracket it if so) or a title over a broken link.",
+          advisory: true,
+        });
+        continue;
+      }
+
+      if (result.status === "site-relative-advisory") {
+        findings.push({
+          check: "D3",
+          claim: `${ref} links to ${code(target)}, which does not resolve at HEAD (possibly site-relative — found at ${code(result.resolvedPath!)}).`,
           evidence: [
             { adr: adr.fileName, line: link.line },
-            { file: foundPath },
+            { file: result.resolvedPath! },
           ],
           consequence: SITE_RELATIVE_CONSEQUENCE,
           advisory: true,
@@ -197,9 +125,10 @@ export function d3ReferenceIntegrity(ctx: AdrLogContext): Finding[] {
         continue;
       }
 
+      // status === "dangling": nothing resolves under any form.
       findings.push({
         check: "D3",
-        claim: `${adr.number !== null ? formatAdrRef(adr.number) : adr.fileName} links to ${code(target)}, which does not resolve at HEAD.`,
+        claim: `${ref} links to ${code(target)}, which does not resolve at HEAD.`,
         evidence: [{ adr: adr.fileName, line: link.line }],
         consequence: dangleConsequence(target),
       });

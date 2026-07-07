@@ -167,12 +167,13 @@ export function d1SchemaLint(ctx: AdrLogContext): Finding[] {
     }
   }
 
-  const numbers = [...byNumber.keys()].sort((a, b) => a - b);
-  for (let i = 1; i < numbers.length; i++) {
-    const prev = numbers[i - 1]!;
-    const curr = numbers[i]!;
-    if (curr - prev > 1) {
-      const after = byNumber.get(curr)![0]!;
+  const emitGaps = (byNumberInScope: Map<number, ParsedAdr>): void => {
+    const numbers = [...byNumberInScope.keys()].sort((a, b) => a - b);
+    for (let i = 1; i < numbers.length; i++) {
+      const prev = numbers[i - 1]!;
+      const curr = numbers[i]!;
+      if (curr - prev <= 1) continue;
+      const after = byNumberInScope.get(curr)!;
       for (let missing = prev + 1; missing < curr; missing++) {
         const gapAdvisory = ctx.numberingGapsMode === "advisory";
         const claim = gapAdvisory
@@ -186,6 +187,50 @@ export function d1SchemaLint(ctx: AdrLogContext): Finding[] {
           ...(gapAdvisory ? { advisory: true } : {}),
         });
       }
+    }
+  };
+  const globalScopeGaps = (): void => {
+    const firstByNumber = new Map<number, ParsedAdr>();
+    for (const [number, group] of byNumber) firstByNumber.set(number, group[0]!);
+    emitGaps(firstByNumber);
+  };
+
+  // ADR-0008: a gap is computed within the numbering namespace. Under
+  // `numbering: global` that is the whole log. Under per-directory it is each
+  // directory independently — unconditionally when the user *declared*
+  // `numbering: per-directory` (NEW-C: an explicit declaration is an assertion,
+  // not a guess, so it is honored even with no cross-directory reuse), and
+  // otherwise (the auto/undeclared default) ONLY when the log actually numbers
+  // per-directory, signalled by a number reused across two or more directories
+  // (the same ambiguity ADR-0008 hinges duplicate-tier on, the B-7 director
+  // ruling). Absent both, the numbers form one global sequence merely organized
+  // into topic folders (edgex-docs: 0001 in the root, 0002 in device-service/,
+  // 0003 in core/, … a contiguous 1..N), where per-folder gap detection would
+  // flag every number that simply lives in a sibling folder — a large
+  // false-positive class.
+  if (ctx.numberingScope === "global") {
+    globalScopeGaps();
+  } else {
+    const byDirNumber = new Map<string, Map<number, ParsedAdr>>();
+    const dirsByNumber = new Map<number, Set<string>>();
+    for (const adr of ctx.adrs) {
+      if (adr.number === null) continue;
+      const dir = dirname(adr.fileName);
+      let m = byDirNumber.get(dir);
+      if (!m) {
+        m = new Map();
+        byDirNumber.set(dir, m);
+      }
+      if (!m.has(adr.number)) m.set(adr.number, adr);
+      const dirs = dirsByNumber.get(adr.number) ?? new Set<string>();
+      dirs.add(dir);
+      dirsByNumber.set(adr.number, dirs);
+    }
+    const perTeamNamespacing = [...dirsByNumber.values()].some((dirs) => dirs.size > 1);
+    if (ctx.numberingScopeDeclared || perTeamNamespacing) {
+      for (const m of byDirNumber.values()) emitGaps(m);
+    } else {
+      globalScopeGaps();
     }
   }
 

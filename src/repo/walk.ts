@@ -77,8 +77,11 @@ const TEXT_EXTENSIONS = new Set([
 ]);
 
 // Belt and suspenders alongside the extension allowlist: a legitimate text
-// file this large is not something a citation scan needs to read in full.
-const MAX_FILE_SIZE_BYTES = 2 * 1024 * 1024;
+// file this large is not something a citation scan needs to read in full. The
+// one size-cap primitive — exported so the config read applies the same bound
+// (B-10: `.duckadrift.yml` was read uncapped, a fork-reachable OOM at V8's
+// string limit).
+export const MAX_FILE_SIZE_BYTES = 2 * 1024 * 1024;
 
 export interface RepoFile {
   relativePath: string;

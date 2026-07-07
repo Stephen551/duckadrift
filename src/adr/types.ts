@@ -38,8 +38,19 @@ export interface AdrSection {
 
 export interface AdrLink {
   text: string;
+  /** The CommonMark-normalized destination (angle brackets/title/fragment removed) — what checks resolve. */
   target: string;
+  /**
+   * The destination with the trailing title kept (escapes resolved, fragment
+   * stripped). D3 falls back to this on the dangling branch to disambiguate a
+   * stripped title from part of a real path: `[d](my folder (v2))` normalizes to
+   * `my folder`, but if the raw `my folder (v2)` resolves on disk, the parens
+   * were a filename, not a title.
+   */
+  rawTarget: string;
   line: number;
+  /** True for an unclosed `<…>` destination — not a valid link; D3 surfaces it as a malformed-link advisory rather than a phantom dangling finding (F4). */
+  malformed?: boolean;
 }
 
 export interface ParsedAdr {
@@ -110,6 +121,14 @@ export interface AdrLogContext {
    * the defaulting happens once, at load time, not per-check.
    */
   numberingScope: NumberingScope;
+  /**
+   * True when the user explicitly declared `numbering:` in `.duckadrift.yml`.
+   * A *declared* `per-directory` forces per-directory gap scoping
+   * unconditionally; the auto/undeclared default is gated on cross-directory
+   * number reuse (the ADR-0008 namespacing signal, B-7). Distinguishing the two
+   * is why the bare `numberingScope` value is not enough (NEW-C).
+   */
+  numberingScopeDeclared: boolean;
   /**
    * Resolved from `.duckadrift.yml`'s `numbering_gaps:` key; defaults to
    * "advisory" when not declared (ADR-0010). Always a definite value — the
