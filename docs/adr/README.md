@@ -25,3 +25,4 @@ Architecture decisions for duckadrift itself, recorded in duckadrift's own vocab
 | [0019](0019-the-standing-pre-tag-adversarial-gate.md) | The standing pre-tag adversarial gate | Accepted | critical |
 | [0020](0020-the-resolution-module.md) | The resolution module — one parser, one resolver ladder | Accepted | elevated |
 | [0021](0021-the-full-surface-adversarial-pass.md) | The full-surface adversarial pass, and the class it closed | Accepted | elevated |
+| [0022](0022-the-pre-tag-clause-a-confirmation.md) | The v0.1.5 pre-tag clause-A confirmation and corpus-roster correction | Accepted | elevated |
