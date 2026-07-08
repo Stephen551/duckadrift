@@ -60,6 +60,14 @@ try {
   git(originDir, ["add", "-A"]);
   git(originDir, ["commit", "-q", "-m", "feature commit"]);
   git(originDir, ["checkout", "-q", "master"]); // leave origin on master
+  // Advance master AFTER feature branched, so master's tip is no longer the merge
+  // base. This is what makes the scenario distinguish three-dot from two-dot: a
+  // three-dot diff (merge-base...HEAD) yields only the PR's change, while a
+  // two-dot diff (master-tip..HEAD) would ALSO report this base-branch commit —
+  // so a future two-dot regression turns the "no base* files" assertion red.
+  writeFileSync(join(originDir, "base-after.txt"), "master moved on after feature branched\n");
+  git(originDir, ["add", "-A"]);
+  git(originDir, ["commit", "-q", "-m", "base advances after feature branches"]);
 
   const runAction = (cloneDir) => {
     const eventPath = join(cloneDir, "event.json");
@@ -101,7 +109,7 @@ try {
   if (ctxWritten) {
     const ctx = JSON.parse(readFileSync(a.outPath, "utf-8"));
     check(
-      "A: changedFiles is the PR's real change (feature.txt), not base-branch commits",
+      "A: changedFiles is the PR's real change (feature.txt) only, not master's post-divergence commit (rejects a two-dot regression)",
       ctx.changedFiles.includes("feature.txt") && !ctx.changedFiles.some((f) => f.startsWith("base"))
     );
   }
