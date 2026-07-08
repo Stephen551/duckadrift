@@ -1,0 +1,52 @@
+name: privacy-guard
+
+# The un-bypassable half of the guard. One shared scanner over every public-history surface:
+# file content, file paths (filenames), and commit messages. Names come from a secret so they
+# never enter the tree; CI mode redacts any match from the (public) log.
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    # Skip fork PRs: secrets are not exposed to them, and external contributors do not have the
+    # private names anyway. The guard exists to catch the maintainers' own leaks.
+    if: >-
+      github.event_name == 'push' ||
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0    # full history so the commit-message range resolves
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Scan tree, filenames, and commit messages for forbidden names
+        env:
+          DENYLIST: ${{ secrets.PRIVACY_DENYLIST }}
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.event.after }}
+        run: |
+          if [ -z "$DENYLIST" ]; then
+            echo "::warning::privacy-guard: PRIVACY_DENYLIST secret is not set — the guard is NOT enforcing yet. Set it in Settings > Secrets and variables > Actions."
+            exit 0
+          fi
+          printf '%s\n' "$DENYLIST" > "$RUNNER_TEMP/deny.txt"
+          git ls-files > "$RUNNER_TEMP/files.txt"
+          # Commit messages in the pushed range; fall back to recent history for a new branch or a PR event.
+          if [ -n "$AFTER" ] && [ -n "$BEFORE" ] && [ "$BEFORE" != "0000000000000000000000000000000000000000" ]; then
+            git log --format=%B "$BEFORE..$AFTER" > "$RUNNER_TEMP/msgs.txt" 2>/dev/null || git log --format=%B -n 50 > "$RUNNER_TEMP/msgs.txt"
+          else
+            git log --format=%B -n 50 > "$RUNNER_TEMP/msgs.txt"
+          fi
+          node scripts/privacy-scan.mjs \
+            --names "$RUNNER_TEMP/deny.txt" \
+            --allow .privacy-allowlist \
+            --ci \
+            --from "$RUNNER_TEMP/files.txt" \
+            "$RUNNER_TEMP/files.txt" \
+            "$RUNNER_TEMP/msgs.txt"

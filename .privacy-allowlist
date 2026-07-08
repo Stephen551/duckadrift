@@ -1,0 +1,8 @@
+# Privacy-guard allowlist — names permitted to appear in this public repo even though they
+# match a denylist entry. Each line is a deliberate, auditable exception. Keep this short;
+# the whole point of the guard is that additions here are rare and considered.
+#
+# fonthead — a public repository (github.com/Stephen551/fonthead) used as a public
+# calibration-corpus log. Named in ADR-0022 and the PR #22 evidence comment by director
+# decision; no longer treated as private, so it is permitted here rather than bypassed.
+fonthead

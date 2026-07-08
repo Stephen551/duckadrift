@@ -10,3 +10,6 @@ dist/
 # these files govern.
 /CLAUDE.md
 /PDR-duckadrift.md
+
+# Local privacy-guard denylist — the actual forbidden names, never committed.
+.privacy-denylist.local
