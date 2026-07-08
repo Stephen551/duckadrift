@@ -49,8 +49,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # PR-scoped checks (D5) diff against the base branch; full history is needed to find the merge base
       - uses: Stephen551/duckadrift@v0
 ```
+
+PR-mode checks diff against the base branch to see what the PR changed, so the canonical workflow fetches full history with `fetch-depth: 0`. Without it, `actions/checkout` is shallow and has no merge base with the base branch — duckadrift then runs the full-log checks and skips the D5 governed-path gate with a warning, rather than failing.
 
 Optional inputs exist for the unconventional cases: `adr-dir` if your log lives somewhere other than `docs/adr` or `doc/adr`, `working-directory` if the repo root to check is not the workflow's root, and `github-token` if the default token is not what schedule mode should use for issue management. PR annotations need no token at all.
 
