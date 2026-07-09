@@ -1,0 +1,17 @@
+[
+  {
+    "check": "D3",
+    "claim": "ADR-0001 links to `../../lib/overview`, which does not resolve at HEAD (possibly site-relative — found at `aaa/overview.md`; 2 other files share this basename: `mmm/overview.md`, `zzz/overview.md`).",
+    "evidence": [
+      {
+        "adr": "0001-decision.md",
+        "line": 9
+      },
+      {
+        "file": "aaa/overview.md"
+      }
+    ],
+    "consequence": "A link written for a published doc site's URL depth can look broken in the raw repository tree even though the target exists — confirm whether this needs fixing for direct GitHub browsing, or just reflects how the site renders it.",
+    "advisory": true
+  }
+]

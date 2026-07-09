@@ -27,6 +27,22 @@ const USERNAME_MENTION_RE = /^@(?:[a-zA-Z0-9](?:-?[a-zA-Z0-9])*)?$/;
 // always has a `/` and never a domain-shaped `.tld` after it) — the two
 // idioms share "exactly one `@`" but are otherwise structurally distinct.
 const EMAIL_RE = /^[^\s@/]+@[^\s@/]+\.[^\s@/]+$/;
+// Issue #2: the bare-email skip (above) reads `author@notes.md` as an email —
+// `.md` is domain-shaped (it is Moldova's actual TLD) — and silently swallows
+// what may be a dangling file reference: a false negative. But the collision is
+// real in both directions: a genuine Moldovan (or Serbian `.rs`, St Helenian
+// `.sh`) email address is possible, so existence-checking these as fact-tier
+// findings would manufacture the opposite failure — a clause-A false positive
+// on a real attribution. The resolution: an email-shaped target whose final
+// dot-segment is a known file extension is not skipped; it goes through the
+// resolver, and if it dangles it surfaces as an ADVISORY whose claim is true
+// under either reading. The extension list is deliberately file-signal-heavy
+// and excludes common email TLDs (.com, .io, .co, .ai, .me are absent).
+const EMAIL_AMBIGUOUS_EXTENSIONS = new Set([
+  "adoc", "c", "cjs", "cpp", "cs", "go", "h", "hpp", "java", "js", "json",
+  "jsx", "markdown", "md", "mdx", "mjs", "py", "rb", "rs", "rst", "sh",
+  "sql", "toml", "ts", "tsx", "txt", "yaml", "yml",
+]);
 
 
 function dangleConsequence(target: string): string {
@@ -78,11 +94,19 @@ export function d3ReferenceIntegrity(ctx: AdrLogContext): Finding[] {
       // so `link.target` is the resolvable path — no per-check re-parsing (an
       // escaped `\#` is part of the path, not a fragment: F2).
       const target = link.target;
+      // Issue #2: an email-shaped target ending in a known file extension is
+      // ambiguous — it may be a file whose name contains an `@`. It is NOT
+      // skipped; it goes through the resolver, and a dangling one surfaces as an
+      // advisory below. Only extension-less (or non-file-extension) email shapes
+      // stay skipped, exactly as ADR-0016 decided.
+      const emailShaped = EMAIL_RE.test(target);
+      const emailExt = emailShaped ? target.slice(target.lastIndexOf(".") + 1).toLowerCase() : "";
+      const emailShapedFileLike = emailShaped && EMAIL_AMBIGUOUS_EXTENSIONS.has(emailExt);
       if (
         target === "" ||
         isExternalReference(target) || // RV-2: the full shared primitive (scheme + protocol-relative `//`), matching D7
         USERNAME_MENTION_RE.test(target) ||
-        EMAIL_RE.test(target)
+        (emailShaped && !emailShapedFileLike)
       )
         continue;
 
@@ -112,9 +136,23 @@ export function d3ReferenceIntegrity(ctx: AdrLogContext): Finding[] {
       }
 
       if (result.status === "site-relative-advisory") {
+        // Issue #8: when other files share the resolved basename, name them so a
+        // reader is not pointed at one candidate as if it were the only one
+        // (ADR-0024). Capped at three named plus a count. Empty → no suffix, so
+        // the unique-basename claim is byte-identical to its previous form.
+        const others = result.otherCandidates ?? [];
+        const n = others.length;
+        let suffix = "";
+        if (n === 1) {
+          suffix = `; 1 other file shares this basename: ${code(others[0]!)}`;
+        } else if (n === 2 || n === 3) {
+          suffix = `; ${n} other files share this basename: ${others.map(code).join(", ")}`;
+        } else if (n > 3) {
+          suffix = `; ${n} other files share this basename: ${others.slice(0, 3).map(code).join(", ")}, and ${n - 3} more`;
+        }
         findings.push({
           check: "D3",
-          claim: `${ref} links to ${code(target)}, which does not resolve at HEAD (possibly site-relative — found at ${code(result.resolvedPath!)}).`,
+          claim: `${ref} links to ${code(target)}, which does not resolve at HEAD (possibly site-relative — found at ${code(result.resolvedPath!)}${suffix}).`,
           evidence: [
             { adr: adr.fileName, line: link.line },
             { file: result.resolvedPath! },
@@ -126,6 +164,21 @@ export function d3ReferenceIntegrity(ctx: AdrLogContext): Finding[] {
       }
 
       // status === "dangling": nothing resolves under any form.
+      // Issue #2: an email-shaped, file-extension-ended dangling target is
+      // irreducibly ambiguous — a file that doesn't resolve, or an email
+      // attribution. Surface it as an advisory whose claim is true under either
+      // reading, never as a fact-tier finding (clause A).
+      if (emailShapedFileLike) {
+        findings.push({
+          check: "D3",
+          claim: `${ref} links to ${code(target)}, which is shaped like an email address but ends in ${code("." + emailExt)} — a file extension — and does not resolve as a file at HEAD.`,
+          evidence: [{ adr: adr.fileName, line: link.line }],
+          consequence:
+            "The two readings carry opposite dispositions: a file reference here dangles, while an email attribution is fine as written. A `mailto:` prefix makes an email explicit; a resolving path makes a file checkable.",
+          advisory: true,
+        });
+        continue;
+      }
       findings.push({
         check: "D3",
         claim: `${ref} links to ${code(target)}, which does not resolve at HEAD.`,
