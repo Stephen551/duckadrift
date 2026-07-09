@@ -19,6 +19,12 @@ changes are needed, and nothing new fails CI.
   repository share that basename, the advisory now names them — the reader is no longer
   pointed at one candidate as if it were the only one. Advisories on unique basenames
   read exactly as before. (#8)
+- In the GitHub Action, the D5 governed-path gate now reads the pull request's actual
+  commit messages for `ADR-ACK` markers, per the documented contract. It previously
+  received the PR title in that field and could not see a marker placed in a commit
+  message — a false positive caught by this repository's own CI and recorded in
+  ADR-0025. The PR body remains an acknowledgement surface; the title never was one and
+  now provably is not.
 
 ## [0.1.8] — 2026-07-09
 
