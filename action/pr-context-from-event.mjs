@@ -93,9 +93,35 @@ const changedFiles = diffOutput
   .map((line) => line.trim())
   .filter(Boolean);
 
+// D5's ack contract (PDR §2.3) reads the marker from "commit message or PR body".
+// This field used to carry pr.title as a stand-in — a mislabel that made the gate
+// blind to the surface the repo's own ADR-0002 flow prescribes (a dedicated
+// ADR-ACK commit), firing a false positive on this repo's own PR #27 during the
+// clause-A window (ADR-0025). The messages come from the same merge-base range
+// as the changed files, so the ack surface and the change surface are the same
+// commits by construction. The title is deliberately NOT included: it was never
+// a contract surface, and silently widening ack surfaces is the B-5 failure
+// class in the other direction.
+const collectCommitMessages = () =>
+  execFileSync(
+    "git",
+    ["log", "--format=%B%x00", `origin/${baseRef}...HEAD`],
+    { encoding: "utf-8" }
+  );
+
+let commitMessages;
+try {
+  commitMessages = collectCommitMessages();
+} catch {
+  console.log(
+    "::warning title=duckadrift::Could not read the PR's commit messages for the ADR-ACK check — running full-log checks; the D5 governed-path gate was skipped rather than run blind to one of its acknowledgement surfaces."
+  );
+  process.exit(0);
+}
+
 const context = {
   changedFiles,
-  commitMessage: pr.title ?? "",
+  commitMessage: commitMessages,
   prBody: pr.body ?? "",
 };
 
