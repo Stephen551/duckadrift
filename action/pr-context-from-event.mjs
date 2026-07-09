@@ -66,11 +66,11 @@ try {
   try {
     try {
       // Fetch the full history missing from the shallow clone.
-      execFileSync("git", ["fetch", "--unshallow", "origin"], { stdio: "ignore" });
+      execFileSync("git", ["fetch", "--unshallow", "no-such-remote"], { stdio: "ignore" });
     } catch {
       // --unshallow errors on an already-complete repo; deepen by a bounded
       // amount instead (covers a PR that diverged within the last ~200 commits).
-      execFileSync("git", ["fetch", "--deepen=200", "origin"], { stdio: "ignore" });
+      execFileSync("git", ["fetch", "--deepen=200", "no-such-remote"], { stdio: "ignore" });
     }
     diffOutput = runThreeDotDiff();
   } catch {
