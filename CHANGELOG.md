@@ -2,6 +2,24 @@
 
 All notable changes to duckadrift are documented here.
 
+## [0.1.9] — 2026-07-09
+
+Two D3 refinements from this repository's own issue backlog (#2, #8). No configuration
+changes are needed, and nothing new fails CI.
+
+### Changed
+
+- A link target shaped like an email address but ending in a known file extension
+  (`author@notes.md`) is no longer silently skipped as an attribution. If it does not
+  resolve as a file, it surfaces as an advisory stating both readings — a dangling file
+  reference, or an email attribution better written with `mailto:`. Real email
+  attributions without file extensions (`chris@redhat.com`) are skipped exactly as
+  before. (#2)
+- When an extensionless link resolves only by basename and other files in the
+  repository share that basename, the advisory now names them — the reader is no longer
+  pointed at one candidate as if it were the only one. Advisories on unique basenames
+  read exactly as before. (#8)
+
 ## [0.1.8] — 2026-07-09
 
 Marketplace listing fix only; nothing in the action's behavior or the CLI changed.
