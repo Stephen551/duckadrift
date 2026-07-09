@@ -2,6 +2,49 @@
 
 All notable changes to duckadrift are documented here.
 
+## [0.1.7] — 2026-07-09
+
+Repository-internal hardening. Nothing in the action or the CLI changed; this release exists so the published tag matches the repository state.
+
+- CI now dogfoods the action against a default shallow checkout on every pull request, alongside the existing full-history run — the crash class fixed in 0.1.6 cannot return unnoticed.
+- The privacy guard's local hooks are versioned in `hooks/` and activate automatically on `npm ci`. They skip with a notice when the scanner or the local denylist is absent, instead of blocking every commit.
+- Changelog entries backfilled for 0.1.5 and 0.1.6.
+
+## [0.1.6] — 2026-07-08
+
+One shipping bug fixed: the action crashed in PR mode on a default (shallow) checkout. No configuration changes are needed, though the canonical workflow now recommends full history.
+
+### Fixed
+
+- PR mode no longer crashes when `actions/checkout` runs at its default depth. Finding what a PR changed requires the point where the PR diverged from its base, and a shallow clone does not contain it. The action now deepens the history and retries the same merge-base diff — never a cheaper diff that would misattribute the base branch's own commits to the PR. If the divergence point still cannot be found, the run says so with a warning and falls back to the full-log checks instead of failing your build on a valid repository. Only the D5 governed-path gate is skipped in that fallback, and the skip is stated, never silent.
+
+### Changed
+
+- The README's canonical workflow now sets `fetch-depth: 0` on the checkout step, giving PR-scoped checks full history directly. Existing workflows without it keep working through the recovery path above.
+
+Internal to this repository (nothing adopters run): a versioned privacy guard — one shared scanner covering file contents, filenames, and commit messages, run as a local hook and as an un-bypassable CI workflow.
+
+## [0.1.5] — 2026-07-07
+
+A full-surface adversarial audit before the Marketplace publish: every Tier 0 check crossed against every failure class it could face, verified through two independent external review rounds, with everything found fixed and re-verified. No configuration changes are needed. The audit is recorded in ADRs 0018–0022.
+
+### Fewer false alarms
+
+- Links written with angle brackets `[text](<path with spaces>)`, link titles `[text](path "title")`, and parentheses inside filenames now parse correctly instead of being reported as broken. Link handling follows the CommonMark specification through one shared parser used by every check.
+- An index entry that wraps across multiple lines is no longer reported as an unlisted file.
+- Protocol-relative URLs (`//example.com/…`) and Windows drive-letter paths are now classified the same way everywhere — the first is an external link to skip, the second a local path to check.
+- Editing an ADR whose filename contains non-ASCII characters no longer trips the governed-path gate on a record the pull request genuinely touched.
+- Logs that number ADRs per directory are no longer flagged for global numbering gaps, and supersession-cycle detection no longer conflates same-numbered records living in different directories.
+- A single MADR-style heading inside a Nygard-style record no longer flips dialect detection and emits spurious missing-section advisories; MADR detection now requires the same weight of evidence Nygard already did.
+
+### Hardening
+
+- Reference resolution is contained to the repository: a crafted link can no longer cause a check to read files outside the checkout, and a sibling directory whose name merely begins with the ADR directory's path is no longer mistaken for the log itself.
+- The pull request's base branch name is passed to git as a literal argument, never through a shell.
+- The file-size cap now covers the config read as well as scanned files, and a malformed or misplaced config file fails loudly instead of crashing the run.
+- The `ADR-ACK` override marker is recognized only as a deliberate marker, no longer when the token merely appears in passing prose.
+- The governed-path gate's "this pull request modified the ADR" recognition requires the exact record path — a similarly named file no longer satisfies it — and its path globs now match dotfiles.
+
 ## [0.1.4] — 2026-07-04
 
 Two false positives found in the pre-publish audit, both fixed. No configuration changes are needed.

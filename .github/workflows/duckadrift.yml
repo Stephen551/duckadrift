@@ -18,3 +18,34 @@ jobs:
         with:
           fetch-depth: 0
       - uses: ./
+
+  # Dogfood against the DEFAULT checkout depth (shallow, depth-1). v0.1.5 crashed in
+  # exactly this configuration and shipped anyway, because the job above always runs at
+  # fetch-depth: 0 — a thing tested in one configuration is untested in every other.
+  # This job asserts two failure classes the full-history job cannot see:
+  #   (a) the crash class — the action must survive a shallow checkout at all;
+  #   (b) the silent-fallback class — on this repo's own PRs the base branch is always
+  #       reachable, so the deepen-and-retry MUST recover a merge base and write PR
+  #       context. Falling back to full-log mode here is always a regression.
+  duckadrift-shallow:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        # No fetch-depth: the default (1) is the point of this job.
+      - name: Confirm the checkout is genuinely shallow
+        # If actions/checkout ever changes its default, this job silently stops testing
+        # the shallow-recovery path. A test that no longer tests its claim fails loudly
+        # instead. Must run BEFORE the action: the action's own recovery unshallows.
+        run: |
+          if [ ! -f "$(git rev-parse --git-dir)/shallow" ]; then
+            echo "::error title=duckadrift-shallow::Checkout is not shallow — this job no longer exercises the shallow-recovery path. Restore a shallow checkout or retire the job deliberately."
+            exit 1
+          fi
+      - uses: ./
+      - name: Assert PR context was derived (shallow recovery worked)
+        run: |
+          if [ ! -f "$RUNNER_TEMP/duckadrift-pr-context.json" ]; then
+            echo "::error title=duckadrift-shallow::The action fell back to full-log mode on a reachable base — the shallow deepen-and-retry path has regressed."
+            exit 1
+          fi

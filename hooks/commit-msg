@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# privacy-guard, layer 1: the commit-message surface. Same degrade posture as
+# hooks/pre-commit — the CI layer is authoritative; missing inputs here mean a notice,
+# never a blocked commit.
+set -euo pipefail
+
+SCANNER="scripts/privacy-scan.mjs"
+DENYLIST=".privacy-denylist.local"
+
+if [ ! -f "$SCANNER" ]; then
+  echo "privacy-guard: $SCANNER not found — skipping commit-message scan (the CI layer still enforces)." >&2
+  exit 0
+fi
+if [ ! -f "$DENYLIST" ]; then
+  echo "privacy-guard: $DENYLIST not found — skipping commit-message scan (the CI layer still enforces)." >&2
+  exit 0
+fi
+
+node "$SCANNER" --names "$DENYLIST" --allow .privacy-allowlist "$1"

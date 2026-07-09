@@ -1,6 +1,6 @@
 {
   "name": "duckadrift",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "private": true,
   "description": "A GitHub Action that verifies an ADR log against reality.",
   "type": "module",
@@ -16,7 +16,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
-    "build": "tsc -p tsconfig.build.json"
+    "build": "tsc -p tsconfig.build.json",
+    "prepare": "node scripts/install-hooks.mjs || true"
   },
   "dependencies": {
     "mdast-util-from-markdown": "^2.0.3",
