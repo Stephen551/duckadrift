@@ -1,0 +1,14 @@
+[
+  {
+    "check": "D3",
+    "claim": "ADR-0001 links to `author@notes.md`, which is shaped like an email address but ends in `.md` — a file extension — and does not resolve as a file at HEAD.",
+    "evidence": [
+      {
+        "adr": "0001-attribution.md",
+        "line": 10
+      }
+    ],
+    "consequence": "The two readings carry opposite dispositions: a file reference here dangles, while an email attribution is fine as written. A `mailto:` prefix makes an email explicit; a resolving path makes a file checkable.",
+    "advisory": true
+  }
+]

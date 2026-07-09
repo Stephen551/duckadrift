@@ -3,16 +3,29 @@ import { resolveWithinRepo } from "./paths.js";
 import { walkAllPaths } from "../repo/walk.js";
 
 /**
+ * A basename hit: the primary path (first in deterministic walk order — the same
+ * file this finder returned before issue #8) plus every other file that shares
+ * the linked basename, sorted lexicographically, empty when the basename is
+ * unique. The site-relative advisory names all candidates so a reader is not
+ * pointed at one file as if it were the only one (ADR-0024).
+ */
+export interface BasenameHit {
+  path: string;
+  otherCandidates: string[];
+}
+
+/**
  * Build the site-relative basename finder the resolver's step 4 uses, shared by
  * D3 and D7. A link written for a published doc site's URL depth (MkDocs /
  * Docusaurus "pretty URLs" — extensionless, often trailing-slash) resolves in
  * the raw tree if a file with the same basename exists anywhere (ADR-0011). The
  * repo walk is lazy — only performed the first time a reference fails to resolve
- * directly — and cached for the rest of the run.
+ * directly — and cached for the rest of the run. Every file per basename is
+ * indexed in walk order (issue #8); the primary is the first, unchanged.
  */
-export function makeBasenameFinder(repoRoot: string): (target: string) => string | undefined {
-  let basenameIndex: Map<string, string> | null = null;
-  let indexDirIndex: Map<string, string> | null = null;
+export function makeBasenameFinder(repoRoot: string): (target: string) => BasenameHit | undefined {
+  let basenameIndex: Map<string, string[]> | null = null;
+  let indexDirIndex: Map<string, string[]> | null = null;
   const build = (): void => {
     if (basenameIndex) return;
     basenameIndex = new Map();
@@ -20,25 +33,34 @@ export function makeBasenameFinder(repoRoot: string): (target: string) => string
     for (const f of walkAllPaths(repoRoot)) {
       const segments = f.relativePath.split("/");
       const base = segments[segments.length - 1]!;
-      if (!basenameIndex.has(base)) basenameIndex.set(base, f.relativePath);
+      const forBase = basenameIndex.get(base) ?? (basenameIndex.set(base, []), basenameIndex.get(base)!);
+      forBase.push(f.relativePath);
       if (base.toLowerCase() === "index.md" && segments.length >= 2) {
         const parentDir = segments[segments.length - 2]!;
-        if (!indexDirIndex.has(parentDir)) indexDirIndex.set(parentDir, f.relativePath);
+        const forDir = indexDirIndex.get(parentDir) ?? (indexDirIndex.set(parentDir, []), indexDirIndex.get(parentDir)!);
+        forDir.push(f.relativePath);
       }
     }
   };
-  return (target: string): string | undefined => {
+  // Primary = first in walk order (the pre-issue-#8 selection, so every existing
+  // resolution is unchanged); otherCandidates = the rest of the SAME list,
+  // sorted lexicographically, empty when unique.
+  const hit = (matches: string[]): BasenameHit => ({
+    path: matches[0]!,
+    otherCandidates: matches.slice(1).sort(),
+  });
+  return (target: string): BasenameHit | undefined => {
     build();
     const stripped = target.replace(/\/+$/, "");
     const slug = stripped.split("/").pop()!;
     if (slug === "") return undefined;
     const direct = basenameIndex!.get(slug);
-    if (direct !== undefined) return direct;
+    if (direct !== undefined) return hit(direct);
     if (!/\.[a-z0-9]+$/i.test(slug)) {
       const withMd = basenameIndex!.get(`${slug}.md`);
-      if (withMd !== undefined) return withMd;
+      if (withMd !== undefined) return hit(withMd);
       const asIndexDir = indexDirIndex!.get(slug);
-      if (asIndexDir !== undefined) return asIndexDir;
+      if (asIndexDir !== undefined) return hit(asIndexDir);
     }
     return undefined;
   };
@@ -75,6 +97,12 @@ export interface ResolveResult {
   status: ResolveStatus;
   /** Repo-relative path (forward slashes) the reference resolved to, when it did. */
   resolvedPath?: string;
+  /**
+   * Other files sharing the resolved basename (site-relative-advisory only,
+   * issue #8). Sorted, empty when the basename is unique. The advisory names
+   * them so a reader can see every candidate; other statuses never set it.
+   */
+  otherCandidates?: string[];
 }
 
 export interface ResolveInput {
@@ -87,8 +115,13 @@ export interface ResolveInput {
   repoRoot: string;
   /** True when the destination was malformed (unclosed angle). */
   malformed?: boolean;
-  /** Site-relative basename lookup — walks the repo tree only (containment-safe). */
-  findByBasename: (t: string) => string | undefined;
+  /**
+   * Site-relative basename lookup — walks the repo tree only (containment-safe).
+   * Accepts either a bare path (D7's extension-inference finder, which needs no
+   * candidates) or a `BasenameHit` (the shared `makeBasenameFinder`, issue #8);
+   * `resolveReference` normalizes both, so no caller outside this module changes.
+   */
+  findByBasename: (t: string) => string | BasenameHit | undefined;
 }
 
 /**
@@ -133,7 +166,11 @@ export function resolveReference(input: ResolveInput): ResolveResult {
   }
 
   const found = input.findByBasename(target) ?? (rawDiffers ? input.findByBasename(rawTarget) : undefined);
-  if (found !== undefined) return { status: "site-relative-advisory", resolvedPath: found };
+  if (found !== undefined) {
+    const path = typeof found === "string" ? found : found.path;
+    const otherCandidates = typeof found === "string" ? [] : found.otherCandidates;
+    return { status: "site-relative-advisory", resolvedPath: path, otherCandidates };
+  }
 
   return { status: "dangling" };
 }

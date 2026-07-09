@@ -26,3 +26,5 @@ Architecture decisions for duckadrift itself, recorded in duckadrift's own vocab
 | [0020](0020-the-resolution-module.md) | The resolution module — one parser, one resolver ladder | Accepted | elevated |
 | [0021](0021-the-full-surface-adversarial-pass.md) | The full-surface adversarial pass, and the class it closed | Accepted | elevated |
 | [0022](0022-the-pre-tag-clause-a-confirmation.md) | The v0.1.5 pre-tag clause-A confirmation and corpus-roster correction | Accepted | elevated |
+| [0023](0023-email-shaped-file-targets.md) | Email-shaped targets with file extensions surface as advisories | Accepted | elevated |
+| [0024](0024-basename-advisories-name-all-candidates.md) | Basename advisories name every candidate, not just the first | Accepted | elevated |
