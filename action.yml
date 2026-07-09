@@ -1,5 +1,5 @@
 name: 'DuckADRift — ADR drift detection & enforcement'
-description: 'Enforce your Architecture Decision Records against the codebase. Deterministic ADR checks that fail CI only on what they can prove — no network calls, no LLM, no config.'
+description: 'Enforce your Architecture Decision Records against the codebase. ADR checks fail CI only on what they can prove.'
 author: 'Stephen551'
 branding:
   icon: 'eye'

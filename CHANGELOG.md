@@ -2,6 +2,12 @@
 
 All notable changes to duckadrift are documented here.
 
+## [0.1.8] — 2026-07-09
+
+Marketplace listing fix only; nothing in the action's behavior or the CLI changed.
+
+- The action.yml description now fits the Marketplace's 125-character limit. The full posture — deterministic, no network calls, no LLM, no config — remains stated in the README, which the listing renders.
+
 ## [0.1.7] — 2026-07-09
 
 Repository-internal hardening. Nothing in the action or the CLI changed; this release exists so the published tag matches the repository state.
