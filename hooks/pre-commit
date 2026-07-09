@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+# privacy-guard, layer 1 (local, fast feedback). Scans staged file contents and staged
+# filenames against the gitignored local denylist. Layer 2 (the privacy-guard CI
+# workflow) is the authoritative, un-bypassable enforcement over full history — so when
+# this layer's inputs are missing it degrades to a notice instead of blocking every
+# commit: a guard that hard-fails on its own missing file is its own footgun.
+# Content is scanned from the working tree, not the index — a staged-vs-worktree
+# divergence can slip this layer; CI catches it at push. Accepted tradeoff for speed.
+set -euo pipefail
+
+SCANNER="scripts/privacy-scan.mjs"
+DENYLIST=".privacy-denylist.local"
+
+if [ ! -f "$SCANNER" ]; then
+  echo "privacy-guard: $SCANNER not found — skipping local scan (the CI layer still enforces)." >&2
+  exit 0
+fi
+if [ ! -f "$DENYLIST" ]; then
+  echo "privacy-guard: $DENYLIST not found — skipping local scan (the CI layer still enforces)." >&2
+  exit 0
+fi
+
+STAGED="$(git diff --cached --name-only --diff-filter=ACMR)"
+if [ -z "$STAGED" ]; then
+  exit 0
+fi
+
+TMP="$(mktemp)"
+trap 'rm -f "$TMP"' EXIT
+printf '%s\n' "$STAGED" > "$TMP"
+
+# --from "$TMP": scan the content of every staged file.
+# "$TMP" as a positional arg: scan the filename list itself (the filenames surface).
+node "$SCANNER" --names "$DENYLIST" --allow .privacy-allowlist --from "$TMP" "$TMP"
