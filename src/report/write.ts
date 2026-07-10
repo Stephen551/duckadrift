@@ -1,5 +1,19 @@
 import { TIER_ZERO_CHECK_IDS } from "../types.js";
 import type { Finding, FindingEvidence, TierZeroCheckId } from "../types.js";
+import type { Tier1Signal } from "../tier1/gate.js";
+
+/**
+ * The Tier 1 status vocabulary (ADR-0029) — the contract M3.2's pipeline
+ * plugs into. Every enabled state names why Tier 1 did or did not spend;
+ * skipping is always spoken (ADR-0003, PDR §2.8).
+ */
+export type Tier1Status =
+  | { enabled: false }
+  | {
+      enabled: true;
+      status: "no-credentials" | "no-signal" | "eligible";
+      signals: Tier1Signal[]; // always computed in PR mode, [] otherwise
+    };
 
 const CHECK_TITLES: Record<TierZeroCheckId, string> = {
   D1: "Schema/structure lint",
@@ -56,14 +70,66 @@ function renderEvidence(ev: FindingEvidence): string {
   return "(unspecified)";
 }
 
-export function renderMarkdownReport(findings: Finding[], unrecognizedFiles: string[] = []): string {
+function signalLine(signal: Tier1Signal): string {
+  // Every path and ADR name below is repo-authored content — fenced through
+  // code() so the report can't become the injection surface S3 closed.
+  switch (signal.kind) {
+    case "governed-path":
+      return `- governed-path: ${code(signal.adr)} governs ${signal.files.map(code).join(", ")}`;
+    case "dependency-manifest":
+      return `- dependency-manifest: ${signal.files.map(code).join(", ")}`;
+    case "storage-schema":
+      return `- storage-schema: ${signal.files.map(code).join(", ")}`;
+  }
+}
+
+function renderTier1Block(tier1: Tier1Status): string[] {
+  const lines = ["## Tier 1", ""];
+  if (!tier1.enabled) {
+    lines.push("Tier 1 semantic checks are disabled (tier1.enabled is not set).", "");
+    return lines;
+  }
+  if (tier1.status === "no-credentials") {
+    // PDR §2.8 fork doctrine: partial blindness is permitted, unannounced
+    // blindness is not.
+    lines.push(
+      "Tier 1 is enabled, but ANTHROPIC_API_KEY is not present in the environment — semantic checks skipped; Tier 0 coverage only. Fork-triggered PRs never receive secrets; the absence is expected there.",
+      ""
+    );
+  } else if (tier1.status === "no-signal") {
+    lines.push(
+      "Tier 1 skipped: no signal — the diff touches no governed path and trips no architectural signal. Zero API calls made.",
+      ""
+    );
+  } else {
+    lines.push(
+      `Tier 1 eligible: ${tier1.signals.length} signal(s) detected. No semantic checks exist in this build — the check pipeline lands at M3.2/M3.3.`,
+      ""
+    );
+  }
+  // Signals render for any status that carries them — under no-credentials the
+  // gate still ran (it is free) and its output is coverage truth (ADR-0029).
+  if (tier1.signals.length > 0) {
+    for (const signal of tier1.signals) lines.push(signalLine(signal));
+    lines.push("");
+  }
+  return lines;
+}
+
+export function renderMarkdownReport(
+  findings: Finding[],
+  unrecognizedFiles: string[] = [],
+  // Defaults to the config default (tier1 disabled) so a caller that predates
+  // status resolution renders the honest common case, never a fabricated
+  // enabled state.
+  tier1: Tier1Status = { enabled: false }
+): string {
   const sorted = sortFindings(findings);
   const failing = sorted.filter((f) => !f.advisory).length;
   const advisory = sorted.length - failing;
   const lines: string[] = ["# duckadrift report", ""];
 
   lines.push(`Tier 0 findings: ${sorted.length} (${failing} failing, ${advisory} advisory)`);
-  lines.push("Tier 1: not run (M1 scope)");
   lines.push("", "## Tier 0 findings", "");
 
   if (sorted.length === 0) {
@@ -98,19 +164,15 @@ export function renderMarkdownReport(findings: Finding[], unrecognizedFiles: str
     lines.push("");
   }
 
-  lines.push(
-    "## Calibration status",
-    "",
-    "Tier 1 semantic checks are not part of this build (M1). Calibration status appears here starting at M3.",
-    ""
-  );
+  lines.push(...renderTier1Block(tier1));
 
   return lines.join("\n");
 }
 
 export interface JsonReport {
   tier0Findings: Finding[];
-  tier1: null;
+  /** null = the scan aborted before Tier 1 status resolution (ADR-0013 error report). */
+  tier1: Tier1Status | null;
   checkCounts: Record<TierZeroCheckId, number>;
   failingCount: number;
   advisoryCount: number;
@@ -156,7 +218,10 @@ export function buildErrorReport(message: string): { markdown: string; json: Jso
     "# duckadrift report",
     "",
     "Tier 0: scan did not complete",
-    "Tier 1: not run (M1 scope)",
+    // Claiming a Tier 1 status here would be a fabrication — the scan failed
+    // before the question could be answered, and the report says so (the JSON
+    // mirrors this with tier1: null).
+    "Tier 1: unresolved — the scan aborted before Tier 1 status resolution",
     "",
     "## Scan failed",
     "",
@@ -173,7 +238,11 @@ export function buildErrorReport(message: string): { markdown: string; json: Jso
 export function buildJsonReport(
   findings: Finding[],
   adrDirRelative: string,
-  unrecognizedFiles: string[] = []
+  unrecognizedFiles: string[] = [],
+  // Deliberately no default: the JSON report is the machine-read surface, and
+  // a defaulted status here would be a fabricated answer if a caller forgot to
+  // resolve one. Only buildErrorReport may write null (scan aborted first).
+  tier1: Tier1Status
 ): JsonReport {
   const sorted = sortFindings(findings);
   const checkCounts = Object.fromEntries(TIER_ZERO_CHECK_IDS.map((id) => [id, 0])) as Record<
@@ -184,7 +253,7 @@ export function buildJsonReport(
   const advisoryCount = sorted.filter((f) => f.advisory).length;
   return {
     tier0Findings: sorted,
-    tier1: null,
+    tier1,
     checkCounts,
     failingCount: sorted.length - advisoryCount,
     advisoryCount,

@@ -3,8 +3,11 @@ import { resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { loadAdrLog } from "../adr/load.js";
 import { runAllTierZeroChecks } from "../checks/index.js";
+import { loadConfig } from "../config/load.js";
 import { SetupError } from "../errors.js";
 import { renderMarkdownReport } from "../report/write.js";
+import { tier1CredentialsPresent } from "../tier1/credentials.js";
+import { resolveTier1Status } from "../tier1/gate.js";
 import { executeReport } from "./report.js";
 
 function printUsage(): void {
@@ -65,7 +68,14 @@ function runCheck(argv: string[]): void {
 
   const failing = findings.filter((f) => !f.advisory).length;
 
-  console.log(renderMarkdownReport(findings, ctx.unrecognizedFiles));
+  // Second config load is quiet: loadAdrLog's internal load already emitted
+  // any per-run notices (config/load.ts documents this contract).
+  const tier1 = resolveTier1Status(
+    loadConfig(repoRoot, { quiet: true }).tier1,
+    tier1CredentialsPresent(),
+    ctx
+  );
+  console.log(renderMarkdownReport(findings, ctx.unrecognizedFiles, tier1));
   if (failing === 0) {
     console.error(
       `duckadrift: ${findings.length} Tier 0 finding(s), all advisory — not failing (dialect not declared, ADR-0005).`
