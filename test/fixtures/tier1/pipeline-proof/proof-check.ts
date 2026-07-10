@@ -21,7 +21,7 @@ export const PROOF_CHECK: CheckDefinition = {
     "(numbering, formatting, dead links); this check reads meaning, not structure.",
   ].join("\n"),
   selectInput(ctx: AdrLogContext) {
-    if (ctx.adrs.length === 0) return null;
+    if (ctx.adrs.length === 0) return { skip: "no-input" as const };
     return {
       documents: ctx.adrs.map((adr) => ({
         label: adr.fileName,

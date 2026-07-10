@@ -120,11 +120,15 @@ function renderTier1Block(tier1: Tier1Status): string[] {
       "Tier 1 skipped: no signal — the diff touches no governed path and trips no architectural signal. Zero API calls made.",
       ""
     );
-  } else {
+  } else if (tier1.calibration === undefined) {
+    // Eligible but no run attached: `check` never runs Tier 1 (PDR §2.5) and
+    // renders this pointer instead of pretending semantic coverage happened.
     lines.push(
-      `Tier 1 eligible: ${tier1.signals.length} signal(s) detected. No semantic checks exist in this build — the check pipeline lands at M3.2/M3.3.`,
+      `Tier 1 eligible: ${tier1.signals.length} signal(s) detected. Semantic checks run under the report command; this output carries none.`,
       ""
     );
+  } else {
+    lines.push(`Tier 1 eligible: ${tier1.signals.length} signal(s) detected.`, "");
   }
   // Signals render for any status that carries them — under no-credentials the
   // gate still ran (it is free) and its output is coverage truth (ADR-0029).
@@ -174,7 +178,16 @@ function renderTier1Findings(tier1: Tier1Status): string[] {
       lines.push(`- discarded (${d.reason}): ${d.check} — ${code(d.claim.slice(0, 80))}`);
     }
     for (const s of skipped) {
-      lines.push(`- skipped (${s.reason}): ${s.check}`);
+      // ADR-0032: "too much to read in one call" is its own loud fact — the
+      // measured size and the cap render, so a Tier 1 gap is never mistaken
+      // for Tier 1 silence.
+      if (s.reason === "input-exceeds-cap") {
+        lines.push(
+          `- skipped (input-exceeds-cap): ${s.check} — selected documents measure ${s.bytes} bytes; the single-call cap is ${s.cap} bytes (ADR-0032). Tier 0 coverage is unaffected; this check read nothing rather than silently reading part.`
+        );
+      } else {
+        lines.push(`- skipped (${s.reason}): ${s.check}`);
+      }
     }
     for (const e of errors) {
       lines.push(`- error: ${e.check} — ${code(e.message)}`);
