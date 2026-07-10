@@ -37,3 +37,4 @@ Architecture decisions for duckadrift itself, recorded in duckadrift's own vocab
 | [0031](0031-prompt-architecture.md) | The prompt architecture — one cached prefix, structured output, citations or silence | Accepted | elevated |
 | [0032](0032-tier1-input-bounds.md) | Tier 1 input bounds — a log too large to read is skipped aloud, never trimmed in silence | Accepted | elevated |
 | [0033](0033-adversarial-round-citation-doctrine.md) | The adversarial round — the citation validator guarantees verbatim evidence and structural coverage, not semantic sufficiency | Accepted | elevated |
+| [0034](0034-envelope-authentication.md) | Envelope authentication — a document boundary the document cannot forge | Accepted | elevated |
