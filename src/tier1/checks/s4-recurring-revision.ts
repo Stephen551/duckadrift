@@ -1,5 +1,5 @@
-import type { CheckDefinition } from "../checks.js";
-import { selectAcceptedFullLog } from "../checks.js";
+import type { CheckDefinition } from "../checks.js"; // type-only — erased, no cycle
+import { selectAcceptedFullLog } from "../select.js";
 
 // S4 — recurring revision (PDR §2.4): the flagship demo. Hunts N≥3 Accepted
 // ADRs revising the same underlying decision without resolving it — the

@@ -4,8 +4,8 @@ import { describe, expect, it } from "vitest";
 import { loadAdrLog } from "../src/adr/load.js";
 import type { AdrLogContext } from "../src/adr/types.js";
 import { renderMarkdownReport, withTier1Run } from "../src/report/write.js";
-import { TIER1_INPUT_CAP_BYTES, isSkip } from "../src/tier1/checks.js";
 import { s4RecurringRevision } from "../src/tier1/checks/s4-recurring-revision.js";
+import { TIER1_INPUT_CAP_BYTES, isSkip } from "../src/tier1/select.js";
 import { runTier1Checks } from "../src/tier1/runner.js";
 import { replayTransport } from "../src/tier1/transport.js";
 

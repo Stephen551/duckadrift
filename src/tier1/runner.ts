@@ -1,7 +1,7 @@
 import type { AdrLogContext } from "../adr/types.js";
 import { loadConfig } from "../config/load.js";
-import { TIER1_INPUT_CAP_BYTES, isSkip } from "./checks.js";
 import type { CheckDefinition, Tier1CheckId } from "./checks.js";
+import { TIER1_INPUT_CAP_BYTES, isSkip } from "./select.js";
 import { validateCitations } from "./citations.js";
 import type { CitationVerdict, Tier1Finding } from "./citations.js";
 import { buildRequest } from "./prompt.js";

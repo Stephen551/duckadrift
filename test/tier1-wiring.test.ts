@@ -1,6 +1,6 @@
 import { execFile } from "node:child_process";
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { dirname, join } from "node:path";
 import { promisify } from "node:util";
 import { afterAll, describe, expect, it } from "vitest";
@@ -99,4 +99,29 @@ describe("CLI wiring: every non-run path is loud and API-free", () => {
     expect(stdout).toContain("0 Tier 0 findings");
     expect(stdout).not.toContain("Tier 1");
   });
+});
+
+describe("built ESM graph: every tier1 module is a valid direct entry point", () => {
+  // Pins the import-cycle fix (verifier-found): checks.ts imported the check
+  // modules for the registry while the check modules imported the shared
+  // selector back from checks.ts. Entry through the registry worked by
+  // function hoisting; DIRECT entry through either check module crashed the
+  // built ESM with a TDZ ReferenceError. In-process vitest imports do not
+  // reproduce that surface — only a fresh node process importing the built
+  // artifact does, so that is exactly what this spawns, once per module.
+  const ENTRY_MODULES = [
+    "dist/tier1/checks/s1-contradiction.js",
+    "dist/tier1/checks/s4-recurring-revision.js",
+    "dist/tier1/checks.js",
+  ];
+
+  for (const modulePath of ENTRY_MODULES) {
+    it(`node imports ${modulePath} directly, exit 0`, async () => {
+      const url = pathToFileURL(join(ROOT, modulePath)).href;
+      // execFile rejects on non-zero exit — a TDZ crash fails this await.
+      await execFileAsync("node", ["--input-type=module", "-e", `await import(${JSON.stringify(url)});`], {
+        env: cliEnv(),
+      });
+    });
+  }
 });

@@ -1,5 +1,5 @@
-import type { CheckDefinition } from "../checks.js";
-import { selectAcceptedFullLog } from "../checks.js";
+import type { CheckDefinition } from "../checks.js"; // type-only — erased, no cycle
+import { selectAcceptedFullLog } from "../select.js";
 
 // S1 — inter-ADR contradiction (PDR §2.4): Accepted records asserting
 // decisions a single codebase could not follow at the same time. Semantic,
