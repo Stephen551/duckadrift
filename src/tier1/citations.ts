@@ -1,0 +1,153 @@
+import type { CheckInput, Tier1CheckId } from "./checks.js";
+
+// Citation validation (ADR-0031): the parsed tool-call input is UNTRUSTED
+// model output until this deterministic validator passes it. Every finding
+// quotes its evidence verbatim from a supplied document, matched as bytes
+// with only line-ending normalization, or the finding dies — and the death
+// is counted and named, because a silently dropped finding and a silently
+// dropped coverage gap are the same violation (PDR §2.4, the Pact).
+
+/** Deliberately NOT the Tier 0 Finding — different trust class, different fields. Do not unify them. */
+export interface Tier1Citation {
+  /** Label of the document the quote comes from (must match a supplied document). */
+  document: string;
+  /** Verbatim quote — must byte-exist in that document's content. */
+  quote: string;
+}
+
+export interface Tier1Finding {
+  check: Tier1CheckId;
+  claim: string;
+  citations: Tier1Citation[]; // at least one after validation
+  consequence: string;
+  /** Model-reported confidence, 0–1. Carried verbatim; NEVER compared against any threshold in this codebase (PDR §2.6 — thresholds are calibration artifacts, M4). */
+  reportedConfidence: number;
+}
+
+export type DiscardReason = "no-citations" | "unknown-document" | "quote-not-found" | "malformed";
+
+export interface CitationVerdict {
+  accepted: Tier1Finding[];
+  /** Every discard is counted and named — never silently dropped. */
+  discarded: Array<{ check: Tier1CheckId; claim: string; reason: DiscardReason }>;
+}
+
+/** Exactly ONE normalization on both sides of the byte-match: CRLF→LF. No trimming, no case folding, no whitespace collapse — the model quotes bytes or the citation dies. */
+function normalizeLineEndings(s: string): string {
+  return s.replace(/\r\n/g, "\n");
+}
+
+/** A quote of the entire document is not evidence selection. */
+const MAX_QUOTE_LENGTH = 2000;
+
+function bestEffortClaim(value: unknown): string {
+  if (typeof value === "object" && value !== null) {
+    const claim = (value as Record<string, unknown>).claim;
+    if (typeof claim === "string" && claim !== "") return claim;
+  }
+  return "(unparseable finding)";
+}
+
+/**
+ * Validates the tool-call input from an untrusted model response. Parses
+ * defensively: schema-shapes everything, discards non-conforming entries with
+ * the closest reason, and never throws over a malformed response — the run
+ * reports what it could validate and counts the rest.
+ */
+export function validateCitations(
+  raw: unknown,
+  input: CheckInput,
+  check: Tier1CheckId
+): CitationVerdict {
+  const accepted: Tier1Finding[] = [];
+  const discarded: CitationVerdict["discarded"] = [];
+
+  const documentsByLabel = new Map<string, string>();
+  for (const doc of input.documents) {
+    documentsByLabel.set(doc.label, normalizeLineEndings(doc.content));
+  }
+
+  if (typeof raw !== "object" || raw === null || !Array.isArray((raw as Record<string, unknown>).findings)) {
+    // Prose (or anything else) where the findings array should be. One loud
+    // discard so the shape failure is visible in the report, not absorbed.
+    discarded.push({ check, claim: "(unparseable response)", reason: "malformed" });
+    return { accepted, discarded };
+  }
+
+  for (const entry of (raw as { findings: unknown[] }).findings) {
+    if (typeof entry !== "object" || entry === null) {
+      discarded.push({ check, claim: bestEffortClaim(entry), reason: "malformed" });
+      continue;
+    }
+    const candidate = entry as Record<string, unknown>;
+    const claim = candidate.claim;
+    const consequence = candidate.consequence;
+    const confidence = candidate.reportedConfidence;
+
+    if (typeof claim !== "string" || claim === "" || typeof consequence !== "string" || consequence === "") {
+      discarded.push({ check, claim: bestEffortClaim(candidate), reason: "malformed" });
+      continue;
+    }
+    // Clamping is FORBIDDEN: a confidence outside [0,1] is a non-conforming
+    // response, and rewriting it would fabricate a number the model never
+    // reported (PDR §2.6 — the number feeds calibration; it must be verbatim).
+    if (typeof confidence !== "number" || !Number.isFinite(confidence) || confidence < 0 || confidence > 1) {
+      discarded.push({ check, claim, reason: "malformed" });
+      continue;
+    }
+
+    const rawCitations = candidate.citations;
+    if (!Array.isArray(rawCitations) || rawCitations.length === 0) {
+      discarded.push({ check, claim, reason: "no-citations" });
+      continue;
+    }
+
+    const surviving: Tier1Citation[] = [];
+    const seen = new Set<string>();
+    let firstFailure: DiscardReason | null = null;
+
+    for (const rawCitation of rawCitations) {
+      if (typeof rawCitation !== "object" || rawCitation === null) {
+        if (firstFailure === null) firstFailure = "malformed";
+        continue;
+      }
+      const citation = rawCitation as Record<string, unknown>;
+      const document = citation.document;
+      const quote = citation.quote;
+      if (typeof document !== "string" || typeof quote !== "string") {
+        if (firstFailure === null) firstFailure = "malformed";
+        continue;
+      }
+      if (quote === "" || quote.length > MAX_QUOTE_LENGTH) {
+        if (firstFailure === null) firstFailure = "quote-not-found";
+        continue;
+      }
+      const content = documentsByLabel.get(document);
+      if (content === undefined) {
+        if (firstFailure === null) firstFailure = "unknown-document";
+        continue;
+      }
+      if (!content.includes(normalizeLineEndings(quote))) {
+        if (firstFailure === null) firstFailure = "quote-not-found";
+        continue;
+      }
+      // NUL-separated dedup key, written as the ESCAPE, never the raw byte: a
+      // raw 0x00 in source reads as binary to grep, diffs, and audit tooling —
+      // a silent-drift vector inside the drift hunter (verifier-found). NUL
+      // cannot appear in either part (quotes must byte-exist in scanned text),
+      // so "a"+"bc" and "ab"+"c" can never collide into one key.
+      const key = `${document}\u0000${quote}`;
+      if (seen.has(key)) continue; // identical duplicate — keep one, deterministically
+      seen.add(key);
+      surviving.push({ document, quote });
+    }
+
+    if (surviving.length === 0) {
+      discarded.push({ check, claim, reason: firstFailure ?? "no-citations" });
+      continue;
+    }
+    accepted.push({ check, claim, citations: surviving, consequence, reportedConfidence: confidence });
+  }
+
+  return { accepted, discarded };
+}

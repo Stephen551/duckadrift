@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "key": {
+    "backend": "api",
+    "model": "claude-sonnet-5",
+    "effort": "high",
+    "checkId": "S1",
+    "promptHash": "b07543cf53bf0c46371318927b1864223193c6e8a225de5b625215a498c2dce7"
+  },
+  "recordedAt": "2026-07-10T00:00:00.000Z",
+  "requestDigest": "b07543cf53bf0c46371318927b1864223193c6e8a225de5b625215a498c2dce7",
+  "response": {
+    "id": "msg_hand_seeded_pipeline_proof",
+    "type": "message",
+    "role": "assistant",
+    "model": "claude-sonnet-5",
+    "content": [
+      {
+        "type": "tool_use",
+        "id": "toolu_pipeline_proof_0001",
+        "name": "report_findings",
+        "input": {
+          "findings": [
+            {
+              "claim": "The checker assesses that ADR-0002's restart-only configuration policy constrains how ADR-0001's queue workers can be re-tuned: changing the polling interval requires a process restart, which the decisions record but do not cross-reference.",
+              "citations": [
+                {
+                  "document": "0002-static-config.md",
+                  "quote": "Configuration is read once at process start and never reloaded"
+                }
+              ],
+              "consequence": "An operator tuning queue throughput will reach for a config change and find it needs a restart; the coupling is real but unrecorded.",
+              "reportedConfidence": 0.55
+            },
+            {
+              "claim": "The checker assesses that the queue is described as push-based in one passage, contradicting the polling decision.",
+              "citations": [
+                {
+                  "document": "0001-embedded-queue.md",
+                  "quote": "Workers subscribe to the broker and receive push notifications instantly."
+                }
+              ],
+              "consequence": "If both passages stood, the worker model would be undecidable.",
+              "reportedConfidence": 0.7
+            },
+            {
+              "claim": "The checker assesses a general architectural tension between the two decisions.",
+              "citations": [],
+              "consequence": "None stated.",
+              "reportedConfidence": 0.4
+            }
+          ]
+        }
+      }
+    ],
+    "stop_reason": "tool_use",
+    "usage": {
+      "input_tokens": 2900,
+      "output_tokens": 350
+    }
+  }
+}
