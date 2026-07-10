@@ -2,6 +2,21 @@
 
 All notable changes to duckadrift are documented here.
 
+## [0.1.10] — 2026-07-10
+
+The never-silent release: failing findings are no longer absorbed without a signal on
+any event, and the action's committed repro guards now run in CI.
+
+### Changed
+
+- Runs triggered by events with no issue channel (such as `push`) now fail when
+  failing findings exist, instead of exiting green with only annotations. Pull
+  requests fail as before; schedule and dispatch runs keep routing findings to the
+  tracking issue. A crash fails the job on every event, without exception (ADR-0027).
+- Missing-section findings state a consequence that matches the missing section — a
+  record without Context no longer carries the missing-Decision consequence line.
+- The action declares Node 24, matching what GitHub's runners already execute.
+
 ## [0.1.9] — 2026-07-09
 
 Two D3 refinements from this repository's own issue backlog (#2, #8). No configuration
