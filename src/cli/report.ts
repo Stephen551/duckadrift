@@ -4,9 +4,12 @@ import { loadAdrLog } from "../adr/load.js";
 import { runAllTierZeroChecks } from "../checks/index.js";
 import { loadConfig } from "../config/load.js";
 import { SetupError } from "../errors.js";
-import { buildErrorReport, buildJsonReport, renderMarkdownReport } from "../report/write.js";
+import { buildErrorReport, buildJsonReport, renderMarkdownReport, withTier1Run } from "../report/write.js";
+import { TIER1_CHECKS } from "../tier1/checks.js";
 import { tier1CredentialsPresent } from "../tier1/credentials.js";
 import { resolveTier1Status } from "../tier1/gate.js";
+import { runTier1Checks } from "../tier1/runner.js";
+import { liveTransport } from "../tier1/transport.js";
 
 export interface ReportOptions {
   repoRoot: string;
@@ -27,7 +30,7 @@ export interface ReportOptions {
  * Pact). A SetupError (no ADR directory yet) is not a scan failure and is
  * re-thrown for the caller's friendly exit-2 path.
  */
-export function executeReport(opts: ReportOptions): number {
+export async function executeReport(opts: ReportOptions): Promise<number> {
   const mdPath = opts.out ?? resolve(opts.repoRoot, "duckadrift-report.md");
   const jsonPath = mdPath.replace(/\.md$/i, "") + ".json";
 
@@ -37,11 +40,18 @@ export function executeReport(opts: ReportOptions): number {
 
     // Second config load is quiet: loadAdrLog's internal load already emitted
     // any per-run notices (config/load.ts documents this contract).
-    const tier1 = resolveTier1Status(
+    let tier1 = resolveTier1Status(
       loadConfig(opts.repoRoot, { quiet: true }).tier1,
       tier1CredentialsPresent(),
       ctx
     );
+    // The live semantic run (M3.3a — the wiring M3.2 deferred). Report-only:
+    // `check` never runs Tier 1 and the verdict channel stays deterministic
+    // (PDR §2.5). Transport construction happens AFTER the status gate, so a
+    // disabled / no-credentials / no-signal run provably never builds one.
+    if (tier1.enabled && tier1.status === "eligible" && TIER1_CHECKS.length > 0) {
+      tier1 = withTier1Run(tier1, await runTier1Checks(ctx, TIER1_CHECKS, liveTransport()));
+    }
     const markdown = renderMarkdownReport(findings, ctx.unrecognizedFiles, tier1);
     const adrDirRelative = relative(opts.repoRoot, ctx.adrDir).split("\\").join("/");
     const json = buildJsonReport(findings, adrDirRelative, ctx.unrecognizedFiles, tier1);

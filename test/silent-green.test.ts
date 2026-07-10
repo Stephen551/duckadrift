@@ -56,10 +56,10 @@ describe("S0: an unexpected crash writes a failing report, never a missing one",
   });
   afterAll(() => rmSync(TMP, { recursive: true, force: true }));
 
-  it("a crash mid-scan yields a failing report.json, not a missing one", () => {
+  it("a crash mid-scan yields a failing report.json, not a missing one", async () => {
     const mdPath = join(TMP, "rep.md");
     const jsonPath = join(TMP, "rep.json");
-    const exit = executeReport({
+    const exit = await executeReport({
       repoRoot: TMP,
       out: mdPath,
       prContextPath: join(TMP, "pr-context.json"),
