@@ -29,3 +29,4 @@ Architecture decisions for duckadrift itself, recorded in duckadrift's own vocab
 | [0023](0023-email-shaped-file-targets.md) | Email-shaped targets with file extensions surface as advisories | Accepted | elevated |
 | [0024](0024-basename-advisories-name-all-candidates.md) | Basename advisories name every candidate, not just the first | Accepted | elevated |
 | [0025](0025-the-d5-ack-source-false-positive.md) | The D5 ack-source false positive | Accepted | elevated |
+| [0026](0026-clause-a-confirmation-at-v019.md) | Kill clause A — confirmation at v0.1.9 | Accepted | elevated |
