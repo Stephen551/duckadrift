@@ -20,6 +20,7 @@
     "prepare": "node scripts/install-hooks.mjs || true"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.111.0",
     "mdast-util-from-markdown": "^2.0.3",
     "minimatch": "^10.2.5",
     "yaml": "^2.9.0"
