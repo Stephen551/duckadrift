@@ -16,6 +16,7 @@ any event, and the action's committed repro guards now run in CI.
 - Missing-section findings state a consequence that matches the missing section — a
   record without Context no longer carries the missing-Decision consequence line.
 - The action declares Node 24, matching what GitHub's runners already execute.
+- The full unit and behavioral suite now runs in CI on every change, alongside the action repros. It previously ran only on developer machines — the same committed-guard-nothing-executes gap, at full size.
 
 ## [0.1.9] — 2026-07-09
 
