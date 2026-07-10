@@ -1,0 +1,14 @@
+{
+  "adrs": [
+    "0001-plain-language-error-output.md",
+    "0002-monthly-release-cadence.md",
+    "0003-conventional-commit-subjects.md",
+    "0004-documentation-in-american-english.md"
+  ],
+  "negative_control": true,
+  "expected_s1": { "findings": 0 },
+  "expected_s2": { "findings": 0 },
+  "expected_s3": { "findings": 0 },
+  "expected_s4": { "findings": 0 },
+  "expected_s5": { "findings": 0 }
+}

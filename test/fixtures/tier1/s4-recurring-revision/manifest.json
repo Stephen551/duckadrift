@@ -1,0 +1,10 @@
+{
+  "adrs": [
+    "0040-contextual-connect-kern-parked-needs-assembled-feedback.md",
+    "0041-connect-rhythm-in-placement-not-kern-densebody-parked.md",
+    "0042-phase1-height-prerequisite-not-fix-thin-hand-joins-banked.md",
+    "0043-eye-body-placement-route-proven-parked-on-bridge-weld-protection.md"
+  ],
+  "primitive": "no build-time measure separates a connector bridge from a weld",
+  "expected_s4": { "revision_count": 4, "resolved": false }
+}

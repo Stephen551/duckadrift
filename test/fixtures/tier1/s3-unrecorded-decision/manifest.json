@@ -1,0 +1,9 @@
+{
+  "adrs": ["0001-two-space-yaml-indentation.md"],
+  "expected_s3": { "signals": ["new-dependency", "storage-schema"] },
+  "control": {
+    "description": "Contract recorded now, exercised when S3 lands in M3.3: the same diff WITH an ADR touch in changedFiles must produce zero S3 findings.",
+    "changedFiles": ["package.json", "src/storage/schema.ts", "docs/adr/0002-order-storage.md"],
+    "expected_s3": { "signals": [] }
+  }
+}

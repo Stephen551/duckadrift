@@ -1,0 +1,8 @@
+{
+  "adrs": ["0001-outbound-http-via-retry-wrapper.md"],
+  "expected_s2": {
+    "adr": "0001-outbound-http-via-retry-wrapper.md",
+    "file": "src/net/client.ts",
+    "lines": [6, 7]
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "key": {
+    "backend": "api",
+    "model": "claude-sonnet-5",
+    "effort": "high",
+    "checkId": "S1",
+    "promptHash": "6015a2b12439c94cb1adabab98de289e48ad9f61a29331421483492b54542ef1"
+  },
+  "recordedAt": "2026-07-10T00:00:00.000Z",
+  "requestDigest": "6015a2b12439c94cb1adabab98de289e48ad9f61a29331421483492b54542ef1",
+  "response": {
+    "id": "msg_hand_seeded_harness_proof",
+    "type": "message",
+    "role": "assistant",
+    "model": "claude-sonnet-5",
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"findings\":[]}"
+      }
+    ],
+    "stop_reason": "end_turn",
+    "usage": {
+      "input_tokens": 42,
+      "output_tokens": 6
+    }
+  }
+}
