@@ -61,7 +61,10 @@ describe("Workstream E — config load hardened (NEW-E, NEW-F)", () => {
   it("NEW-E: a directory named `.duckadrift.yml` is ignored (defaults), not an EISDIR crash", () => {
     const dir = writeRepo({ "docs/adr/0001-a.md": adr("0001") });
     mkdirSync(join(dir, ".duckadrift.yml", "nested"), { recursive: true }); // a DIRECTORY of that name
-    expect(loadConfig(dir)).toEqual({});
+    // Full defaults — tier1 at its always-populated default (ADR-0029).
+    expect(loadConfig(dir)).toEqual({
+      tier1: { enabled: false, backend: "api", model: "claude-sonnet-5", effort: "high" },
+    });
   });
 
   it("NEW-F: malformed YAML is a loud SetupError (exit 2), not an uncaught throw or silent default", () => {
