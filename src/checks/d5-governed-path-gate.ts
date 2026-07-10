@@ -1,5 +1,4 @@
-import { relative, sep } from "node:path";
-import { minimatch } from "minimatch";
+import { adrRepoPath, governedTouches } from "../adr/governs.js";
 import { formatAdrRef, padAdrNumber } from "../adr/refs.js";
 import type { AdrLogContext } from "../adr/types.js";
 import { code } from "../report/write.js";
@@ -37,12 +36,13 @@ export function d5GovernedPathGate(ctx: AdrLogContext): Finding[] {
     // Exact repo-relative-path identity, not a suffix match: `endsWith` let an
     // unrelated `backup-0001-foo.md` count as "the PR modified the ADR" and slip
     // the gate (B-4). changedFiles are repo-root-relative (git diff), forward-slash.
-    const adrRepoPath = relative(ctx.repoRoot, adr.filePath).split(sep).join("/");
-    if (changedFiles.some((f) => f === adrRepoPath)) continue; // PR modifies the ADR itself
+    // Path matching lives in the shared primitive (src/adr/governs.ts, ADR-0029);
+    // the ACK and self-modification exemptions above and below stay here — they
+    // are check policy, and the Tier 1 gate deliberately takes neither.
+    const selfPath = adrRepoPath(ctx.repoRoot, adr.filePath);
+    if (changedFiles.some((f) => f === selfPath)) continue; // PR modifies the ADR itself
 
-    // { dot: true } so a governed dotfile path (`.github/workflows/ci.yml` under a
-    // `**/*` glob) is matched, not silently skipped by minimatch's default (B-6).
-    const touched = changedFiles.filter((f) => globs.some((g) => minimatch(f, g, { dot: true })));
+    const touched = governedTouches(changedFiles, globs);
     if (touched.length === 0) continue;
 
     findings.push({

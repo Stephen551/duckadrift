@@ -32,4 +32,5 @@ Architecture decisions for duckadrift itself, recorded in duckadrift's own vocab
 | [0026](0026-clause-a-confirmation-at-v019.md) | Kill clause A — confirmation at v0.1.9 | Accepted | elevated |
 | [0027](0027-never-silent.md) | A broken watch goes red on every event; no event absorbs findings silently | Accepted | elevated |
 | [0028](0028-recorded-responses-and-replay-doctrine.md) | Recorded responses and the replay doctrine | Accepted | elevated |
+| [0029](0029-tier1-plumbing-contract.md) | The Tier 1 plumbing contract — config surface, credential doctrine, and the deterministic relevance gate | Accepted | elevated |
 | [0030](0030-parity-guard-auditable-override.md) | The parity guard gains an auditable override | Accepted | elevated |

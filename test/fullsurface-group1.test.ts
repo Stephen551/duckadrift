@@ -96,7 +96,10 @@ describe("B-10 — the file-size cap applies to the config read", () => {
     // defaults, provably (a declared dialect inside it is not adopted).
     const oversized = `dialect: madr\n# ${"padding ".repeat(300_000)}\n`; // ~2.4MB > 2MB cap
     const dir = writeRepo({ ".duckadrift.yml": oversized });
-    expect(loadConfig(dir)).toEqual({});
+    // Full defaults — no dialect adopted, tier1 at its always-populated default (ADR-0029).
+    expect(loadConfig(dir)).toEqual({
+      tier1: { enabled: false, backend: "api", model: "claude-sonnet-5", effort: "high" },
+    });
   });
 });
 
