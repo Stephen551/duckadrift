@@ -65,6 +65,37 @@ describe("citation validation: acceptance", () => {
     expect(verdict.accepted[0]!.citations).toHaveLength(1);
   });
 
+  it("does NOT collapse different citations whose document+quote concatenations collide", () => {
+    // The dedup key's NUL separator exists for exactly this: "a"+"bc" and
+    // "ab"+"c" concatenate identically, but they are different citations and
+    // both must survive.
+    const collisionInput: CheckInput = {
+      documents: [
+        { label: "a", path: "docs/a.md", content: "bc is in this one." },
+        { label: "ab", path: "docs/ab.md", content: "c is in this one." },
+      ],
+    };
+    const verdict = validateCitations(
+      {
+        findings: [
+          finding({
+            citations: [
+              { document: "a", quote: "bc" },
+              { document: "ab", quote: "c" },
+            ],
+          }),
+        ],
+      },
+      collisionInput,
+      "S1"
+    );
+    expect(verdict.accepted).toHaveLength(1);
+    expect(verdict.accepted[0]!.citations).toEqual([
+      { document: "a", quote: "bc" },
+      { document: "ab", quote: "c" },
+    ]);
+  });
+
   it("keeps surviving citations and drops failed ones on the same finding", () => {
     const verdict = run([
       finding({
