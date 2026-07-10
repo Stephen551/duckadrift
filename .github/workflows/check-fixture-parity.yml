@@ -16,6 +16,11 @@ jobs:
           fetch-depth: 0
 
       - name: Require a fixture change alongside any check-logic change
+        # The PR body reaches the script through env, NEVER by direct
+        # interpolation into run: — the body is attacker-authorable on fork
+        # PRs, and an interpolated string is a shell (ADR-0030).
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
         run: |
           BASE="${{ github.event.pull_request.base.sha }}"
           HEAD="${{ github.event.pull_request.head.sha }}"
@@ -25,7 +30,23 @@ jobs:
           FIXTURE_CHANGED=$(echo "$CHANGED" | grep -E '^test/fixtures/tier0/' || true)
 
           if [ -n "$CHECK_CHANGED" ] && [ -z "$FIXTURE_CHANGED" ]; then
-            echo "::error::This PR modifies check logic under src/checks/** without touching any fixture under test/fixtures/tier0/**. Every check ships with its isolating fixture in the same PR — add or update the corresponding fixture and its expected-findings.json."
+            # The auditable override (ADR-0030): an anchored whole line
+            # `PARITY-ACK: <reason>`, reason mandatory, in a commit message
+            # body or the PR body. Whole-line anchoring is ADR-ACK's B-5
+            # lesson imported verbatim — an incidental prose mention never
+            # acks a gate. Sources are handled as data (printf into grep,
+            # never eval'd); carriage returns are stripped so a CRLF-bodied
+            # bare `PARITY-ACK:` cannot smuggle its \r past the
+            # non-empty-reason requirement.
+            COMMIT_BODIES=$(git log --format=%B "$BASE".."$HEAD")
+            ACKS=$(printf '%s\n%s' "$COMMIT_BODIES" "$PR_BODY" | tr -d '\r' | grep -E '^[[:blank:]]*PARITY-ACK:[[:blank:]]*[^[:blank:]]' || true)
+            if [ -n "$ACKS" ]; then
+              echo "PARITY-ACK accepted:"
+              echo "$ACKS"
+              echo "Check-logic change without a fixture change is acknowledged on the record (ADR-0030)."
+              exit 0
+            fi
+            echo "::error::This PR modifies check logic under src/checks/** without touching any fixture under test/fixtures/tier0/**. Every check ships with its isolating fixture in the same PR — add or update the corresponding fixture and its expected-findings.json. A behavior-identical change may pass by carrying an anchored 'PARITY-ACK: <reason>' line in a commit message body or the PR body, which is recorded in the run log (ADR-0030)."
             echo "Changed check files:"
             echo "$CHECK_CHANGED"
             exit 1
