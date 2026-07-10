@@ -17,9 +17,12 @@ import { listFixtureDirs } from "./helpers/fixture-schema.js";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const TIER1_DIR = join(__dirname, "fixtures", "tier1");
 
-// harness-proof holds the hand-seeded recording for tier1-harness.test.ts — the
-// harness's own proof fixture, not a repo fixture: no docs/adr, no manifest.
-const REPO_FIXTURES = listFixtureDirs(TIER1_DIR).filter((name) => name !== "harness-proof");
+// harness-proof holds the hand-seeded recording for tier1-harness.test.ts and
+// pipeline-proof holds the M3.2 pipeline's end-to-end fixture (test-only check
+// + recording, driven by tier1-runner.test.ts) — proof fixtures, not S-check
+// repo fixtures: no manifest.json, not part of the S-check corpus contract.
+const PROOF_FIXTURES = new Set(["harness-proof", "pipeline-proof"]);
+const REPO_FIXTURES = listFixtureDirs(TIER1_DIR).filter((name) => !PROOF_FIXTURES.has(name));
 
 const S4_FIXTURE = "s4-recurring-revision";
 const CLEAN_BASELINE = "clean-baseline";
