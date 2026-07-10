@@ -1,11 +1,16 @@
 import { TIER_ZERO_CHECK_IDS } from "../types.js";
 import type { Finding, FindingEvidence, TierZeroCheckId } from "../types.js";
 import type { Tier1Signal } from "../tier1/gate.js";
+import type { Tier1RunResult } from "../tier1/runner.js";
 
 /**
  * The Tier 1 status vocabulary (ADR-0029) — the contract M3.2's pipeline
  * plugs into. Every enabled state names why Tier 1 did or did not spend;
- * skipping is always spoken (ADR-0003, PDR §2.8).
+ * skipping is always spoken (ADR-0003, PDR §2.8). When checks actually ran
+ * (M3.2's runner), the run fields appear together, always labeled
+ * UNCALIBRATED: findings carry model-reported confidence that is compared
+ * against nothing in this codebase (PDR §2.6 — thresholds are calibration
+ * artifacts, M4), and their only destination is this annex.
  */
 export type Tier1Status =
   | { enabled: false }
@@ -13,7 +18,21 @@ export type Tier1Status =
       enabled: true;
       status: "no-credentials" | "no-signal" | "eligible";
       signals: Tier1Signal[]; // always computed in PR mode, [] otherwise
+      findings?: Tier1RunResult["findings"];
+      discarded?: Tier1RunResult["discarded"];
+      skipped?: Tier1RunResult["skipped"];
+      errors?: Tier1RunResult["errors"];
+      calibration?: "UNCALIBRATED";
     };
+
+/** Attaches a run's results to an enabled status — the one way run data enters a report. */
+export function withTier1Run(
+  status: Tier1Status,
+  run: Tier1RunResult
+): Tier1Status {
+  if (!status.enabled) return status;
+  return { ...status, ...run, calibration: "UNCALIBRATED" };
+}
 
 const CHECK_TITLES: Record<TierZeroCheckId, string> = {
   D1: "Schema/structure lint",
@@ -111,6 +130,55 @@ function renderTier1Block(tier1: Tier1Status): string[] {
   // gate still ran (it is free) and its output is coverage truth (ADR-0029).
   if (tier1.signals.length > 0) {
     for (const signal of tier1.signals) lines.push(signalLine(signal));
+    lines.push("");
+  }
+  lines.push(...renderTier1Findings(tier1));
+  return lines;
+}
+
+/** Analyst-voice caveat attached to every rendered Tier 1 finding (PDR §3.1, §2.6). */
+const UNCALIBRATED_LABEL =
+  "assessed by the checker — UNCALIBRATED (annex only; interrupts require a calibration entry, PDR §2.6)";
+
+/**
+ * Renders the run's findings section. Every model- or repo-derived string —
+ * claims, consequences, quotes, document labels, error messages — is fenced
+ * through code(): this text is untrusted content flowing into the job summary,
+ * the exact surface S3 (ADR-0013) closed for Tier 0. Raw confidence decimals
+ * do NOT appear here (PDR §3.1) — the numbers live in report.json.
+ */
+function renderTier1Findings(tier1: Tier1Status): string[] {
+  if (!tier1.enabled || tier1.calibration === undefined) return [];
+  const lines: string[] = ["### Findings (UNCALIBRATED — annex only)", ""];
+
+  const findings = tier1.findings ?? [];
+  if (findings.length === 0) {
+    lines.push("No Tier 1 findings were accepted in this run.", "");
+  } else {
+    for (const finding of findings) {
+      lines.push(`- ${finding.check}: ${code(finding.claim)}`);
+      for (const citation of finding.citations) {
+        lines.push(`  - Quoted from ${code(citation.document)}: ${code(citation.quote)}`);
+      }
+      lines.push(`  - Consequence: ${code(finding.consequence)}`);
+      lines.push(`  - ${UNCALIBRATED_LABEL}`);
+    }
+    lines.push("");
+  }
+
+  const discarded = tier1.discarded ?? [];
+  const skipped = tier1.skipped ?? [];
+  const errors = tier1.errors ?? [];
+  if (discarded.length > 0 || skipped.length > 0 || errors.length > 0) {
+    for (const d of discarded) {
+      lines.push(`- discarded (${d.reason}): ${d.check} — ${code(d.claim.slice(0, 80))}`);
+    }
+    for (const s of skipped) {
+      lines.push(`- skipped (${s.reason}): ${s.check}`);
+    }
+    for (const e of errors) {
+      lines.push(`- error: ${e.check} — ${code(e.message)}`);
+    }
     lines.push("");
   }
   return lines;
