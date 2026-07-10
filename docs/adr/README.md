@@ -34,3 +34,4 @@ Architecture decisions for duckadrift itself, recorded in duckadrift's own vocab
 | [0028](0028-recorded-responses-and-replay-doctrine.md) | Recorded responses and the replay doctrine | Accepted | elevated |
 | [0029](0029-tier1-plumbing-contract.md) | The Tier 1 plumbing contract — config surface, credential doctrine, and the deterministic relevance gate | Accepted | elevated |
 | [0030](0030-parity-guard-auditable-override.md) | The parity guard gains an auditable override | Accepted | elevated |
+| [0031](0031-prompt-architecture.md) | The prompt architecture — one cached prefix, structured output, citations or silence | Accepted | elevated |
