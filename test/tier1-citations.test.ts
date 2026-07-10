@@ -26,8 +26,12 @@ function finding(overrides: Record<string, unknown>): Record<string, unknown> {
   };
 }
 
-function run(findings: unknown[]) {
-  return validateCitations({ findings }, INPUT, "S1");
+// These acceptance/rejection tests were written around single-citation
+// findings, so they run at coverage minimum 1 (any one verbatim citation
+// suffices). The structural-coverage minimums (2 for contradiction, 3 for
+// recurrence) are exercised in test/tier1-adversarial.test.ts.
+function run(findings: unknown[], minDistinct = 1) {
+  return validateCitations({ findings }, INPUT, "S1", minDistinct);
 }
 
 describe("citation validation: acceptance", () => {
@@ -54,7 +58,7 @@ describe("citation validation: acceptance", () => {
     const verdict = validateCitations(
       { findings: [finding({ citations: [{ document: "0001-a.md", quote: "startup.\nWorkers poll" }] })] },
       crlfInput,
-      "S1"
+      "S1", 1
     );
     expect(verdict.accepted).toHaveLength(1);
   });
@@ -66,9 +70,9 @@ describe("citation validation: acceptance", () => {
   });
 
   it("does NOT collapse different citations whose document+quote concatenations collide", () => {
-    // The dedup key's NUL separator exists for exactly this: "a"+"bc" and
-    // "ab"+"c" concatenate identically, but they are different citations and
-    // both must survive.
+    // The structural dedup key (JSON.stringify of the pair) exists for exactly
+    // this: "a"+"bc" and "ab"+"c" concatenate identically under any separator,
+    // but they are different citations and both must survive.
     const collisionInput: CheckInput = {
       documents: [
         { label: "a", path: "docs/a.md", content: "bc is in this one." },
@@ -87,7 +91,7 @@ describe("citation validation: acceptance", () => {
         ],
       },
       collisionInput,
-      "S1"
+      "S1", 1
     );
     expect(verdict.accepted).toHaveLength(1);
     expect(verdict.accepted[0]!.citations).toEqual([
@@ -139,7 +143,7 @@ describe("citation validation: fabrications die", () => {
     const verdict = validateCitations(
       { findings: [finding({})] },
       spaced,
-      "S1"
+      "S1", 1
     );
     expect(verdict.discarded[0]!.reason).toBe("quote-not-found");
   });
@@ -180,7 +184,7 @@ describe("citation validation: fabrications die", () => {
     const verdict = validateCitations(
       { findings: [finding({ citations: [{ document: "0001-a.md", quote: huge }] })] },
       hugeInput,
-      "S1"
+      "S1", 1
     );
     expect(verdict.discarded[0]!.reason).toBe("quote-not-found");
   });
@@ -212,7 +216,7 @@ describe("citation validation: shape defects", () => {
   });
 
   it("prose where the findings array should be → one loud malformed discard, no throw", () => {
-    const verdict = validateCitations("Here are my findings: everything looks fine.", INPUT, "S1");
+    const verdict = validateCitations("Here are my findings: everything looks fine.", INPUT, "S1", 1);
     expect(verdict.accepted).toHaveLength(0);
     expect(verdict.discarded).toEqual([
       { check: "S1", claim: "(unparseable response)", reason: "malformed" },
