@@ -30,4 +30,7 @@ export const s4RecurringRevision: CheckDefinition = {
     "array is the correct report.",
   ].join("\n"),
   selectInput: (ctx) => selectAcceptedFullLog(ctx),
+  // Recurrence is N>=3 records revising one decision: a finding must cite at
+  // least three distinct documents to structurally support the claim (ADR-0033).
+  minDistinctCitedDocuments: 3,
 };

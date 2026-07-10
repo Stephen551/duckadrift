@@ -30,4 +30,10 @@ export const PROOF_CHECK: CheckDefinition = {
       })),
     };
   },
+  // Set to 1, matching what the committed proof recording legitimately
+  // contains — its one accepted finding cites a single document (ADR-0033
+  // directs matching the recording, not re-recording, when it cites fewer
+  // than a nominal value). This is a pipeline-shape proof, not a relationship
+  // check, so single-citation coverage is the honest declaration here.
+  minDistinctCitedDocuments: 1,
 };

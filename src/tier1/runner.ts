@@ -22,23 +22,35 @@ export type Tier1Skip =
 export interface Tier1RunResult {
   findings: Tier1Finding[]; // accepted only
   discarded: CitationVerdict["discarded"];
+  droppedCitations: CitationVerdict["droppedCitations"];
   skipped: Tier1Skip[];
   errors: Array<{ check: Tier1CheckId; message: string }>; // transport/parse failures, run continues
 }
 
-/** Defensive extraction of the forced tool call's input from an untrusted response body. Returns undefined when no report_findings tool call is present. */
-function extractToolInput(response: unknown): unknown {
-  if (typeof response !== "object" || response === null) return undefined;
+/**
+ * Extraction result: the forced tool call's input, or a NAMED reason it could
+ * not be taken. "none" — no report_findings block at all. "duplicate" — MORE
+ * than one, a violation of the forced single-tool contract (S3-14): selecting
+ * the first would silently lose the rest, so the runner refuses all of them.
+ */
+type Extracted =
+  | { ok: true; input: unknown }
+  | { ok: false; reason: "none" | "duplicate"; count: number };
+
+function extractToolInput(response: unknown): Extracted {
+  if (typeof response !== "object" || response === null) return { ok: false, reason: "none", count: 0 };
   const content = (response as Record<string, unknown>).content;
-  if (!Array.isArray(content)) return undefined;
-  for (const block of content) {
-    if (typeof block !== "object" || block === null) continue;
+  if (!Array.isArray(content)) return { ok: false, reason: "none", count: 0 };
+  const blocks = content.filter((block): block is Record<string, unknown> => {
+    if (typeof block !== "object" || block === null) return false;
     const candidate = block as Record<string, unknown>;
-    if (candidate.type === "tool_use" && candidate.name === "report_findings") {
-      return candidate.input;
-    }
-  }
-  return undefined;
+    return candidate.type === "tool_use" && candidate.name === "report_findings";
+  });
+  if (blocks.length === 0) return { ok: false, reason: "none", count: 0 };
+  // A response with two report_findings blocks violated the forced contract on
+  // the wire; refuse all, never silently take the first (S3-14).
+  if (blocks.length > 1) return { ok: false, reason: "duplicate", count: blocks.length };
+  return { ok: true, input: blocks[0]!.input };
 }
 
 export async function runTier1Checks(
@@ -52,7 +64,7 @@ export async function runTier1Checks(
   // loadAdrLog that produced ctx.
   const { model, effort } = loadConfig(ctx.repoRoot, { quiet: true }).tier1;
 
-  const result: Tier1RunResult = { findings: [], discarded: [], skipped: [], errors: [] };
+  const result: Tier1RunResult = { findings: [], discarded: [], droppedCitations: [], skipped: [], errors: [] };
 
   for (const check of checks) {
     const selection = check.selectInput(ctx);
@@ -71,31 +83,43 @@ export async function runTier1Checks(
 
     const request = buildRequest(check, selection, { model, effort });
 
-    let response: unknown;
+    // The whole untrusted-response handling — transport, extract, validate —
+    // is inside one try/catch: one check's failure never silently costs
+    // another's coverage, AND the runner never propagates a throw from a
+    // pathological response object (a throwing getter, a reference cycle —
+    // none reach the real JSON wire, but the guarantee is "the runner never
+    // propagates", not "the validator handles impossible inputs"; ADR-0033,
+    // S3-16/S3-17). Any throw becomes a counted error and the run continues.
     try {
-      response = await transport.send(request);
+      const response = await transport.send(request);
+
+      const extracted = extractToolInput(response);
+      if (!extracted.ok) {
+        result.errors.push({
+          check: check.id,
+          message:
+            extracted.reason === "duplicate"
+              ? `response carried ${extracted.count} report_findings tool calls; the forced contract is exactly one`
+              : "response carries no report_findings tool call — nothing to validate",
+        });
+        continue;
+      }
+
+      const verdict = validateCitations(
+        extracted.input,
+        selection,
+        check.id,
+        check.minDistinctCitedDocuments
+      );
+      result.findings.push(...verdict.accepted);
+      result.discarded.push(...verdict.discarded);
+      result.droppedCitations.push(...verdict.droppedCitations);
     } catch (err) {
-      // One check's failure never silently costs another's coverage: record
-      // the error loudly and CONTINUE to the next check.
       result.errors.push({
         check: check.id,
         message: err instanceof Error ? err.message : String(err),
       });
-      continue;
     }
-
-    const rawInput = extractToolInput(response);
-    if (rawInput === undefined) {
-      result.errors.push({
-        check: check.id,
-        message: "response carries no report_findings tool call — nothing to validate",
-      });
-      continue;
-    }
-
-    const verdict = validateCitations(rawInput, selection, check.id);
-    result.findings.push(...verdict.accepted);
-    result.discarded.push(...verdict.discarded);
   }
 
   return result;

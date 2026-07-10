@@ -27,4 +27,8 @@ export const s1Contradiction: CheckDefinition = {
     "array is the correct report.",
   ].join("\n"),
   selectInput: (ctx) => selectAcceptedFullLog(ctx),
+  // A contradiction is a relationship between two records: a finding that cites
+  // only one is structurally unsupportable regardless of how the model phrased
+  // it (ADR-0033, the S1-11 breach).
+  minDistinctCitedDocuments: 2,
 };

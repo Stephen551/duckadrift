@@ -30,6 +30,12 @@ export interface CheckDefinition {
   instructions: string;
   /** Deterministic input selector (select.ts). Every skip is reported loudly, never silent. */
   selectInput(ctx: AdrLogContext): SelectResult;
+  /** Minimum distinct cited documents a surviving finding must carry (ADR-0033
+   * structural coverage). 1 = any single verbatim citation suffices; 2 = the
+   * finding must cite at least two DISTINCT documents (a contradiction names both
+   * records); etc. The validator enforces this deterministically — it is coverage,
+   * not relevance. */
+  minDistinctCitedDocuments: number;
 }
 
 /** The production registry. S4 and S1 live here as of M3.3a; S2/S3/S5 land at M3.3b. */
