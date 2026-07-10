@@ -159,6 +159,10 @@ describe("credentials: presence is the only fact the system may know (PDR §2.8)
     expect(tier1CredentialsPresent({ ANTHROPIC_API_KEY: "" })).toBe(false);
   });
 
+  it("whitespace-only → false (PR #32's logged non-blocker, landed with M3.2)", () => {
+    expect(tier1CredentialsPresent({ ANTHROPIC_API_KEY: "   \t " })).toBe(false);
+  });
+
   it("the key's value appears in no report string, markdown or JSON", () => {
     const present = tier1CredentialsPresent({ ANTHROPIC_API_KEY: FAKE_KEY });
     const status = resolveTier1Status(ENABLED, present, s2Context());

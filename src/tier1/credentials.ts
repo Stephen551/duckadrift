@@ -6,5 +6,7 @@
  */
 export function tier1CredentialsPresent(env: NodeJS.ProcessEnv = process.env): boolean {
   const key = env.ANTHROPIC_API_KEY;
-  return key !== undefined && key !== "";
+  // Trimmed: a whitespace-only key is absent (PR #32's logged non-blocker,
+  // landed here on schedule with M3.2).
+  return key !== undefined && key.trim() !== "";
 }
