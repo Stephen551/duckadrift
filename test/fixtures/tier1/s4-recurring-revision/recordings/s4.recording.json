@@ -5,10 +5,10 @@
     "model": "claude-sonnet-5",
     "effort": "high",
     "checkId": "S4",
-    "promptHash": "406e2c1aefdc717c6dd5bd690e4dbbb499982f2b438668e72d9693ae6d06bd90"
+    "promptHash": "805619f0a036ba4c4eba5ce505ea2b4ee616daac83afbd3adb34d3988285c669"
   },
   "recordedAt": "2026-07-10T21:39:17.626Z",
-  "requestDigest": "406e2c1aefdc717c6dd5bd690e4dbbb499982f2b438668e72d9693ae6d06bd90",
+  "requestDigest": "805619f0a036ba4c4eba5ce505ea2b4ee616daac83afbd3adb34d3988285c669",
   "response": {
     "model": "claude-sonnet-5",
     "id": "msg_011Ccu6ofSp2ocmWvzPoo2qP",
