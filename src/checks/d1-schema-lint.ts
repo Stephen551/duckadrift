@@ -29,6 +29,19 @@ const ANNEX_CONSEQUENCE =
 const NUMBERING_GAP_CONSEQUENCE =
   "A skipped number is either a lost ADR or a numbering error; both need a human to confirm which.";
 
+// ADR-0027: the missing-section consequence is per required section, not one
+// line shared across them — a record missing Context and one missing Decision
+// fail in different ways, and the single-copy phrasing (the missing-Decision
+// line standing in for a missing Context) is the sibling-copy class this repo
+// documents. Mapped by required-section family; every dialect's required
+// sections are a context* or decision* key (dialect.ts, REQUIRED_SECTIONS).
+const MISSING_DECISION_CONSEQUENCE = "A decision record with no recorded decision fails its one job.";
+const MISSING_CONTEXT_CONSEQUENCE =
+  "A decision without its recorded context cannot be safely revisited; the why is the first thing to rot.";
+function missingSectionConsequence(required: string): string {
+  return required.startsWith("context") ? MISSING_CONTEXT_CONSEQUENCE : MISSING_DECISION_CONSEQUENCE;
+}
+
 // Deliberately narrow (ADR-0009): only a well-known documentary-annex
 // vocabulary counts as "recognizable," so this can't silently swallow a
 // genuine duplicate-numbering mistake in some other repo whose filenames
@@ -291,7 +304,7 @@ export function d1SchemaLint(ctx: AdrLogContext): Finding[] {
           check: "D1",
           claim,
           evidence: [{ adr: adr.fileName }],
-          consequence: "A decision record with no recorded decision fails its one job.",
+          consequence: missingSectionConsequence(req),
           ...(ctx.dialectDeclared ? {} : { advisory: true }),
         });
       }

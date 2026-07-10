@@ -30,3 +30,4 @@ Architecture decisions for duckadrift itself, recorded in duckadrift's own vocab
 | [0024](0024-basename-advisories-name-all-candidates.md) | Basename advisories name every candidate, not just the first | Accepted | elevated |
 | [0025](0025-the-d5-ack-source-false-positive.md) | The D5 ack-source false positive | Accepted | elevated |
 | [0026](0026-clause-a-confirmation-at-v019.md) | Kill clause A — confirmation at v0.1.9 | Accepted | elevated |
+| [0027](0027-never-silent.md) | A broken watch goes red on every event; no event absorbs findings silently | Accepted | elevated |

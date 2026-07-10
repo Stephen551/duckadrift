@@ -29,7 +29,7 @@ runs:
     - name: Set up Node
       uses: actions/setup-node@v4
       with:
-        node-version: '20'
+        node-version: '24'
 
     - name: Build duckadrift
       shell: bash
@@ -105,12 +105,25 @@ runs:
         fi
         echo "failing-count=$FAILING" >> "$GITHUB_OUTPUT"
 
+        # schedule / workflow_dispatch route findings to the tracking issue and
+        # stay green — the issue IS the interrupt (PDR §2.1, ADR-0027). Those two
+        # events are the only ones with a channel other than the job status.
         if { [ "${{ github.event_name }}" = "schedule" ] || [ "${{ github.event_name }}" = "workflow_dispatch" ]; } && [ -f duckadrift-report.json ]; then
           bash "${{ github.action_path }}/action/issue-sweep.sh" duckadrift-report.md duckadrift-report.json
+          exit 0
         fi
 
-        if [ "${{ github.event_name }}" = "pull_request" ] && [ "$FAILING" -gt 0 ]; then
-          echo "::error title=duckadrift::$FAILING Tier 0 finding(s) failing — see annotations above and the job summary."
+        # No event silently absorbs failing findings (ADR-0027). pull_request
+        # fails with the annotations as its detail; every other channel-less
+        # event (push included) fails too, because the red is the only honest
+        # signal it has — a finding that fired but blocked nothing is exactly the
+        # quiet stand-down the Pact forbids.
+        if [ "$FAILING" -gt 0 ]; then
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "::error title=duckadrift::$FAILING Tier 0 finding(s) failing — see annotations above and the job summary."
+          else
+            echo "::error title=duckadrift::$FAILING Tier 0 finding(s) failing on a '${{ github.event_name }}' event, which has no tracking-issue channel — failing the run is the only honest signal (ADR-0027). Wire this check to schedule or workflow_dispatch to route findings to a tracking issue instead."
+          fi
           exit 1
         fi
         exit 0

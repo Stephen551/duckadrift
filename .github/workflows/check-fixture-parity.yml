@@ -32,3 +32,50 @@ jobs:
           fi
 
           echo "OK: no check-logic change without a corresponding fixture change."
+
+  # The action-wrapper repros under test/action/*.mjs are committed guards that,
+  # until now, nothing ran (ADR-0027) — a guard that never executes is untested
+  # in every configuration. This job runs each one sequentially against the built
+  # CLI, naming any that fail. Node 24 matches what the action declares.
+  action-repros:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm ci
+      - run: npm run build
+      - name: Run every test/action/*.mjs
+        run: |
+          fail=0
+          for f in test/action/*.mjs; do
+            echo "::group::$f"
+            if node "$f"; then
+              echo "PASS: $f"
+            else
+              echo "::error title=action-repro::action repro failed: $f"
+              fail=1
+            fi
+            echo "::endgroup::"
+          done
+          if [ "$fail" -ne 0 ]; then
+            echo "::error::One or more action repros failed — see the named files above."
+            exit 1
+          fi
+          echo "OK: all action repros passed."
+
+  # The unit and behavioral suite (build, typecheck, 525 vitest tests) ran only
+  # on developer machines — the same committed-guard-nothing-executes gap the
+  # action repros had, at full size (ADR-0027). It now runs in CI on every change.
+  unit-suite:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm ci
+      - run: npm run build
+      - run: npm run typecheck
+      - run: npm test
