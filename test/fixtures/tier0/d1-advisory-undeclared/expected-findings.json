@@ -3,7 +3,7 @@
     "check": "D1",
     "claim": "ADR-0001: no `## Context`, `## Problem`, or `## Problem Statement` section found — if this log uses a house template, declare it in `.duckadrift.yml`.",
     "evidence": [{ "adr": "0001-missing-context.md" }],
-    "consequence": "A decision record with no recorded decision fails its one job.",
+    "consequence": "A decision without its recorded context cannot be safely revisited; the why is the first thing to rot.",
     "advisory": true
   }
 ]
