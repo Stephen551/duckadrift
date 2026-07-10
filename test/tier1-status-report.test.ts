@@ -109,10 +109,10 @@ describe("Tier 1 markdown block (each status renders its exact copy)", () => {
     );
   });
 
-  it("eligible, honest about the missing pipeline, one line per signal", () => {
+  it("eligible without a run attached, honest about where checks execute, one line per signal", () => {
     const md = renderMarkdownReport([], [], resolveTier1Status(ENABLED, true, s2Context()));
     expect(md).toContain(
-      "Tier 1 eligible: 1 signal(s) detected. No semantic checks exist in this build — the check pipeline lands at M3.2/M3.3."
+      "Tier 1 eligible: 1 signal(s) detected. Semantic checks run under the report command; this output carries none."
     );
     expect(md).toContain(
       "- governed-path: `0001-outbound-http-via-retry-wrapper.md` governs `src/net/client.ts`"

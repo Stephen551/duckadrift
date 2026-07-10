@@ -12,7 +12,7 @@ const CHECK: CheckDefinition = {
   id: "S1",
   title: "Prompt test check",
   instructions: "Compare the supplied decisions for incompatibility.",
-  selectInput: () => null, // unused — buildRequest takes the input directly
+  selectInput: () => ({ skip: "no-input" as const }), // unused — buildRequest takes the input directly
 };
 
 const CONFIG = { model: "claude-sonnet-5", effort: "high" };

@@ -1,6 +1,7 @@
 import type { AdrLogContext } from "../adr/types.js";
 import { loadConfig } from "../config/load.js";
 import type { CheckDefinition, Tier1CheckId } from "./checks.js";
+import { TIER1_INPUT_CAP_BYTES, isSkip } from "./select.js";
 import { validateCitations } from "./citations.js";
 import type { CitationVerdict, Tier1Finding } from "./citations.js";
 import { buildRequest } from "./prompt.js";
@@ -13,10 +14,15 @@ import type { Tier1Transport } from "./transport.js";
 // interrupt code path exists in this build, structurally (opening that
 // channel is the 1.0 event, ADR-0012).
 
+/** A skip is a NAMED fact (ADR-0032): nothing to read, or too much to read in one call — never conflated. */
+export type Tier1Skip =
+  | { check: Tier1CheckId; reason: "no-input" }
+  | { check: Tier1CheckId; reason: "input-exceeds-cap"; bytes: number; cap: number };
+
 export interface Tier1RunResult {
   findings: Tier1Finding[]; // accepted only
   discarded: CitationVerdict["discarded"];
-  skipped: Array<{ check: Tier1CheckId; reason: "no-input" }>;
+  skipped: Tier1Skip[];
   errors: Array<{ check: Tier1CheckId; message: string }>; // transport/parse failures, run continues
 }
 
@@ -49,15 +55,21 @@ export async function runTier1Checks(
   const result: Tier1RunResult = { findings: [], discarded: [], skipped: [], errors: [] };
 
   for (const check of checks) {
-    const input = check.selectInput(ctx);
-    if (input === null) {
-      // Loud, never silent: a check with nothing to read in this mode is a
-      // reported skip (the Pact — the watch may pause visibly).
-      result.skipped.push({ check: check.id, reason: "no-input" });
+    const selection = check.selectInput(ctx);
+    if (isSkip(selection)) {
+      // Loud, never silent (the Pact; ADR-0032): a check with nothing to read
+      // is a reported skip, and a check with too much to read in one call is
+      // a DIFFERENT reported skip carrying the measured size and the cap —
+      // never a silent trim, never a partial read presented as a full one.
+      result.skipped.push(
+        selection.skip === "input-exceeds-cap"
+          ? { check: check.id, reason: "input-exceeds-cap", bytes: selection.bytes, cap: TIER1_INPUT_CAP_BYTES }
+          : { check: check.id, reason: "no-input" }
+      );
       continue;
     }
 
-    const request = buildRequest(check, input, { model, effort });
+    const request = buildRequest(check, selection, { model, effort });
 
     let response: unknown;
     try {
@@ -81,7 +93,7 @@ export async function runTier1Checks(
       continue;
     }
 
-    const verdict = validateCitations(rawInput, input, check.id);
+    const verdict = validateCitations(rawInput, selection, check.id);
     result.findings.push(...verdict.accepted);
     result.discarded.push(...verdict.discarded);
   }

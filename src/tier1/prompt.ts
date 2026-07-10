@@ -52,6 +52,12 @@ export const REPORT_FINDINGS_TOOL = {
   name: "report_findings",
   description:
     "Report the findings of this semantic check. Call exactly once. An empty findings array is the correct report when nothing meets the evidence bar.",
+  // strict: the API validates tool input against the schema exactly. Added at
+  // M3.3a after the first live S4 run returned `findings` as a JSON string
+  // instead of an array — the deterministic validator discarded the whole
+  // response as malformed. The schema contract is enforced by the platform,
+  // not begged for in prose (declared footprint deviation, PR #35 ledger).
+  strict: true,
   input_schema: {
     type: "object",
     properties: {

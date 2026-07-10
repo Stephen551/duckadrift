@@ -1,0 +1,73 @@
+{
+  "schemaVersion": 1,
+  "key": {
+    "backend": "api",
+    "model": "claude-sonnet-5",
+    "effort": "high",
+    "checkId": "S4",
+    "promptHash": "406e2c1aefdc717c6dd5bd690e4dbbb499982f2b438668e72d9693ae6d06bd90"
+  },
+  "recordedAt": "2026-07-10T21:39:17.626Z",
+  "requestDigest": "406e2c1aefdc717c6dd5bd690e4dbbb499982f2b438668e72d9693ae6d06bd90",
+  "response": {
+    "model": "claude-sonnet-5",
+    "id": "msg_011Ccu6ofSp2ocmWvzPoo2qP",
+    "type": "message",
+    "role": "assistant",
+    "content": [
+      {
+        "type": "tool_use",
+        "id": "toolu_01Bh9KSix6RM1jdQEKQF1LZ7",
+        "name": "report_findings",
+        "input": {
+          "findings": [
+            {
+              "claim": "ADRs 0040, 0041, 0042, and 0043 form a chain of four Accepted records that all circle the same unresolved primitive — no build-time or placement-time measure can yet discriminate a deliberate connector bridge/overlap from an actual body weld — and none of them closes that discrimination problem; each parks, banks, or re-locates it instead.",
+              "citations": [
+                {
+                  "document": "0040-contextual-connect-kern-parked-needs-assembled-feedback.md",
+                  "quote": "no build-time\nmeasure can tell that intentional overlap from a body weld"
+                },
+                {
+                  "document": "0041-connect-rhythm-in-placement-not-kern-densebody-parked.md",
+                  "quote": "the\nsame root as ADR 0040: no build-time measure separates the connector bridge from\na weld."
+                },
+                {
+                  "document": "0042-phase1-height-prerequisite-not-fix-thin-hand-joins-banked.md",
+                  "quote": "BANK thin-hand\njoin evenness at ~B and defer it to a focused milestone."
+                },
+                {
+                  "document": "0043-eye-body-placement-route-proven-parked-on-bridge-weld-protection.md",
+                  "quote": "That discrimination is ADR\n0040's assembled-glyph problem in its minimal, tractable form — the geometry is now\nknown at placement time."
+                }
+              ],
+              "consequence": "A maintainer should treat this as a single open decision with a four-record paper trail rather than four separate closed decisions, and should track the bridge-vs-weld discrimination layer as the one blocking milestone before thin-hand/flashy-hand join evenness can ship.",
+              "reportedConfidence": 0.85
+            }
+          ]
+        },
+        "caller": {
+          "type": "direct"
+        }
+      }
+    ],
+    "stop_reason": "tool_use",
+    "stop_sequence": null,
+    "stop_details": null,
+    "usage": {
+      "input_tokens": 3420,
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 2457,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 0
+      },
+      "output_tokens": 582,
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      },
+      "service_tier": "standard",
+      "inference_geo": "global"
+    }
+  }
+}

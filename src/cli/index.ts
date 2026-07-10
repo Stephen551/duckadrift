@@ -89,20 +89,22 @@ function runCheck(argv: string[]): void {
   process.exitCode = 1;
 }
 
-function runReport(argv: string[]): void {
-  process.exitCode = executeReport(parseCommonArgs(argv));
+async function runReport(argv: string[]): Promise<void> {
+  process.exitCode = await executeReport(parseCommonArgs(argv));
 }
 
-function main(): void {
+async function main(): Promise<void> {
   const [, , command, ...rest] = process.argv;
 
   try {
     switch (command) {
       case "check":
+        // Deliberately synchronous and Tier 1-free: the verdict channel stays
+        // deterministic (PDR §2.5) — semantic checks run under `report` only.
         runCheck(rest);
         break;
       case "report":
-        runReport(rest);
+        await runReport(rest);
         break;
       default:
         printUsage();
@@ -119,4 +121,4 @@ function main(): void {
   }
 }
 
-main();
+void main();

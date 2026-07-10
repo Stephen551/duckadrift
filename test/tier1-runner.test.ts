@@ -28,9 +28,9 @@ async function runProof() {
   return runTier1Checks(proofContext(), [PROOF_CHECK], replayTransport(RECORDING));
 }
 
-describe("the production registry ships empty in M3.2", () => {
-  it("TIER1_CHECKS is empty — no live check exists in this build", () => {
-    expect(TIER1_CHECKS).toEqual([]);
+describe("the production registry (M3.3a)", () => {
+  it("carries exactly S1 and S4 — S2/S3/S5 land at M3.3b", () => {
+    expect(TIER1_CHECKS.map((c) => c.id).sort()).toEqual(["S1", "S4"]);
   });
 });
 
@@ -62,7 +62,7 @@ describe("pipeline end-to-end against the committed recording", () => {
   });
 
   it("a check with no input is a loud skip, never a silent pass", async () => {
-    const emptyCheck = { ...PROOF_CHECK, selectInput: () => null };
+    const emptyCheck = { ...PROOF_CHECK, selectInput: () => ({ skip: "no-input" as const }) };
     const result = await runTier1Checks(proofContext(), [emptyCheck], replayTransport(RECORDING));
     expect(result.skipped).toEqual([{ check: "S1", reason: "no-input" }]);
     expect(result.errors).toEqual([]);

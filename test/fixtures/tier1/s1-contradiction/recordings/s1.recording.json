@@ -1,0 +1,80 @@
+{
+  "schemaVersion": 1,
+  "key": {
+    "backend": "api",
+    "model": "claude-sonnet-5",
+    "effort": "high",
+    "checkId": "S1",
+    "promptHash": "7079e1f599213877d4e14cf354dbc2db48d2ea76e8c0ee9b82878f30d29aa8b4"
+  },
+  "recordedAt": "2026-07-10T21:39:28.903Z",
+  "requestDigest": "7079e1f599213877d4e14cf354dbc2db48d2ea76e8c0ee9b82878f30d29aa8b4",
+  "response": {
+    "model": "claude-sonnet-5",
+    "id": "msg_011Ccu6pobEavrN6AXBimRRM",
+    "type": "message",
+    "role": "assistant",
+    "content": [
+      {
+        "type": "tool_use",
+        "id": "toolu_018dn1JGzFgrR1KqyacJkMQA",
+        "name": "report_findings",
+        "input": {
+          "findings": [
+            {
+              "claim": "ADR-0001 requires that the application run with no network services and open no connections to other processes, while ADR-0003 requires the application to connect to a managed PostgreSQL cluster over TLS, which is a network connection to another process. Both records are Accepted, and a codebase cannot simultaneously open zero connections to other processes and maintain a TLS connection to a remote database cluster.",
+              "citations": [
+                {
+                  "document": "0001-embedded-file-local-persistence.md",
+                  "quote": "The deploy target runs no network services: nothing listens on any\nport, and the application opens no connections to other processes."
+                },
+                {
+                  "document": "0003-postgresql-system-of-record.md",
+                  "quote": "The database runs\nas a managed cluster; the application authenticates with rotating credentials\nand connects over TLS."
+                }
+              ],
+              "consequence": "Engineers cannot satisfy both decisions at once: either the appliance remains network-isolated with embedded SQLite persistence, or it connects to an external managed PostgreSQL cluster, but not both. One of these ADRs should be marked Superseded to reflect which persistence model is actually current.",
+              "reportedConfidence": 0.93
+            },
+            {
+              "claim": "ADR-0001 mandates that all persistence lives in the embedded SQLite file shipped inside the install directory, while ADR-0003 mandates that PostgreSQL is adopted as the system of record for all persistence. These are mutually exclusive storage architectures for 'all persistence' and both are marked Accepted.",
+              "citations": [
+                {
+                  "document": "0001-embedded-file-local-persistence.md",
+                  "quote": "All persistence lives in the embedded SQLite file that ships inside the install\ndirectory."
+                },
+                {
+                  "document": "0003-postgresql-system-of-record.md",
+                  "quote": "Adopt PostgreSQL as the system of record for all persistence."
+                }
+              ],
+              "consequence": "The codebase cannot have all persistence in a local embedded file and simultaneously have all persistence in a remote managed database; the two decisions describe incompatible system architectures and one should be marked as superseding the other.",
+              "reportedConfidence": 0.9
+            }
+          ]
+        },
+        "caller": {
+          "type": "direct"
+        }
+      }
+    ],
+    "stop_reason": "tool_use",
+    "stop_sequence": null,
+    "stop_details": null,
+    "usage": {
+      "input_tokens": 1163,
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 2390,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 0
+      },
+      "output_tokens": 724,
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      },
+      "service_tier": "standard",
+      "inference_geo": "global"
+    }
+  }
+}
