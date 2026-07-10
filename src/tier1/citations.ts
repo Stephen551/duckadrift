@@ -24,12 +24,23 @@ export interface Tier1Finding {
   reportedConfidence: number;
 }
 
-export type DiscardReason = "no-citations" | "unknown-document" | "quote-not-found" | "malformed";
+export type DiscardReason =
+  | "no-citations"
+  | "unknown-document"
+  | "quote-not-found"
+  | "malformed"
+  | "insufficient-coverage";
+
+/** Why a single citation was dropped from within a finding (a subset of the whole-finding reasons). */
+export type CitationDropReason = "unknown-document" | "quote-not-found" | "malformed";
 
 export interface CitationVerdict {
   accepted: Tier1Finding[];
   /** Every discard is counted and named — never silently dropped. */
   discarded: Array<{ check: Tier1CheckId; claim: string; reason: DiscardReason }>;
+  /** Citations dropped from within findings that otherwise survived — the
+   * fabricated-beside-the-real case (ADR-0033). Named, never silent. */
+  droppedCitations: Array<{ check: Tier1CheckId; claim: string; reason: CitationDropReason }>;
 }
 
 /** Exactly ONE normalization on both sides of the byte-match: CRLF→LF. No trimming, no case folding, no whitespace collapse — the model quotes bytes or the citation dies. */
@@ -57,13 +68,26 @@ function bestEffortClaim(value: unknown): string {
 export function validateCitations(
   raw: unknown,
   input: CheckInput,
-  check: Tier1CheckId
+  check: Tier1CheckId,
+  minDistinctCitedDocuments: number
 ): CitationVerdict {
   const accepted: Tier1Finding[] = [];
   const discarded: CitationVerdict["discarded"] = [];
+  const droppedCitations: CitationVerdict["droppedCitations"] = [];
 
   const documentsByLabel = new Map<string, string>();
   for (const doc of input.documents) {
+    // A duplicate label would let a later document silently overwrite an
+    // earlier one, so a quote could "match" a document the finding did not
+    // mean (S1-13). This cannot happen on the real path — production labels
+    // are unique relative paths — so a duplicate is duckadrift's OWN
+    // invariant violation, not model output: throw, don't degrade (ADR-0033
+    // hardening; a throw here is unreachable by any model or file).
+    if (documentsByLabel.has(doc.label)) {
+      throw new Error(
+        `validateCitations: duplicate document label ${JSON.stringify(doc.label)} in check input — labels must be unique (duckadrift invariant, not model output)`
+      );
+    }
     documentsByLabel.set(doc.label, normalizeLineEndings(doc.content));
   }
 
@@ -71,7 +95,7 @@ export function validateCitations(
     // Prose (or anything else) where the findings array should be. One loud
     // discard so the shape failure is visible in the report, not absorbed.
     discarded.push({ check, claim: "(unparseable response)", reason: "malformed" });
-    return { accepted, discarded };
+    return { accepted, discarded, droppedCitations };
   }
 
   for (const entry of (raw as { findings: unknown[] }).findings) {
@@ -106,37 +130,47 @@ export function validateCitations(
     const seen = new Set<string>();
     let firstFailure: DiscardReason | null = null;
 
+    // A single citation can fail in one of these ways; when it does, count it
+    // at the citation level (S1-12) IN ADDITION to recording firstFailure for
+    // the whole-finding fallback — a fabricated citation that vanishes beside
+    // a real one is the same silent drop the Pact forbids, one level down.
+    const dropCitation = (reason: CitationDropReason): void => {
+      if (firstFailure === null) firstFailure = reason;
+      droppedCitations.push({ check, claim, reason });
+    };
+
     for (const rawCitation of rawCitations) {
       if (typeof rawCitation !== "object" || rawCitation === null) {
-        if (firstFailure === null) firstFailure = "malformed";
+        dropCitation("malformed");
         continue;
       }
       const citation = rawCitation as Record<string, unknown>;
       const document = citation.document;
       const quote = citation.quote;
       if (typeof document !== "string" || typeof quote !== "string") {
-        if (firstFailure === null) firstFailure = "malformed";
+        dropCitation("malformed");
         continue;
       }
       if (quote === "" || quote.length > MAX_QUOTE_LENGTH) {
-        if (firstFailure === null) firstFailure = "quote-not-found";
+        dropCitation("quote-not-found");
         continue;
       }
       const content = documentsByLabel.get(document);
       if (content === undefined) {
-        if (firstFailure === null) firstFailure = "unknown-document";
+        dropCitation("unknown-document");
         continue;
       }
       if (!content.includes(normalizeLineEndings(quote))) {
-        if (firstFailure === null) firstFailure = "quote-not-found";
+        dropCitation("quote-not-found");
         continue;
       }
-      // NUL-separated dedup key, written as the ESCAPE, never the raw byte: a
-      // raw 0x00 in source reads as binary to grep, diffs, and audit tooling —
-      // a silent-drift vector inside the drift hunter (verifier-found). NUL
-      // cannot appear in either part (quotes must byte-exist in scanned text),
-      // so "a"+"bc" and "ab"+"c" can never collide into one key.
-      const key = `${document}\u0000${quote}`;
+      // Structural dedup key (S1-15): JSON.stringify of the (document, quote)
+      // pair cannot collide across different pairs regardless of content. The
+      // prior NUL-separated key was NOT collision-proof — a document body can
+      // contain a NUL byte, so a quote can too, and the earlier comment
+      // claiming otherwise was wrong. This keys on structure, not a magic
+      // separator byte.
+      const key = JSON.stringify([document, quote]);
       if (seen.has(key)) continue; // identical duplicate — keep one, deterministically
       seen.add(key);
       surviving.push({ document, quote });
@@ -146,8 +180,21 @@ export function validateCitations(
       discarded.push({ check, claim, reason: firstFailure ?? "no-citations" });
       continue;
     }
+
+    // Structural coverage (ADR-0033): a finding must cite at least the check's
+    // declared minimum of DISTINCT documents — a contradiction names both
+    // records, a recurrence at least three. This is coverage (countable), not
+    // relevance (an uncalibrated threshold, forbidden before M4). A finding
+    // whose surviving citations span too few documents is discarded, counted
+    // like every other discard.
+    const distinctDocuments = new Set(surviving.map((c) => c.document)).size;
+    if (distinctDocuments < minDistinctCitedDocuments) {
+      discarded.push({ check, claim, reason: "insufficient-coverage" });
+      continue;
+    }
+
     accepted.push({ check, claim, citations: surviving, consequence, reportedConfidence: confidence });
   }
 
-  return { accepted, discarded };
+  return { accepted, discarded, droppedCitations };
 }

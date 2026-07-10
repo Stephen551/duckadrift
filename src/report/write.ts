@@ -20,6 +20,7 @@ export type Tier1Status =
       signals: Tier1Signal[]; // always computed in PR mode, [] otherwise
       findings?: Tier1RunResult["findings"];
       discarded?: Tier1RunResult["discarded"];
+      droppedCitations?: Tier1RunResult["droppedCitations"];
       skipped?: Tier1RunResult["skipped"];
       errors?: Tier1RunResult["errors"];
       calibration?: "UNCALIBRATED";
@@ -171,11 +172,23 @@ function renderTier1Findings(tier1: Tier1Status): string[] {
   }
 
   const discarded = tier1.discarded ?? [];
+  const droppedCitations = tier1.droppedCitations ?? [];
   const skipped = tier1.skipped ?? [];
   const errors = tier1.errors ?? [];
-  if (discarded.length > 0 || skipped.length > 0 || errors.length > 0) {
+  if (
+    discarded.length > 0 ||
+    droppedCitations.length > 0 ||
+    skipped.length > 0 ||
+    errors.length > 0
+  ) {
     for (const d of discarded) {
       lines.push(`- discarded (${d.reason}): ${d.check} — ${code(d.claim.slice(0, 80))}`);
+    }
+    // A citation dropped from within a surviving finding is counted too
+    // (ADR-0033): a fabricated citation beside a real one is the same silent
+    // drop the Pact forbids, one level down.
+    for (const c of droppedCitations) {
+      lines.push(`- dropped citation (${c.reason}): ${c.check} — ${code(c.claim.slice(0, 80))}`);
     }
     for (const s of skipped) {
       // ADR-0032: "too much to read in one call" is its own loud fact — the
