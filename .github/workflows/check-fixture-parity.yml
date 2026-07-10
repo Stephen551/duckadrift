@@ -39,7 +39,7 @@ jobs:
             # bare `PARITY-ACK:` cannot smuggle its \r past the
             # non-empty-reason requirement.
             COMMIT_BODIES=$(git log --format=%B "$BASE".."$HEAD")
-            ACKS=$(printf '%s\n%s' "$COMMIT_BODIES" "$PR_BODY" | tr -d '\r' | grep -E '^[ \t]*PARITY-ACK:[ \t]*[^ \t]' || true)
+            ACKS=$(printf '%s\n%s' "$COMMIT_BODIES" "$PR_BODY" | tr -d '\r' | grep -E '^[[:blank:]]*PARITY-ACK:[[:blank:]]*[^[:blank:]]' || true)
             if [ -n "$ACKS" ]; then
               echo "PARITY-ACK accepted:"
               echo "$ACKS"
