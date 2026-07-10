@@ -1,0 +1,5 @@
+{
+  "changedFiles": ["src/net/client.ts"],
+  "commitMessage": "Add upstream status probe",
+  "prBody": "Adds a status probe for the upstream service. The new code calls fetch directly instead of going through the retry wrapper ADR-0001 requires — the seeded S2 violation. No ADR touched, no override marker."
+}

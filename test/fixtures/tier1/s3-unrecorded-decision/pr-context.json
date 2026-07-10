@@ -1,0 +1,5 @@
+{
+  "changedFiles": ["package.json", "src/storage/schema.ts"],
+  "commitMessage": "Add order persistence",
+  "prBody": "Adds an HTTP client dependency and a first storage schema. No ADR is touched anywhere in the diff — the seeded S3 scenario: two architectural signals, zero recorded decisions."
+}

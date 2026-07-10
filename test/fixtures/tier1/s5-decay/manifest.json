@@ -1,0 +1,4 @@
+{
+  "adrs": ["0001-color-normalization-pipeline.md"],
+  "expected_s5": { "dead_premises": ["leftpad-classic", "src/pipeline/color.ts"] }
+}
