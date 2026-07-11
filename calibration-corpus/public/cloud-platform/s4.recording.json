@@ -1,0 +1,92 @@
+{
+  "schemaVersion": 1,
+  "key": {
+    "backend": "api",
+    "model": "claude-sonnet-5",
+    "effort": "high",
+    "checkId": "S4",
+    "promptHash": "14c36cc95024db5b20600de66051a520be9eb524c00a75b3a3f3ae8cb2da66cb"
+  },
+  "recordedAt": "2026-07-11T13:56:15.322Z",
+  "requestDigest": "14c36cc95024db5b20600de66051a520be9eb524c00a75b3a3f3ae8cb2da66cb",
+  "response": {
+    "model": "claude-sonnet-5",
+    "id": "msg_011CcvPJb3KenPrMta6tXCLF",
+    "type": "message",
+    "role": "assistant",
+    "content": [
+      {
+        "type": "tool_use",
+        "id": "toolu_019xjhNMuN147DXjtfrcSsiX",
+        "name": "report_findings",
+        "input": {
+          "findings": [
+            {
+              "claim": "The decision of how many Kubernetes clusters to run and how to segment them (single cluster vs multi-cluster vs per-business-unit) is a recurring, unresolved primitive spanning at least four Accepted ADRs: 012 (one cluster for dev/staging/prod), 036 (multi-cluster split by environment type), 042 (multi-cluster tied to Modernisation Platform accounts), and 048 (per-business-unit clusters), each parking or narrowing cluster topology rather than settling it permanently, with 012 itself later annotated as being revisited and 048 explicitly reframing 036's decision as insufficient.",
+              "citations": [
+                {
+                  "document": "012-One-cluster-for-dev-staging-prod.md",
+                  "quote": "**May 2021 Update** We're looking to move on from this ADR decision, and have different clusters for non-prod namespaces - see [021-Multi-cluster]"
+                },
+                {
+                  "document": "036-multi-cluster.md",
+                  "quote": "start adopting multi-cluster by splitting out workloads by _environment type_, i.e. _production_ and _non-production_"
+                },
+                {
+                  "document": "042-use-modernisation-platform-accounts.md",
+                  "quote": "We will use an AWS account per live and non-live clusters (as per ADR 36 Multi Cluster decision)."
+                },
+                {
+                  "document": "048-per-business-unit-clusters.md",
+                  "quote": "Decision 036 reduces the blast radius with non live and live clusters, but this still leaves the noisy neighbour problem and potential security threats traversing business units."
+                }
+              ],
+              "consequence": "A reader relying on any single one of these records as the current cluster-segmentation strategy will be wrong; the platform's topology decision has been repeatedly narrowed (single cluster to two to per-business-unit) without a record that closes the question of final cluster granularity, so maintainers should treat 048 as the latest but not necessarily final word and link the chain explicitly.",
+              "reportedConfidence": 0.55
+            },
+            {
+              "claim": "The scaling/node-management mechanism for the cluster is revised across at least three Accepted records without a final resolution: 022-EKS (choosing managed node groups with future Fargate experimentation, explicitly left open), 036-multi-cluster (implicitly reopening node/cluster capacity planning), and 047-use-karpenter-for-scaling (switching the primary scaling approach to Karpenter for a new platform build), each treating scaling strategy as provisional.",
+              "citations": [
+                {
+                  "document": "022-EKS.md",
+                  "quote": "Initially we'll use managed node groups, before looking at Fargate for workloads."
+                },
+                {
+                  "document": "022-EKS.md",
+                  "quote": "**Status:**\n\n- 18/8/21 Manual scaling in place [#3033](https://github.com/ministryofjustice/cloud-platform/issues/3033)\n- 23/9/21 Auto-scaler is still desired"
+                },
+                {
+                  "document": "047-use-karpenter-for-scaling.md",
+                  "quote": "We will use **Karpenter** as the primary scaling solution for `Container Platform`."
+                }
+              ],
+              "consequence": "If accepted, maintainers should note that node-scaling strategy has never reached a closed state across the platform's history and 047 should be checked against whether Fargate or cluster-autoscaler considerations from 022 were ever formally closed out rather than superseded silently.",
+              "reportedConfidence": 0.35
+            }
+          ]
+        },
+        "caller": {
+          "type": "direct"
+        }
+      }
+    ],
+    "stop_reason": "tool_use",
+    "stop_sequence": null,
+    "stop_details": null,
+    "usage": {
+      "input_tokens": 35085,
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 2457,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 0
+      },
+      "output_tokens": 1154,
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      },
+      "service_tier": "standard",
+      "inference_geo": "global"
+    }
+  }
+}

@@ -1,0 +1,92 @@
+{
+  "schemaVersion": 1,
+  "key": {
+    "backend": "api",
+    "model": "claude-sonnet-5",
+    "effort": "high",
+    "checkId": "S4",
+    "promptHash": "a42b672f8620443403993745bf88394c0802bf0d03b32f7dd880bf8a7251bf42"
+  },
+  "recordedAt": "2026-07-11T13:53:27.432Z",
+  "requestDigest": "a42b672f8620443403993745bf88394c0802bf0d03b32f7dd880bf8a7251bf42",
+  "response": {
+    "model": "claude-sonnet-5",
+    "id": "msg_011CcvP68cWX6amRoo9HWGBF",
+    "type": "message",
+    "role": "assistant",
+    "content": [
+      {
+        "type": "tool_use",
+        "id": "toolu_01Q2mxAmjKhERAo3ikcPd7eG",
+        "name": "report_findings",
+        "input": {
+          "findings": [
+            {
+              "claim": "ADR-0009, ADR-0010, and ADR-0011 form a recurring-revision set (three records) that each apply the same 'provable state vs. provable error' fact/advisory downgrade doctrine (first established in ADR-0005/ADR-0008) to a different Tier 0 check, without any of them settling the underlying open question of when a fact-tier claim should be downgraded — each narrows the doctrine to its own case (annex numbering, numbering gaps, site-relative links) rather than resolving it generally, and ADR-0008 explicitly leaves related sub-questions (doctrine Q1, Q2) open.",
+              "citations": [
+                {
+                  "document": "0009-annex-companion-numbering.md",
+                  "quote": "ADR-0008 already\nestablished that a same-directory collision stays fact-tier by default — this is the\none recognized exception to that: a shared base filename plus a well-known annex or\ncompanion suffix is a real, common convention for splitting one decision across\nmultiple documents, not an authoring accident."
+                },
+                {
+                  "document": "0010-numbering-gaps-advisory.md",
+                  "quote": "A gap is a provable *state*, not a\nprovable *error*."
+                },
+                {
+                  "document": "0011-site-relative-dangles-advisory.md",
+                  "quote": "This is a provable-state, not provable-error, distinction, the same shape as\nADR-0009 and ADR-0010: the tool can prove the file exists somewhere; it cannot prove\nthe specific link is wrong for this repo's publishing setup."
+                },
+                {
+                  "document": "0008-directory-scoped-numbering.md",
+                  "quote": "Skip-numbering (doctrine Q1, still open) and the annex-style same-number\nmulti-file convention (doctrine Q2, still open) are untouched by this ADR — this\ndecision is scoped to duplicate-number detection alone."
+                }
+              ],
+              "consequence": "If read as a single unresolved thread, the log would show the fact/advisory boundary for Tier 0 checks as still being incrementally discovered case-by-case rather than governed by a settled general rule, which could motivate consolidating this doctrine into one explicit statement rather than continuing to patch it check-by-check.",
+              "reportedConfidence": 0.35
+            },
+            {
+              "claim": "The parallel-primitive duplication failure (a hardening applied to one copy of a shared mechanism failing to reach its sibling copies) recurs across ADR-0018, ADR-0020, and ADR-0021 as three separate consolidation efforts, each claiming to close the class but each followed by another instance being found, suggesting the underlying architectural problem (multiple implementations of what should be one primitive) was never fully resolved until explicitly claimed complete in ADR-0021.",
+              "citations": [
+                {
+                  "document": "0018-the-adversarial-consolidation-round.md",
+                  "quote": "The five were not five bugs. They were three primitives kept in duplicate — link parsing,\nnumber-scoping, and path containment — where hardening applied to one copy never reached\nits siblings."
+                },
+                {
+                  "document": "0020-the-resolution-module.md",
+                  "quote": "ADR-0018 consolidated three duplicated primitives after five false positives traced to\neach being kept in more than one copy. Link parsing was one of them, and the consolidation\ngave it a single home: a hand-rolled scanner every check shared. That fixed the duplication\nand left a deeper problem standing"
+                },
+                {
+                  "document": "0021-the-full-surface-adversarial-pass.md",
+                  "quote": "The result confirmed the thesis by finding the signature bug five more times. Path\ncontainment excluded the ADR directory by string prefix, so a sibling directory named\n`docs/adr-extra` slipped the exclusion."
+                }
+              ],
+              "consequence": "This chain appears to end in resolution (ADR-0021 explicitly claims the class is closed by construction), so per the check's own rule this is healthy iteration, not recurring revision, and should not be reported as drift — noted here only to confirm it was considered and excluded.",
+              "reportedConfidence": 0.15
+            }
+          ]
+        },
+        "caller": {
+          "type": "direct"
+        }
+      }
+    ],
+    "stop_reason": "tool_use",
+    "stop_sequence": null,
+    "stop_details": null,
+    "usage": {
+      "input_tokens": 54842,
+      "cache_creation_input_tokens": 2457,
+      "cache_read_input_tokens": 0,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 2457,
+        "ephemeral_1h_input_tokens": 0
+      },
+      "output_tokens": 1370,
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      },
+      "service_tier": "standard",
+      "inference_geo": "global"
+    }
+  }
+}

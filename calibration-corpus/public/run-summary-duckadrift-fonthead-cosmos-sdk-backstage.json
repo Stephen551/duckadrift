@@ -1,0 +1,422 @@
+[
+  {
+    "label": "duckadrift",
+    "side": "public",
+    "sha": "0597fee7bc5067efe11bd4ba9e49c3e14d06e084",
+    "acceptedAdrs": 40,
+    "perCheck": {
+      "S1": {
+        "status": "captured",
+        "usage": {
+          "input_tokens": 54842,
+          "cache_creation_input_tokens": 2390,
+          "cache_read_input_tokens": 0,
+          "cache_creation": {
+            "ephemeral_5m_input_tokens": 2390,
+            "ephemeral_1h_input_tokens": 0
+          },
+          "output_tokens": 34,
+          "output_tokens_details": {
+            "thinking_tokens": 0
+          },
+          "service_tier": "standard",
+          "inference_geo": "global"
+        },
+        "cost": 0.115999
+      },
+      "S4": {
+        "status": "captured",
+        "usage": {
+          "input_tokens": 54842,
+          "cache_creation_input_tokens": 2457,
+          "cache_read_input_tokens": 0,
+          "cache_creation": {
+            "ephemeral_5m_input_tokens": 2457,
+            "ephemeral_1h_input_tokens": 0
+          },
+          "output_tokens": 1370,
+          "output_tokens_details": {
+            "thinking_tokens": 0
+          },
+          "service_tier": "standard",
+          "inference_geo": "global"
+        },
+        "cost": 0.1295265
+      },
+      "S5": {
+        "status": "captured",
+        "usage": {
+          "input_tokens": 54842,
+          "cache_creation_input_tokens": 2515,
+          "cache_read_input_tokens": 0,
+          "cache_creation": {
+            "ephemeral_5m_input_tokens": 2515,
+            "ephemeral_1h_input_tokens": 0
+          },
+          "output_tokens": 34,
+          "output_tokens_details": {
+            "thinking_tokens": 0
+          },
+          "service_tier": "standard",
+          "inference_geo": "global"
+        },
+        "cost": 0.1163115
+      }
+    },
+    "repoCost": 0.361837
+  },
+  {
+    "label": "fonthead",
+    "side": "public",
+    "sha": "865127ad9be4664f1eca42cdc8e05b574dc2fffa",
+    "acceptedAdrs": 53,
+    "perCheck": {
+      "S1": {
+        "status": "captured",
+        "usage": {
+          "input_tokens": 62128,
+          "cache_creation_input_tokens": 0,
+          "cache_read_input_tokens": 2390,
+          "cache_creation": {
+            "ephemeral_5m_input_tokens": 0,
+            "ephemeral_1h_input_tokens": 0
+          },
+          "output_tokens": 34,
+          "output_tokens_details": {
+            "thinking_tokens": 0
+          },
+          "service_tier": "standard",
+          "inference_geo": "global"
+        },
+        "cost": 0.125074
+      },
+      "S4": {
+        "status": "captured",
+        "usage": {
+          "input_tokens": 62128,
+          "cache_creation_input_tokens": 0,
+          "cache_read_input_tokens": 2457,
+          "cache_creation": {
+            "ephemeral_5m_input_tokens": 0,
+            "ephemeral_1h_input_tokens": 0
+          },
+          "output_tokens": 1285,
+          "output_tokens_details": {
+            "thinking_tokens": 0
+          },
+          "service_tier": "standard",
+          "inference_geo": "global"
+        },
+        "cost": 0.13759739999999998
+      },
+      "S5": {
+        "status": "captured",
+        "usage": {
+          "input_tokens": 62128,
+          "cache_creation_input_tokens": 0,
+          "cache_read_input_tokens": 2515,
+          "cache_creation": {
+            "ephemeral_5m_input_tokens": 0,
+            "ephemeral_1h_input_tokens": 0
+          },
+          "output_tokens": 4805,
+          "output_tokens_details": {
+            "thinking_tokens": 0
+          },
+          "service_tier": "standard",
+          "inference_geo": "global"
+        },
+        "cost": 0.172809
+      }
+    },
+    "repoCost": 0.4354804
+  },
+  {
+    "label": "cosmos-sdk",
+    "side": "public",
+    "sha": "315d7ce75a23aa5a176cb484dd39c5ba68364002",
+    "acceptedAdrs": 62,
+    "perCheck": {
+      "S1": {
+        "status": "captured",
+        "usage": {
+          "input_tokens": 89167,
+          "cache_creation_input_tokens": 0,
+          "cache_read_input_tokens": 2390,
+          "cache_creation": {
+            "ephemeral_5m_input_tokens": 0,
+            "ephemeral_1h_input_tokens": 0
+          },
+          "output_tokens": 34,
+          "output_tokens_details": {
+            "thinking_tokens": 0
+          },
+          "service_tier": "standard",
+          "inference_geo": "global"
+        },
+        "cost": 0.179152
+      },
+      "S4": {
+        "status": "captured",
+        "usage": {
+          "input_tokens": 89167,
+          "cache_creation_input_tokens": 0,
+          "cache_read_input_tokens": 2457,
+          "cache_creation": {
+            "ephemeral_5m_input_tokens": 0,
+            "ephemeral_1h_input_tokens": 0
+          },
+          "output_tokens": 34,
+          "output_tokens_details": {
+            "thinking_tokens": 0
+          },
+          "service_tier": "standard",
+          "inference_geo": "global"
+        },
+        "cost": 0.1791654
+      },
+      "S5": {
+        "status": "captured",
+        "usage": {
+          "input_tokens": 89167,
+          "cache_creation_input_tokens": 0,
+          "cache_read_input_tokens": 2515,
+          "cache_creation": {
+            "ephemeral_5m_input_tokens": 0,
+            "ephemeral_1h_input_tokens": 0
+          },
+          "output_tokens": 762,
+          "output_tokens_details": {
+            "thinking_tokens": 0
+          },
+          "service_tier": "standard",
+          "inference_geo": "global"
+        },
+        "cost": 0.186457
+      }
+    },
+    "repoCost": 0.5447744
+  },
+  {
+    "label": "backstage",
+    "side": "public",
+    "sha": "61bb32db5c6b487fa36b95798b1db018df4fb5c8",
+    "acceptedAdrs": 16,
+    "perCheck": {
+      "S1": {
+        "status": "skipped-no-input",
+        "usage": null,
+        "cost": 0
+      },
+      "S4": {
+        "status": "skipped-no-input",
+        "usage": null,
+        "cost": 0
+      },
+      "S5": {
+        "status": "skipped-no-input",
+        "usage": null,
+        "cost": 0
+      }
+    },
+    "repoCost": 0
+  },
+  {
+    "label": "edgex-docs",
+    "side": "public",
+    "sha": "e204cc7b6e070997fc3fdd88f478e020d26ae8f3",
+    "acceptedAdrs": 31,
+    "perCheck": {
+      "S1": {
+        "status": "captured",
+        "usage": {
+          "input_tokens": 3286,
+          "cache_creation_input_tokens": 0,
+          "cache_read_input_tokens": 2390,
+          "cache_creation": {
+            "ephemeral_5m_input_tokens": 0,
+            "ephemeral_1h_input_tokens": 0
+          },
+          "output_tokens": 34,
+          "output_tokens_details": {
+            "thinking_tokens": 0
+          },
+          "service_tier": "standard",
+          "inference_geo": "global"
+        },
+        "cost": 0.00739
+      },
+      "S4": {
+        "status": "captured",
+        "usage": {
+          "input_tokens": 3286,
+          "cache_creation_input_tokens": 0,
+          "cache_read_input_tokens": 2457,
+          "cache_creation": {
+            "ephemeral_5m_input_tokens": 0,
+            "ephemeral_1h_input_tokens": 0
+          },
+          "output_tokens": 34,
+          "output_tokens_details": {
+            "thinking_tokens": 0
+          },
+          "service_tier": "standard",
+          "inference_geo": "global"
+        },
+        "cost": 0.007403399999999999
+      },
+      "S5": {
+        "status": "captured",
+        "usage": {
+          "input_tokens": 3286,
+          "cache_creation_input_tokens": 0,
+          "cache_read_input_tokens": 2515,
+          "cache_creation": {
+            "ephemeral_5m_input_tokens": 0,
+            "ephemeral_1h_input_tokens": 0
+          },
+          "output_tokens": 34,
+          "output_tokens_details": {
+            "thinking_tokens": 0
+          },
+          "service_tier": "standard",
+          "inference_geo": "global"
+        },
+        "cost": 0.007415
+      }
+    },
+    "repoCost": 0.022208399999999996
+  },
+  {
+    "label": "terraform-provider-proxmox",
+    "side": "public",
+    "sha": "04894bdf3c238ae25104b2fe708e08d9caabb9a6",
+    "acceptedAdrs": 8,
+    "perCheck": {
+      "S1": {
+        "status": "captured",
+        "usage": {
+          "input_tokens": 41287,
+          "cache_creation_input_tokens": 0,
+          "cache_read_input_tokens": 2390,
+          "cache_creation": {
+            "ephemeral_5m_input_tokens": 0,
+            "ephemeral_1h_input_tokens": 0
+          },
+          "output_tokens": 34,
+          "output_tokens_details": {
+            "thinking_tokens": 0
+          },
+          "service_tier": "standard",
+          "inference_geo": "global"
+        },
+        "cost": 0.083392
+      },
+      "S4": {
+        "status": "captured",
+        "usage": {
+          "input_tokens": 41287,
+          "cache_creation_input_tokens": 0,
+          "cache_read_input_tokens": 2457,
+          "cache_creation": {
+            "ephemeral_5m_input_tokens": 0,
+            "ephemeral_1h_input_tokens": 0
+          },
+          "output_tokens": 730,
+          "output_tokens_details": {
+            "thinking_tokens": 0
+          },
+          "service_tier": "standard",
+          "inference_geo": "global"
+        },
+        "cost": 0.0903654
+      },
+      "S5": {
+        "status": "captured",
+        "usage": {
+          "input_tokens": 41287,
+          "cache_creation_input_tokens": 0,
+          "cache_read_input_tokens": 2515,
+          "cache_creation": {
+            "ephemeral_5m_input_tokens": 0,
+            "ephemeral_1h_input_tokens": 0
+          },
+          "output_tokens": 4725,
+          "output_tokens_details": {
+            "thinking_tokens": 0
+          },
+          "service_tier": "standard",
+          "inference_geo": "global"
+        },
+        "cost": 0.130327
+      }
+    },
+    "repoCost": 0.30408440000000003
+  },
+  {
+    "label": "cloud-platform",
+    "side": "public",
+    "sha": "dab45455f22fe3eb35a3c27c03ff746f1d5352df",
+    "acceptedAdrs": 49,
+    "perCheck": {
+      "S1": {
+        "status": "captured",
+        "usage": {
+          "input_tokens": 35085,
+          "cache_creation_input_tokens": 0,
+          "cache_read_input_tokens": 2390,
+          "cache_creation": {
+            "ephemeral_5m_input_tokens": 0,
+            "ephemeral_1h_input_tokens": 0
+          },
+          "output_tokens": 452,
+          "output_tokens_details": {
+            "thinking_tokens": 0
+          },
+          "service_tier": "standard",
+          "inference_geo": "global"
+        },
+        "cost": 0.075168
+      },
+      "S4": {
+        "status": "captured",
+        "usage": {
+          "input_tokens": 35085,
+          "cache_creation_input_tokens": 0,
+          "cache_read_input_tokens": 2457,
+          "cache_creation": {
+            "ephemeral_5m_input_tokens": 0,
+            "ephemeral_1h_input_tokens": 0
+          },
+          "output_tokens": 1154,
+          "output_tokens_details": {
+            "thinking_tokens": 0
+          },
+          "service_tier": "standard",
+          "inference_geo": "global"
+        },
+        "cost": 0.0822014
+      },
+      "S5": {
+        "status": "captured",
+        "usage": {
+          "input_tokens": 35085,
+          "cache_creation_input_tokens": 0,
+          "cache_read_input_tokens": 2515,
+          "cache_creation": {
+            "ephemeral_5m_input_tokens": 0,
+            "ephemeral_1h_input_tokens": 0
+          },
+          "output_tokens": 34,
+          "output_tokens_details": {
+            "thinking_tokens": 0
+          },
+          "service_tier": "standard",
+          "inference_geo": "global"
+        },
+        "cost": 0.071013
+      }
+    },
+    "repoCost": 0.22838239999999999
+  }
+]
