@@ -28,9 +28,9 @@ async function runProof() {
   return runTier1Checks(proofContext(), [PROOF_CHECK], replayTransport(RECORDING));
 }
 
-describe("the production registry (M3.3a)", () => {
-  it("carries exactly S1 and S4 — S2/S3/S5 land at M3.3b", () => {
-    expect(TIER1_CHECKS.map((c) => c.id).sort()).toEqual(["S1", "S4"]);
+describe("the production registry (M3.3b)", () => {
+  it("carries all five semantic checks", () => {
+    expect(TIER1_CHECKS.map((c) => c.id).sort()).toEqual(["S1", "S2", "S3", "S4", "S5"]);
   });
 });
 

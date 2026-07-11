@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "key": {
+    "backend": "api",
+    "model": "claude-sonnet-5",
+    "effort": "high",
+    "checkId": "S2",
+    "promptHash": "7de8978b554813072941ab94ee62d908f845aa3e30e444b678784b164c88053a"
+  },
+  "recordedAt": "2026-07-11T00:28:31.723Z",
+  "requestDigest": "7de8978b554813072941ab94ee62d908f845aa3e30e444b678784b164c88053a",
+  "response": {
+    "model": "claude-sonnet-5",
+    "id": "msg_011CcuKikqPNr57xZMRKHJKm",
+    "type": "message",
+    "role": "assistant",
+    "content": [
+      {
+        "type": "tool_use",
+        "id": "toolu_01JDDnWJ8Zx4drUbrtSBBKuh",
+        "name": "report_findings",
+        "input": {
+          "findings": [
+            {
+              "claim": "src/net/client.ts issues a direct fetch call to an outbound HTTP endpoint, bypassing the retry wrapper that ADR-0001 requires for every outbound HTTP call in governed paths (src/net/**).",
+              "citations": [
+                {
+                  "document": "0001-outbound-http-via-retry-wrapper.md",
+                  "quote": "Every outbound HTTP call goes through the retry wrapper in `src/net/wrapper.ts`;\ndirect fetch calls are prohibited in governed paths."
+                },
+                {
+                  "document": "src/net/client.ts",
+                  "quote": "const response = await fetch(url);"
+                }
+              ],
+              "consequence": "The retry, timeout, and backoff policy centralized in the wrapper is silently skipped for this call site, reintroducing the ad hoc failure handling ADR-0001 was written to eliminate, and any future tuning of retry policy will not apply here.",
+              "reportedConfidence": 0.97
+            }
+          ]
+        },
+        "caller": {
+          "type": "direct"
+        }
+      }
+    ],
+    "stop_reason": "tool_use",
+    "stop_sequence": null,
+    "stop_details": null,
+    "usage": {
+      "input_tokens": 954,
+      "cache_creation_input_tokens": 2338,
+      "cache_read_input_tokens": 0,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 2338,
+        "ephemeral_1h_input_tokens": 0
+      },
+      "output_tokens": 343,
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      },
+      "service_tier": "standard",
+      "inference_geo": "global"
+    }
+  }
+}
