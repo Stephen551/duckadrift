@@ -1,0 +1,72 @@
+{
+  "schemaVersion": 1,
+  "key": {
+    "backend": "api",
+    "model": "claude-sonnet-5",
+    "effort": "high",
+    "checkId": "S3",
+    "promptHash": "91a40f283fe763b75e7af9c233223d72d1e1c6c7763c303c15786d9ae95ab46d"
+  },
+  "recordedAt": "2026-07-11T00:28:39.040Z",
+  "requestDigest": "91a40f283fe763b75e7af9c233223d72d1e1c6c7763c303c15786d9ae95ab46d",
+  "response": {
+    "model": "claude-sonnet-5",
+    "id": "msg_011CcuKj8yeX2CuANmiNAHAw",
+    "type": "message",
+    "role": "assistant",
+    "content": [
+      {
+        "type": "tool_use",
+        "id": "toolu_01XEG9CSkKV9pWAw31QfiZMr",
+        "name": "report_findings",
+        "input": {
+          "findings": [
+            {
+              "claim": "A new dependency 'yaml' (^2.9.0) was added to package.json without an accompanying decision record explaining why YAML parsing/serialization was adopted as a project dependency.",
+              "citations": [
+                {
+                  "document": "package.json",
+                  "quote": "\"yaml\": \"^2.9.0\""
+                }
+              ],
+              "consequence": "A maintainer six months from now will not know why YAML support was introduced, what alternatives were considered, or what boundary this dependency serves, making future removal or replacement risky without archaeology through commit history.",
+              "reportedConfidence": 0.55
+            },
+            {
+              "claim": "A new storage schema (an 'orders' table definition) was introduced in src/storage/schema.ts with no decision record documenting the choice of persistence structure, column types, or the boundary this table represents.",
+              "citations": [
+                {
+                  "document": "src/storage/schema.ts",
+                  "quote": "export const ordersTable = {\n  name: \"orders\",\n  columns: {\n    id: \"integer primary key\",\n    payload: \"text not null\",\n    created_at: \"text not null\",\n  },\n} as const;"
+                }
+              ],
+              "consequence": "Future maintainers will lack context on why the orders table uses a raw text payload column rather than structured columns, and why this persistence boundary was introduced, risking incompatible schema evolution or duplicated storage decisions elsewhere.",
+              "reportedConfidence": 0.75
+            }
+          ]
+        },
+        "caller": {
+          "type": "direct"
+        }
+      }
+    ],
+    "stop_reason": "tool_use",
+    "stop_sequence": null,
+    "stop_details": null,
+    "usage": {
+      "input_tokens": 733,
+      "cache_creation_input_tokens": 2366,
+      "cache_read_input_tokens": 0,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 2366,
+        "ephemeral_1h_input_tokens": 0
+      },
+      "output_tokens": 495,
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      },
+      "service_tier": "standard",
+      "inference_geo": "global"
+    }
+  }
+}

@@ -27,8 +27,12 @@ export interface GateResult {
 }
 
 // Exact basename match, case-sensitive — the manifest names below are fixed
-// vocabulary in their ecosystems, not free-form.
-const DEPENDENCY_MANIFESTS = new Set([
+// vocabulary in their ecosystems, not free-form. Exported so S3's selector
+// reuses the exact same architectural-signal vocabulary the gate uses
+// (ADR-0035) — one primitive, never a second copy. gate.ts's only runtime
+// import is governedTouches; its report/write import is type-only, so a check
+// module importing these introduces no runtime cycle.
+export const DEPENDENCY_MANIFESTS = new Set([
   "package.json",
   "package-lock.json",
   "npm-shrinkwrap.json",
@@ -59,11 +63,11 @@ const DEPENDENCY_MANIFESTS = new Set([
 const STORAGE_SEGMENTS = new Set(["schema", "schemas", "migration", "migrations"]);
 const SCHEMA_BASENAME_RE = /^schema\.[a-z0-9]+$/i;
 
-function basenameOf(path: string): string {
+export function basenameOf(path: string): string {
   return path.split("/").pop() ?? path;
 }
 
-function isStorageSchemaFile(path: string): boolean {
+export function isStorageSchemaFile(path: string): boolean {
   const base = basenameOf(path);
   if (/\.sql$/i.test(base)) return true;
   const directorySegments = path.split("/").slice(0, -1);

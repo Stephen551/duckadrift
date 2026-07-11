@@ -21,8 +21,10 @@ export type Tier1Status =
       findings?: Tier1RunResult["findings"];
       discarded?: Tier1RunResult["discarded"];
       droppedCitations?: Tier1RunResult["droppedCitations"];
+      livePremises?: Tier1RunResult["livePremises"];
       skipped?: Tier1RunResult["skipped"];
       errors?: Tier1RunResult["errors"];
+      usage?: Tier1RunResult["usage"];
       calibration?: "UNCALIBRATED";
     };
 
@@ -173,11 +175,13 @@ function renderTier1Findings(tier1: Tier1Status): string[] {
 
   const discarded = tier1.discarded ?? [];
   const droppedCitations = tier1.droppedCitations ?? [];
+  const livePremises = tier1.livePremises ?? [];
   const skipped = tier1.skipped ?? [];
   const errors = tier1.errors ?? [];
   if (
     discarded.length > 0 ||
     droppedCitations.length > 0 ||
+    livePremises.length > 0 ||
     skipped.length > 0 ||
     errors.length > 0
   ) {
@@ -204,6 +208,26 @@ function renderTier1Findings(tier1: Tier1Status): string[] {
     }
     for (const e of errors) {
       lines.push(`- error: ${e.check} — ${code(e.message)}`);
+    }
+    // A premise dropped as still-live is reported, never vanished (ADR-0036):
+    // the confirmation step is governed by the Pact's silence clause like every
+    // other drop.
+    for (const p of livePremises) {
+      lines.push(`- live premise (dropped, not decay): ${p.check} — ${code(p.claim.slice(0, 80))}`);
+    }
+    lines.push("");
+  }
+
+  // Per-check measured token usage (ADR-0035, PDR §2.8 — measured, never
+  // estimated). The numbers are the machine report's; the markdown carries a
+  // one-line-per-check summary under the calibration frame.
+  const usage = tier1.usage ?? [];
+  if (usage.length > 0) {
+    lines.push("Token usage (measured):");
+    for (const u of usage) {
+      lines.push(
+        `- ${u.check}: input ${u.inputTokens}, output ${u.outputTokens}, cache read ${u.cacheReadTokens}, cache write ${u.cacheCreationTokens}`
+      );
     }
     lines.push("");
   }

@@ -4,6 +4,7 @@ import type { CheckDefinition, Tier1CheckId } from "./checks.js";
 import { TIER1_INPUT_CAP_BYTES, isSkip } from "./select.js";
 import { validateCitations } from "./citations.js";
 import type { CitationVerdict, Tier1Finding } from "./citations.js";
+import { confirmDeadPremise } from "./confirm-premise.js";
 import { buildRequest } from "./prompt.js";
 import type { Tier1Transport } from "./transport.js";
 
@@ -19,12 +20,41 @@ export type Tier1Skip =
   | { check: Tier1CheckId; reason: "no-input" }
   | { check: Tier1CheckId; reason: "input-exceeds-cap"; bytes: number; cap: number };
 
+/** Measured token usage for one check's call (ADR-0035, PDR §2.8 — measured, never estimated). Replay bodies carry the recorded usage; a body lacking a field reads 0. */
+export interface Tier1CheckUsage {
+  check: Tier1CheckId;
+  inputTokens: number;
+  outputTokens: number;
+  cacheReadTokens: number;
+  cacheCreationTokens: number;
+}
+
 export interface Tier1RunResult {
   findings: Tier1Finding[]; // accepted only
   discarded: CitationVerdict["discarded"];
   droppedCitations: CitationVerdict["droppedCitations"];
   skipped: Tier1Skip[];
   errors: Array<{ check: Tier1CheckId; message: string }>; // transport/parse failures, run continues
+  /** S5 findings dropped because the extracted premise is still live (ADR-0036) — counted, never silent. */
+  livePremises: Array<{ check: "S5"; claim: string }>;
+  /** One entry per check that made a call (live or replay); skipped checks contribute none. */
+  usage: Tier1CheckUsage[];
+}
+
+/** Reads the four usage fields off an untrusted response body, defensively — any absent field is 0 (a replay body may omit them). */
+function readUsage(check: Tier1CheckId, response: unknown): Tier1CheckUsage {
+  const num = (v: unknown): number => (typeof v === "number" && Number.isFinite(v) ? v : 0);
+  const usage =
+    typeof response === "object" && response !== null
+      ? ((response as Record<string, unknown>).usage as Record<string, unknown> | undefined)
+      : undefined;
+  return {
+    check,
+    inputTokens: num(usage?.input_tokens),
+    outputTokens: num(usage?.output_tokens),
+    cacheReadTokens: num(usage?.cache_read_input_tokens),
+    cacheCreationTokens: num(usage?.cache_creation_input_tokens),
+  };
 }
 
 /**
@@ -64,7 +94,7 @@ export async function runTier1Checks(
   // loadAdrLog that produced ctx.
   const { model, effort } = loadConfig(ctx.repoRoot, { quiet: true }).tier1;
 
-  const result: Tier1RunResult = { findings: [], discarded: [], droppedCitations: [], skipped: [], errors: [] };
+  const result: Tier1RunResult = { findings: [], discarded: [], droppedCitations: [], skipped: [], errors: [], livePremises: [], usage: [] };
 
   for (const check of checks) {
     const selection = check.selectInput(ctx);
@@ -93,6 +123,11 @@ export async function runTier1Checks(
     try {
       const response = await transport.send(request);
 
+      // A call was made (live or replay) — its measured usage is recorded
+      // whatever the response's shape, before any refusal or discard, so cost
+      // is reported from observation (ADR-0035, PDR §2.8).
+      result.usage.push(readUsage(check.id, response));
+
       const extracted = extractToolInput(response);
       if (!extracted.ok) {
         result.errors.push({
@@ -111,9 +146,26 @@ export async function runTier1Checks(
         check.id,
         check.minDistinctCitedDocuments
       );
-      result.findings.push(...verdict.accepted);
       result.discarded.push(...verdict.discarded);
       result.droppedCitations.push(...verdict.droppedCitations);
+
+      // S5 stage 2 (ADR-0036): a validated extraction is real decay only if
+      // its named referent is provably absent. Confirmation is deterministic
+      // and runs on the check's ctx (real repo/fixture root) — identical under
+      // replay and live. Keyed on S5 alone; every other check's findings pass
+      // through untouched.
+      for (const finding of verdict.accepted) {
+        if (check.id === "S5") {
+          if (confirmDeadPremise(finding, ctx).dead) {
+            result.findings.push(finding);
+          } else {
+            // Dropped because still-live — counted, never silent (the Pact).
+            result.livePremises.push({ check: "S5", claim: finding.claim });
+          }
+        } else {
+          result.findings.push(finding);
+        }
+      }
     } catch (err) {
       result.errors.push({
         check: check.id,

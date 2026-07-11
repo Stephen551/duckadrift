@@ -1,7 +1,10 @@
 import type { AdrLogContext } from "../adr/types.js";
 import type { SelectResult } from "./select.js";
 import { s1Contradiction } from "./checks/s1-contradiction.js";
+import { s2CodeVsDecision } from "./checks/s2-code-vs-decision.js";
+import { s3UnrecordedDecision } from "./checks/s3-unrecorded-decision.js";
 import { s4RecurringRevision } from "./checks/s4-recurring-revision.js";
+import { s5Decay } from "./checks/s5-decay.js";
 
 // Checks as data (ADR-0031). There is exactly ONE pipeline — prompt builder,
 // transport, validator, runner — and a check is a data record it consumes:
@@ -38,5 +41,11 @@ export interface CheckDefinition {
   minDistinctCitedDocuments: number;
 }
 
-/** The production registry. S4 and S1 live here as of M3.3a; S2/S3/S5 land at M3.3b. */
-export const TIER1_CHECKS: readonly CheckDefinition[] = [s1Contradiction, s4RecurringRevision];
+/** The production registry (ADR-0035): all five semantic checks live as of M3.3b. */
+export const TIER1_CHECKS: readonly CheckDefinition[] = [
+  s1Contradiction,
+  s2CodeVsDecision,
+  s3UnrecordedDecision,
+  s4RecurringRevision,
+  s5Decay,
+];
