@@ -1,0 +1,80 @@
+{
+  "_comment": "Synthetic hand-labeled corpus for the M4.0 calibration harness (ADR-0038). ZERO API calls produced this — every finding and every label is authored, not captured. It exercises severity grouping (critical/elevated/routine cohorts), the MAX rule (crit-max cites a critical AND a routine ADR → critical), the no-ADR default (route-s3 cites a manifest, not an ADR → routine), and cosmetic exclusion (cosmetic-note cites only the cosmetic ADR → counted in sampleSize, absent from every channel). The corpus is deliberately small, so every channel stays closed: a small corpus opens nothing, and that is the correct, published outcome. The curve's opening path is proven separately with explicit arrays in the unit tests.",
+  "findings": [
+    {
+      "check": "S1",
+      "claim": "The signing key is read into process memory in the build cache path, against the HSM-only decision.",
+      "citations": [{ "document": "0001-critical-decision.md", "quote": "no code path reads the key material into process memory" }],
+      "consequence": "A build-host compromise could exfiltrate a key the decision says it can never hold.",
+      "reportedConfidence": 0.92,
+      "label": true
+    },
+    {
+      "check": "S1",
+      "claim": "A second service exports the private key for a local signing shortcut.",
+      "citations": [{ "document": "0001-critical-decision.md", "quote": "generated inside the HSM and never exported" }],
+      "consequence": "The key leaves the module, which is the exact failure this decision exists to prevent.",
+      "reportedConfidence": 0.88,
+      "label": true
+    },
+    {
+      "check": "S2",
+      "claim": "The rotation script rewrites both the HSM ceremony doc and the UTC storage note, touching two decisions at once.",
+      "citations": [
+        { "document": "0001-critical-decision.md", "quote": "Key rotation is an HSM ceremony, not a config change" },
+        { "document": "0003-routine-default.md", "quote": "Every persisted timestamp is UTC" }
+      ],
+      "consequence": "A change spanning a critical and a routine decision inherits the critical consequence (the MAX rule).",
+      "reportedConfidence": 0.8,
+      "label": true
+    },
+    {
+      "check": "S2",
+      "claim": "The billing service forwards trace ids but the notifier drops the header.",
+      "citations": [{ "document": "0002-elevated-decision.md", "quote": "forwards it on every downstream call" }],
+      "consequence": "Requests through the notifier lose correlation, degrading every downstream investigation.",
+      "reportedConfidence": 0.9,
+      "label": true
+    },
+    {
+      "check": "S2",
+      "claim": "The edge assigns a fresh trace id even when one is present.",
+      "citations": [{ "document": "0002-elevated-decision.md", "quote": "assigned a fresh id at\nthe edge, never in the interior" }],
+      "consequence": "A pre-existing trace id would be discarded, breaking cross-boundary correlation.",
+      "reportedConfidence": 0.7,
+      "label": false
+    },
+    {
+      "check": "S1",
+      "claim": "A migration writes local time into one legacy column.",
+      "citations": [{ "document": "0003-routine-default.md", "quote": "Every persisted timestamp is UTC" }],
+      "consequence": "One column drifts from the UTC storage rule, complicating cross-region comparison.",
+      "reportedConfidence": 0.85,
+      "label": true
+    },
+    {
+      "check": "S1",
+      "claim": "A report renders timestamps without applying the viewer zone.",
+      "citations": [{ "document": "0003-routine-default.md", "quote": "Localization happens at render time" }],
+      "consequence": "Render-time localization is skipped in one view.",
+      "reportedConfidence": 0.6,
+      "label": false
+    },
+    {
+      "check": "S3",
+      "claim": "A retry-backoff policy is implemented in code with no ADR recording the decision.",
+      "citations": [{ "document": "package.json", "quote": "\"retry\": \"^0.13.0\"" }],
+      "consequence": "An unrecorded operational decision cites a manifest, not an ADR, so it takes the routine default.",
+      "reportedConfidence": 0.75,
+      "label": true
+    },
+    {
+      "check": "S2",
+      "claim": "One service emits uppercase WARN against the lowercase level-name note.",
+      "citations": [{ "document": "0004-cosmetic-note.md", "quote": "Structured log level names are lowercase" }],
+      "consequence": "A cosmetic-only finding: counted in the corpus, but it can never open a channel.",
+      "reportedConfidence": 0.99,
+      "label": true
+    }
+  ]
+}

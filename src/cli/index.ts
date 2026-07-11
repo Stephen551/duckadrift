@@ -8,6 +8,7 @@ import { SetupError } from "../errors.js";
 import { renderMarkdownReport } from "../report/write.js";
 import { tier1CredentialsPresent } from "../tier1/credentials.js";
 import { resolveTier1Status } from "../tier1/gate.js";
+import { executeCalibrate } from "./calibrate.js";
 import { executeCapture } from "./capture.js";
 import { executeReport } from "./report.js";
 
@@ -110,6 +111,12 @@ async function main(): Promise<void> {
       case "capture":
         // The paid capture path (ADR-0037) — never on a verdict path.
         process.exitCode = await executeCapture(rest);
+        break;
+      case "calibrate":
+        // The calibration harness (ADR-0038) — off every verdict path and
+        // network-free: generate replays recordings, fit reads labels. Neither
+        // reads ANTHROPIC_API_KEY.
+        process.exitCode = await executeCalibrate(rest);
         break;
       default:
         printUsage();
