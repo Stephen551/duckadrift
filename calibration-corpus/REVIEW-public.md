@@ -34,7 +34,7 @@ confidence: 0.55
 claim: The root package.json adds a resolutions entry that remaps the package name 'GendocuPublicApis' to an npm package 'gendocu-public-apis', an unusual dependency substitution with no apparent connection to the rest of the resolutions block (which otherwise contains patch overrides for existing packages), and no decision record explains why this resolution exists.
 evidence:
 > "GendocuPublicApis": "npm:gendocu-public-apis@^1.0.0", — package.json
-label: ____
+label: false
 
 ## finding 002
 repo: cloud-platform
@@ -46,7 +46,7 @@ claim: ADR 012 (One cluster for dev/staging/prod) requires a single Kubernetes c
 evidence:
 > After consideration of the pros and cons of each approach we went with one cluster, using namespaces to partition different workloads. — 012-One-cluster-for-dev-staging-prod.md
 > We will give a non-live and a live cluster for each business unit. — 048-per-business-unit-clusters.md
-label: ____
+label: true
 
 ## finding 003
 repo: cloud-platform
@@ -60,7 +60,7 @@ evidence:
 > start adopting multi-cluster by splitting out workloads by _environment type_, i.e. _production_ and _non-production_ — 036-multi-cluster.md
 > We will use an AWS account per live and non-live clusters (as per ADR 36 Multi Cluster decision). — 042-use-modernisation-platform-accounts.md
 > Decision 036 reduces the blast radius with non live and live clusters, but this still leaves the noisy neighbour problem and potential security threats traversing business units. — 048-per-business-unit-clusters.md
-label: ____
+label: true
 
 ## finding 004
 repo: cloud-platform
@@ -72,7 +72,7 @@ claim: The go.mod adds direct dependencies on GitHub API client and OAuth2 libra
 evidence:
 > require ( 	github.com/google/go-github/v68 v68.0.0 	github.com/jferrl/go-githubauth v1.2.0 	golang.org/x/oauth2 v0.28.0 ) — cmd/create-upgrade-issues/go.mod
 > github.com/google/go-github/v69 v69.0.0 // indirect — cmd/create-upgrade-issues/go.mod
-label: ____
+label: false
 
 ## finding 005
 repo: cosmos-sdk
@@ -84,7 +84,7 @@ claim: The new enterprise/poa and enterprise/group modules (a new proof-of-autho
 evidence:
 > module github.com/cosmos/cosmos-sdk/enterprise/poa — enterprise/poa/go.mod
 > module github.com/cosmos/cosmos-sdk/enterprise/group — enterprise/group/go.mod
-label: ____
+label: false
 
 ## finding 006
 repo: cosmos-sdk
@@ -95,7 +95,7 @@ confidence: 0.3
 claim: The store/v2 module adds a dependency on github.com/hashicorp/go-plugin, a library for building plugin-based process architectures, which is an architectural choice (out-of-process plugin boundary) that a later reader would need reasoning for.
 evidence:
 > github.com/hashicorp/go-plugin v1.8.0 — store/go.mod
-label: ____
+label: false
 
 ## finding 007
 repo: duckadrift
@@ -108,7 +108,7 @@ evidence:
 > ADR-0008 already established that a same-directory collision stays fact-tier by default — this is the one recognized exception to that: a shared base filename plus a well-known annex or companion suffix is a real, common convention for splitting one decision across multiple documents, not an authoring accident. — 0009-annex-companion-numbering.md
 > A gap is a provable *state*, not a provable *error*. — 0010-numbering-gaps-advisory.md
 > This is a provable-state, not provable-error, distinction, the same shape as ADR-0009 and ADR-0010: the tool can prove the file exists somewhere; it cannot prove the specific link is wrong for this repo's publishing setup. — 0011-site-relative-dangles-advisory.md
-label: ____
+label: false
 
 ## finding 008
 repo: duckadrift
@@ -121,7 +121,7 @@ evidence:
 > The five were not five bugs. They were three primitives kept in duplicate — link parsing, number-scoping, and path containment — where hardening applied to one copy never reached its siblings. — 0018-the-adversarial-consolidation-round.md
 > ADR-0018 consolidated three duplicated primitives after five false positives traced to each being kept in more than one copy. Link parsing was one of them, and the consolidation gave it a single home: a hand-rolled scanner every check shared. That fixed the duplication and left a deeper problem standing — 0020-the-resolution-module.md
 > The result confirmed the thesis by finding the signature bug five more times. Path containment excluded the ADR directory by string prefix, so a sibling directory named `docs/adr-extra` slipped the exclusion. — 0021-the-full-surface-adversarial-pass.md
-label: ____
+label: false
 
 ## finding 009
 repo: fonthead
@@ -133,7 +133,7 @@ claim: The project adopts better-auth as an authentication dependency and pins k
 evidence:
 > "better-auth": "^1.5.0", — package.json
 > "overrides": {     "kysely": "0.28.17"   }, — package.json
-label: ____
+label: false
 
 ## finding 010
 repo: terraform-provider-proxmox
@@ -144,5 +144,5 @@ confidence: 0.35
 claim: go.mod adds a new direct dependency on github.com/go-git/go-git/v5 (via go.sum entries), which introduces a full git implementation into the provider — a significant new capability that would need an explanation of why the provider now needs to perform git operations.
 evidence:
 > github.com/go-git/go-git/v5 v5.18.0 h1:O831KI+0PR51hM2kep6T8k+w0/LIAD490gvqMCvL5hM= — go.sum
-label: ____
+label: false
 
