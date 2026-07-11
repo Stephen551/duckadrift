@@ -37,6 +37,8 @@ const CASES: Case[] = [
   { file: "0007-frontmatter-superseded-heading-accepted.md", value: "superseded", source: "frontmatter", accepted: false },
   { file: "0008-heading-accepted-datesuffix.md", value: "accepted", source: "heading", accepted: true },
   { file: "0009-proxmox-shaped.md", value: "accepted", source: "heading", accepted: true },
+  { file: "0010-heading-accepted-trailing-period.md", value: "accepted", source: "heading", accepted: true },
+  { file: "0011-heading-emphasis-approved.md", value: "approved", source: "heading", accepted: false },
 ];
 
 describe("effectiveStatus resolves every dialect to {value, source}", () => {
@@ -69,6 +71,17 @@ describe("the heading dialect the recognizer used to miss", () => {
   it("resolves the exact tf-proxmox shape that stopped the corpus capture", () => {
     // ## Status\n\nAccepted\n\n## Date... — the real dialect, 8/8 of proxmox's ADRs.
     expect(isAccepted(load("0009-proxmox-shaped.md"))).toBe(true);
+  });
+  it("strips a trailing period from the token (cosmos's `Accepted.`)", () => {
+    // The period made three genuinely accepted cosmos ADRs read as "accepted.".
+    expect(effectiveStatus(load("0010-heading-accepted-trailing-period.md")).value).toBe("accepted");
+  });
+  it("strips wrapping markdown emphasis from the token (edgex's `**Approved**`)", () => {
+    // The emphasis corrupted the value to "approved**"; the token must be clean.
+    // Value is "approved", NOT accepted — the corruption is fixed, the vocabulary
+    // is left as-is (approved is not mapped to the accepted family here).
+    expect(effectiveStatus(load("0011-heading-emphasis-approved.md")).value).toBe("approved");
+    expect(isAccepted(load("0011-heading-emphasis-approved.md"))).toBe(false);
   });
 });
 

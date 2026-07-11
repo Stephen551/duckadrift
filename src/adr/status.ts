@@ -40,7 +40,12 @@ function normalizeStatusValue(raw: string): string | null {
   const firstLine = raw.split(/\r?\n/).map((l) => l.trim()).find((l) => l !== "") ?? "";
   const unlabeled = firstLine.replace(LABEL_PREFIX_RE, "");
   const undecorated = unlabeled.replace(/^[^\p{L}\p{N}]+/u, "");
-  const token = undecorated.trim().split(/\s+/)[0] ?? "";
+  const rawToken = undecorated.trim().split(/\s+/)[0] ?? "";
+  // The word-run still carries wrapping the wild puts around it: markdown
+  // emphasis (edgex's `**Approved**`) and trailing punctuation (cosmos's
+  // `Accepted.`). Strip both so the status token is the bare word. These
+  // characters never occur inside a real status word, so the strip is lossless.
+  const token = rawToken.replace(/[*_`]+/g, "").replace(/[.:;,]+$/, "");
   return token === "" ? null : token.toLowerCase();
 }
 
