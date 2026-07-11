@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "key": {
+    "backend": "api",
+    "model": "claude-sonnet-5",
+    "effort": "high",
+    "checkId": "S3",
+    "promptHash": "1ab9c676631e8cfbcd1d21db0ba945cfd8291f73f7c6e6d87c900e91401c1338"
+  },
+  "recordedAt": "2026-07-11T14:55:15.214Z",
+  "requestDigest": "1ab9c676631e8cfbcd1d21db0ba945cfd8291f73f7c6e6d87c900e91401c1338",
+  "response": {
+    "model": "claude-sonnet-5",
+    "id": "msg_011CcvTpR1NjsYy95adoDLbp",
+    "type": "message",
+    "role": "assistant",
+    "content": [
+      {
+        "type": "tool_use",
+        "id": "toolu_014TMBfzBfhmeQkEX5ajaSEA",
+        "name": "report_findings",
+        "input": {
+          "findings": []
+        },
+        "caller": {
+          "type": "direct"
+        }
+      }
+    ],
+    "stop_reason": "tool_use",
+    "stop_sequence": null,
+    "stop_details": null,
+    "usage": {
+      "input_tokens": 3253,
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 2366,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 0
+      },
+      "output_tokens": 34,
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      },
+      "service_tier": "standard",
+      "inference_geo": "global"
+    }
+  }
+}
