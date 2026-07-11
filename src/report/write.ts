@@ -203,7 +203,7 @@ function renderCalibrationBlock(calibration: "UNCALIBRATED" | CalibrationConsump
       );
     } else if (ch.refusedDecree !== undefined) {
       lines.push(
-        `- ${severity}: CLOSED — the artifact asserted threshold ${fmt(ch.refusedDecree.assertedThreshold)}, REFUSED: its own lower bound ${fmt(ch.refusedDecree.lowerBound)} does not meet floor ${ch.refusedDecree.floor} (measured, never decreed — ADR-0038/0042)`
+        `- ${severity}: CLOSED — the artifact asserted threshold ${fmt(ch.refusedDecree.assertedThreshold)}, REFUSED: ${ch.refusedDecree.reason} (measured, never decreed — ADR-0038/0042)`
       );
     } else {
       lines.push(

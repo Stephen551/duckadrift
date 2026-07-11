@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { wilsonLowerBound } from "./curve.js";
 import { SEVERITY_FLOORS, type CalibrationEntry, type InterruptSeverity } from "./schema.js";
 
 // Calibration consumption (ADR-0042, PDR §2.6). The runtime reads the
@@ -21,8 +22,14 @@ export type ChannelState =
       sampleSize: number;
       pointPrecision: number | null;
       lowerBound: number | null;
-      /** Present when the entry ASSERTED a threshold whose own bound fails the floor — the decreed opening, refused (ADR-0042). */
-      refusedDecree?: { assertedThreshold: number; lowerBound: number | null; floor: number };
+      /** Present when the entry ASSERTED a threshold the gate refused — the decreed opening (ADR-0042). `recomputedLowerBound` is the Wilson bound re-derived at consumption from the curve point's own (truePositives, n); null when no curve point supports the threshold at all. */
+      refusedDecree?: {
+        assertedThreshold: number;
+        lowerBound: number | null;
+        recomputedLowerBound: number | null;
+        floor: number;
+        reason: string;
+      };
     };
 
 export type CalibrationConsumption =
@@ -68,12 +75,27 @@ function readCalibrationEntries(path: string): CalibrationEntry[] | null {
   return (parsed as { entries: CalibrationEntry[] }).entries;
 }
 
+/** Numerical tolerance for stored-vs-recomputed bound agreement — float round-trip noise only, never a semantic gap. */
+const BOUND_TOLERANCE = 1e-9;
+
 /**
  * Derives one severity's channel state from its calibration. The opening
- * condition is re-derived from the entry's own measurements — `threshold`
- * present AND `lowerBound >= floor` — never taken on the artifact's word.
+ * condition is RE-DERIVED from the entry's own measurements — the curve, not
+ * the summary fields (ADR-0042; verifier-defeated first version trusted the
+ * stored lowerBound, so an artifact edited in BOTH fields opened). An OPEN
+ * verdict requires, at consumption:
+ *   1. a curve point whose confidence equals the asserted threshold —
+ *      thresholds are curve crossings by construction; no point, no opening;
+ *   2. the Wilson 95% lower bound recomputed HERE from that point's own
+ *      (truePositives, n) — the same wilsonLowerBound the fit uses, never a
+ *      second implementation — meeting the §2.5 floor;
+ *   3. the stored lowerBound agreeing with the recomputation (float tolerance
+ *      only) — a mismatch is a tampered artifact and refuses even when the
+ *      true measurement would open, because integrity failed.
  * The floor is the §2.5 constant, NOT the entry's `floor` field: an artifact
- * that lowered its own floor would otherwise open a channel by decree.
+ * that lowered its own floor would otherwise open a channel by decree. A fully
+ * self-consistent fabricated curve still opens — that is the review boundary's
+ * job (corpusHash + the verifier's re-fit), not this gate's.
  */
 export function deriveChannelState(
   cal: CalibrationEntry["perSeverity"][InterruptSeverity],
@@ -81,24 +103,44 @@ export function deriveChannelState(
 ): ChannelState {
   const floor = SEVERITY_FLOORS[severity];
   if (cal.threshold !== null) {
-    if (cal.lowerBound !== null && cal.lowerBound >= floor) {
-      return {
-        state: "open",
-        threshold: cal.threshold,
-        floor,
-        sampleSize: cal.sampleSize,
-        lowerBound: cal.lowerBound,
-      };
-    }
-    // The decreed opening: a threshold asserted without the bound behind it.
-    // Refused, and the refusal names the failed bound (ADR-0042).
-    return {
+    const refuse = (recomputed: number | null, reason: string): ChannelState => ({
       state: "closed",
       floor,
       sampleSize: cal.sampleSize,
       pointPrecision: cal.pointPrecision,
       lowerBound: cal.lowerBound,
-      refusedDecree: { assertedThreshold: cal.threshold, lowerBound: cal.lowerBound, floor },
+      refusedDecree: {
+        assertedThreshold: cal.threshold as number,
+        lowerBound: cal.lowerBound,
+        recomputedLowerBound: recomputed,
+        floor,
+        reason,
+      },
+    });
+
+    const point = cal.curve.find((p) => p.confidence === cal.threshold);
+    if (point === undefined) {
+      return refuse(null, "threshold has no curve support");
+    }
+    const recomputed = wilsonLowerBound(point.truePositives, point.n);
+    if (recomputed < floor) {
+      return refuse(
+        recomputed,
+        `recomputed lower bound ${recomputed.toFixed(4)} (from the curve point's ${point.truePositives}/${point.n}) does not meet floor ${floor}; stored lowerBound was ${cal.lowerBound === null ? "null" : cal.lowerBound.toFixed(4)}`
+      );
+    }
+    if (cal.lowerBound === null || Math.abs(recomputed - cal.lowerBound) > BOUND_TOLERANCE) {
+      return refuse(
+        recomputed,
+        `stored lowerBound ${cal.lowerBound === null ? "null" : cal.lowerBound.toFixed(4)} disagrees with the bound recomputed from the curve (${recomputed.toFixed(4)}) — tampered artifact, refused`
+      );
+    }
+    return {
+      state: "open",
+      threshold: cal.threshold,
+      floor,
+      sampleSize: cal.sampleSize,
+      lowerBound: recomputed,
     };
   }
   return {

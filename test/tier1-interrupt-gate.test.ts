@@ -7,6 +7,7 @@ import { loadAdrLog } from "../src/adr/load.js";
 import type { ParsedAdr } from "../src/adr/types.js";
 import type { Tier1Finding } from "../src/tier1/citations.js";
 import { consumeCalibration, deriveChannelState } from "../src/tier1/calibration/consume.js";
+import { wilsonLowerBound } from "../src/tier1/calibration/curve.js";
 import { routeFindings } from "../src/tier1/calibration/route.js";
 import { assembleCalibrationEntry, type LabeledReviewFinding } from "../src/tier1/calibration/review.js";
 import { serializeCalibration, type CalibrationEntry } from "../src/tier1/calibration/schema.js";
@@ -168,10 +169,10 @@ describe("earned-open-opens — a legitimately-cleared floor opens exactly its s
   });
 });
 
-describe("decreed-open-refused — a hand-typed threshold cannot open a channel", () => {
-  it("consumption refuses a threshold whose own bound fails the floor, naming the numbers", () => {
+describe("decreed-open-refused — the gate recomputes from the curve; no summary field is trusted", () => {
+  it("a gutted stored bound refuses on MISMATCH even though the true measurement would open — integrity failed", () => {
     const decreed = earnedEntry();
-    // The attack: assert routine's threshold but gut the bound behind it.
+    // The attack: assert routine's threshold but gut the stored bound.
     decreed.perSeverity.routine.lowerBound = 0.6;
     const tmp = mkdtempSync(join(tmpdir(), "duckadrift-gate-decreed-"));
     writeFileSync(join(tmp, "calibration.json"), serializeCalibration({ schemaVersion: 1, entries: [decreed] }), "utf-8");
@@ -181,27 +182,115 @@ describe("decreed-open-refused — a hand-typed threshold cannot open a channel"
     const routine = consumption.perSeverity.routine;
     expect(routine.state).toBe("closed");
     if (routine.state !== "closed") return;
-    expect(routine.refusedDecree).toEqual({ assertedThreshold: 0.9, lowerBound: 0.6, floor: 0.95 });
+    expect(routine.refusedDecree?.assertedThreshold).toBe(0.9);
+    expect(routine.refusedDecree?.lowerBound).toBe(0.6);
+    expect(routine.refusedDecree?.recomputedLowerBound).toBeGreaterThanOrEqual(0.95);
+    expect(routine.refusedDecree?.reason).toContain("disagrees with the bound recomputed from the curve");
     // No finding interrupts through a refused decree.
     const { findings, adrsByFileName } = gateFindings();
     const routed = routeFindings(findings, adrsByFileName, consumption);
     expect(routed.every((r) => r.disposition === "annex")).toBe(true);
     const md = renderWith(findings, consumption, adrsByFileName);
-    expect(md).toContain("REFUSED: its own lower bound 0.6000 does not meet floor 0.95");
+    expect(md).toContain("REFUSED: stored lowerBound 0.6000 disagrees");
   });
 
-  it("a bound exactly AT the floor opens (>= is the spec); a hair under refuses", () => {
-    const at = { threshold: 0.9, sampleSize: 100, pointPrecision: 1, lowerBound: 0.95, curve: [] };
-    expect(deriveChannelState({ ...at, floor: 0.95 }, "routine").state).toBe("open");
-    const under = deriveChannelState({ ...at, floor: 0.95, lowerBound: 0.9499999 }, "routine");
-    expect(under.state).toBe("closed");
-    if (under.state === "closed") expect(under.refusedDecree).toBeDefined();
+  it("the TWO-FIELD forgery (the verifier's defeat): threshold + lowerBound both edited on the shipped routine entry → refused, recomputed bound named", () => {
+    const shipped = JSON.parse(readFileSync(SHIPPED, "utf-8"));
+    const forged = structuredClone(shipped.entries.find((e: CalibrationEntry) => e.key.model === "claude-sonnet-5"));
+    // The verifier's reproduction: forge the threshold at the curve's BEST
+    // slice (the highest recomputable bound the corpus offers — 0.0775) and
+    // assert a wishful stored bound beside it. Even the corpus's best real
+    // number is nowhere near the floor, and the gate says so.
+    const routineCurve = forged.perSeverity.routine.curve;
+    const widest = routineCurve.reduce((a: { wilsonLower: number }, p: { wilsonLower: number }) =>
+      p.wilsonLower > a.wilsonLower ? p : a
+    );
+    forged.perSeverity.routine.threshold = widest.confidence;
+    forged.perSeverity.routine.lowerBound = 0.99;
+    const tmp = mkdtempSync(join(tmpdir(), "duckadrift-gate-forgery-"));
+    writeFileSync(join(tmp, "calibration.json"), serializeCalibration({ schemaVersion: 1, entries: [forged] }), "utf-8");
+    const consumption = consumeCalibration(tmp, KEY, SHIPPED);
+    expect(consumption.calibrated).toBe(true);
+    if (!consumption.calibrated) return;
+    const routine = consumption.perSeverity.routine;
+    expect(routine.state).toBe("closed");
+    if (routine.state !== "closed") return;
+    const expected = wilsonLowerBound(widest.truePositives, widest.n);
+    expect(routine.refusedDecree?.recomputedLowerBound).toBeCloseTo(expected, 9);
+    expect(expected).toBeCloseTo(0.0775, 3); // the shipped corpus's real bound at its widest slice
+    expect(routine.refusedDecree?.reason).toContain("does not meet floor 0.95");
+    expect(routine.refusedDecree?.reason).toContain("stored lowerBound was 0.9900");
+  });
+
+  it("a threshold with NO curve point behind it is refused — thresholds are curve crossings", () => {
+    const shipped = JSON.parse(readFileSync(SHIPPED, "utf-8"));
+    const forged = structuredClone(shipped.entries.find((e: CalibrationEntry) => e.key.model === "claude-sonnet-5"));
+    forged.perSeverity.routine.threshold = 0.42424242; // no such confidence in the curve
+    forged.perSeverity.routine.lowerBound = 0.99;
+    const tmp = mkdtempSync(join(tmpdir(), "duckadrift-gate-nopoint-"));
+    writeFileSync(join(tmp, "calibration.json"), serializeCalibration({ schemaVersion: 1, entries: [forged] }), "utf-8");
+    const consumption = consumeCalibration(tmp, KEY, SHIPPED);
+    expect(consumption.calibrated).toBe(true);
+    if (!consumption.calibrated) return;
+    const routine = consumption.perSeverity.routine;
+    expect(routine.state).toBe("closed");
+    if (routine.state !== "closed") return;
+    expect(routine.refusedDecree?.reason).toBe("threshold has no curve support");
+    expect(routine.refusedDecree?.recomputedLowerBound).toBeNull();
+  });
+
+  it("a fully SELF-CONSISTENT fabricated curve opens — by design, that is the review boundary's job (corpusHash + re-fit), not this gate's", () => {
+    // 198-of-200 at 0.9: recomputed Wilson LB ≈ 0.9634 ≥ 0.95, stored bound
+    // matching the recomputation exactly. The gate cannot distinguish this
+    // from an earned artifact; the labeling review + hash chain can.
+    const lb = wilsonLowerBound(198, 200);
+    expect(lb).toBeGreaterThanOrEqual(0.95);
+    const cal = {
+      floor: 0.95,
+      threshold: 0.9,
+      sampleSize: 200,
+      pointPrecision: 0.99,
+      lowerBound: lb,
+      curve: [{ confidence: 0.9, n: 200, truePositives: 198, precision: 0.99, wilsonLower: lb }],
+    };
+    expect(deriveChannelState(cal, "routine").state).toBe("open");
+  });
+
+  it("a recomputed bound exactly AT the floor opens (>= is the spec); one member fewer refuses", () => {
+    // 73 all-true at 0.9: recomputed LB = 1/(1 + z²/73) ≈ 0.95001 ≥ 0.95 → open.
+    const at = wilsonLowerBound(73, 73);
+    expect(at).toBeGreaterThanOrEqual(0.95);
+    const open = deriveChannelState(
+      { floor: 0.95, threshold: 0.9, sampleSize: 73, pointPrecision: 1, lowerBound: at, curve: [{ confidence: 0.9, n: 73, truePositives: 73, precision: 1, wilsonLower: at }] },
+      "routine"
+    );
+    expect(open.state).toBe("open");
+    // 72 all-true: recomputed ≈ 0.94934 < 0.95 → refused with the recomputation named.
+    const under = wilsonLowerBound(72, 72);
+    expect(under).toBeLessThan(0.95);
+    const closed = deriveChannelState(
+      { floor: 0.95, threshold: 0.9, sampleSize: 72, pointPrecision: 1, lowerBound: under, curve: [{ confidence: 0.9, n: 72, truePositives: 72, precision: 1, wilsonLower: under }] },
+      "routine"
+    );
+    expect(closed.state).toBe("closed");
+    if (closed.state === "closed") {
+      expect(closed.refusedDecree?.recomputedLowerBound).toBeCloseTo(under, 9);
+      expect(closed.refusedDecree?.reason).toContain("does not meet floor 0.95");
+    }
   });
 
   it("an entry that lowered its own floor field cannot open by decree — the §2.5 constant governs", () => {
-    // floor: 0.5 typed into the artifact; the entry's bound (0.6) would clear
-    // THAT, but the gate re-checks against the real routine floor 0.95.
-    const tampered = { threshold: 0.9, sampleSize: 50, pointPrecision: 0.9, lowerBound: 0.6, curve: [], floor: 0.5 };
+    // floor: 0.5 typed into the artifact with a self-consistent curve whose
+    // bound (≈0.6) clears THAT — but the gate re-checks against the real 0.95.
+    const lb = wilsonLowerBound(7, 10);
+    const tampered = {
+      floor: 0.5,
+      threshold: 0.9,
+      sampleSize: 10,
+      pointPrecision: 0.7,
+      lowerBound: lb,
+      curve: [{ confidence: 0.9, n: 10, truePositives: 7, precision: 0.7, wilsonLower: lb }],
+    };
     const state = deriveChannelState(tampered, "routine");
     expect(state.state).toBe("closed");
     if (state.state === "closed") expect(state.refusedDecree?.floor).toBe(0.95);
