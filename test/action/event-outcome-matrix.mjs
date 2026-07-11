@@ -37,6 +37,7 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO = join(HERE, "..", "..");
 const ACTION_YML = join(REPO, "action.yml");
 const REAL_EMIT = join(REPO, "action", "emit-annotations.mjs");
+const REAL_INTERRUPTS = join(REPO, "action", "emit-interrupts.mjs");
 
 const EVENTS = ["pull_request", "push", "schedule", "workflow_dispatch"];
 const OUTCOMES = ["clean", "failing", "crash", "postfail"];
@@ -137,6 +138,10 @@ try {
       // stub that throws after the report already exists.
       if (outcome === "postfail") writeFileSync(join(actionDir, "action", "emit-annotations.mjs"), THROWING_EMIT);
       else cpSync(REAL_EMIT, join(actionDir, "action", "emit-annotations.mjs"));
+      // The REAL interrupt emitter (ADR-0042): stub reports carry no tier1
+      // interrupts, so its zero-interrupt path runs genuinely — prints
+      // "0 interrupt(s)" and exits 0 without gh — in every cell that reaches it.
+      cpSync(REAL_INTERRUPTS, join(actionDir, "action", "emit-interrupts.mjs"));
       const sweepScript = join(actionDir, "action", "issue-sweep.sh");
       writeFileSync(sweepScript, ISSUE_SWEEP_STUB);
 
@@ -159,6 +164,10 @@ try {
             GITHUB_STEP_SUMMARY: join(cell, "gh_summary").replace(/\\/g, "/"),
             GH_TOKEN: "stub-token",
             ADR_DIR: "",
+            // The PR number reaches the wrapper via env (M4.4 verifier fix) —
+            // the harness supplies one so the pull_request path exercises with
+            // a number present, matching the runner's env substitution.
+            PR_NUMBER: "7",
             CELL_SWEEP_MARKER: sweepMarker.replace(/\\/g, "/"),
           },
           stdio: ["ignore", "ignore", "ignore"],

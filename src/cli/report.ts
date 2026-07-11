@@ -5,6 +5,8 @@ import { runAllTierZeroChecks } from "../checks/index.js";
 import { loadConfig } from "../config/load.js";
 import { SetupError } from "../errors.js";
 import { buildErrorReport, buildJsonReport, renderMarkdownReport, withTier1Run } from "../report/write.js";
+import { consumeCalibration } from "../tier1/calibration/consume.js";
+import { routeFindings } from "../tier1/calibration/route.js";
 import { TIER1_CHECKS } from "../tier1/checks.js";
 import { tier1CredentialsPresent } from "../tier1/credentials.js";
 import { resolveTier1Status } from "../tier1/gate.js";
@@ -40,17 +42,26 @@ export async function executeReport(opts: ReportOptions): Promise<number> {
 
     // Second config load is quiet: loadAdrLog's internal load already emitted
     // any per-run notices (config/load.ts documents this contract).
-    let tier1 = resolveTier1Status(
-      loadConfig(opts.repoRoot, { quiet: true }).tier1,
-      tier1CredentialsPresent(),
-      ctx
-    );
+    const tier1Config = loadConfig(opts.repoRoot, { quiet: true }).tier1;
+    let tier1 = resolveTier1Status(tier1Config, tier1CredentialsPresent(), ctx);
     // The live semantic run (M3.3a — the wiring M3.2 deferred). Report-only:
     // `check` never runs Tier 1 and the verdict channel stays deterministic
     // (PDR §2.5). Transport construction happens AFTER the status gate, so a
     // disabled / no-credentials / no-signal run provably never builds one.
     if (tier1.enabled && tier1.status === "eligible" && TIER1_CHECKS.length > 0) {
-      tier1 = withTier1Run(tier1, await runTier1Checks(ctx, TIER1_CHECKS, liveTransport()));
+      const run = await runTier1Checks(ctx, TIER1_CHECKS, liveTransport());
+      // Calibration consumption + routing (ADR-0042): the artifact is read
+      // (repo-local overrides shipped), each severity's channel state derived
+      // from its own measurements, and each finding routed. On the shipped
+      // artifact every channel is closed and every finding stays annex-only.
+      const consumption = consumeCalibration(opts.repoRoot, {
+        backend: tier1Config.backend,
+        model: tier1Config.model,
+        effort: tier1Config.effort,
+      });
+      const adrsByFileName = new Map(ctx.adrs.map((a) => [a.fileName, a]));
+      const dispositions = routeFindings(run.findings, adrsByFileName, consumption);
+      tier1 = withTier1Run(tier1, run, consumption, dispositions);
     }
     const markdown = renderMarkdownReport(findings, ctx.unrecognizedFiles, tier1);
     const adrDirRelative = relative(opts.repoRoot, ctx.adrDir).split("\\").join("/");

@@ -1,5 +1,8 @@
 import { TIER_ZERO_CHECK_IDS } from "../types.js";
 import type { Finding, FindingEvidence, TierZeroCheckId } from "../types.js";
+import type { CalibrationConsumption } from "../tier1/calibration/consume.js";
+import type { RoutedFinding } from "../tier1/calibration/route.js";
+import type { InterruptSeverity } from "../tier1/calibration/schema.js";
 import type { Tier1Signal } from "../tier1/gate.js";
 import type { Tier1RunResult } from "../tier1/runner.js";
 
@@ -25,16 +28,31 @@ export type Tier1Status =
       skipped?: Tier1RunResult["skipped"];
       errors?: Tier1RunResult["errors"];
       usage?: Tier1RunResult["usage"];
-      calibration?: "UNCALIBRATED";
+      /**
+       * "UNCALIBRATED": no calibration entry answered this run's tuple —
+       * today's annex-only behavior, loudly labeled. A CalibrationConsumption
+       * (ADR-0042): the artifact was consumed and each severity's channel
+       * state is stated with its numbers.
+       */
+      calibration?: "UNCALIBRATED" | CalibrationConsumption;
+      /** Index-aligned with `findings`: each finding's derived severity and disposition (ADR-0042). Absent on an uncalibrated run predating routing. */
+      dispositions?: RoutedFinding[];
     };
 
-/** Attaches a run's results to an enabled status — the one way run data enters a report. */
+/** Attaches a run's results to an enabled status — the one way run data enters a report. When consumption and routing are supplied (ADR-0042), the calibration block carries channel states; otherwise the run is labeled UNCALIBRATED exactly as before. */
 export function withTier1Run(
   status: Tier1Status,
-  run: Tier1RunResult
+  run: Tier1RunResult,
+  calibration?: CalibrationConsumption,
+  dispositions?: RoutedFinding[]
 ): Tier1Status {
   if (!status.enabled) return status;
-  return { ...status, ...run, calibration: "UNCALIBRATED" };
+  return {
+    ...status,
+    ...run,
+    calibration: calibration ?? "UNCALIBRATED",
+    ...(dispositions !== undefined ? { dispositions } : {}),
+  };
 }
 
 const CHECK_TITLES: Record<TierZeroCheckId, string> = {
@@ -147,6 +165,56 @@ function renderTier1Block(tier1: Tier1Status): string[] {
 const UNCALIBRATED_LABEL =
   "assessed by the checker — UNCALIBRATED (annex only; interrupts require a calibration entry, PDR §2.6)";
 
+const INTERRUPT_SEVERITIES: InterruptSeverity[] = ["critical", "elevated", "routine"];
+
+function fmt(n: number | null): string {
+  return n === null ? "—" : n.toFixed(4);
+}
+
+/**
+ * The per-severity calibration block (ADR-0042): each channel's state with its
+ * numbers — open with its threshold, or closed with the sample size and the
+ * bound that fell short — never a global shrug. These are channel statistics,
+ * not finding confidences, so the measured numbers render here; raw
+ * finding-confidence decimals still never appear in prose (PDR §3.1).
+ */
+function renderCalibrationBlock(calibration: "UNCALIBRATED" | CalibrationConsumption): string[] {
+  const lines: string[] = ["### Calibration", ""];
+  if (calibration === "UNCALIBRATED") {
+    lines.push(
+      "UNCALIBRATED — no calibration was consumed on this run; every finding is annex-only.",
+      ""
+    );
+    return lines;
+  }
+  if (!calibration.calibrated) {
+    lines.push(`UNCALIBRATED (${calibration.reason}): ${calibration.detail}`, "");
+    return lines;
+  }
+  lines.push(
+    `Artifact: ${calibration.source} (${code(calibration.sourcePath)}), corpus ${calibration.corpusHash.slice(0, 12)}, ${calibration.sampleSize} labeled finding(s). Channel states (ADR-0042 — a threshold opens only on the measured lower bound):`,
+    ""
+  );
+  for (const severity of INTERRUPT_SEVERITIES) {
+    const ch = calibration.perSeverity[severity];
+    if (ch.state === "open") {
+      lines.push(
+        `- ${severity}: OPEN — threshold ${fmt(ch.threshold)} (n=${ch.sampleSize}, lower bound ${fmt(ch.lowerBound)} ≥ floor ${ch.floor})`
+      );
+    } else if (ch.refusedDecree !== undefined) {
+      lines.push(
+        `- ${severity}: CLOSED — the artifact asserted threshold ${fmt(ch.refusedDecree.assertedThreshold)}, REFUSED: ${ch.refusedDecree.reason} (measured, never decreed — ADR-0038/0042)`
+      );
+    } else {
+      lines.push(
+        `- ${severity}: CLOSED — n=${ch.sampleSize}, point ${fmt(ch.pointPrecision)}, lower bound ${fmt(ch.lowerBound)} < floor ${ch.floor}`
+      );
+    }
+  }
+  lines.push("- cosmetic: never interrupts (PDR §2.5, hard rule)", "");
+  return lines;
+}
+
 /**
  * Renders the run's findings section. Every model- or repo-derived string —
  * claims, consequences, quotes, document labels, error messages — is fenced
@@ -156,20 +224,60 @@ const UNCALIBRATED_LABEL =
  */
 function renderTier1Findings(tier1: Tier1Status): string[] {
   if (!tier1.enabled || tier1.calibration === undefined) return [];
-  const lines: string[] = ["### Findings (UNCALIBRATED — annex only)", ""];
+  const calibrated =
+    typeof tier1.calibration === "object" && tier1.calibration.calibrated === true;
+  const lines: string[] = [...renderCalibrationBlock(tier1.calibration)];
 
   const findings = tier1.findings ?? [];
+  const dispositions = tier1.dispositions ?? [];
+
+  // Interrupts first (ADR-0042): findings that route through an open channel.
+  // They ALSO appear in the annex below — the interrupt is an additional push,
+  // never a relocation; the report stays complete.
+  const interrupts = findings
+    .map((finding, i) => ({ finding, routed: dispositions[i] }))
+    .filter((x) => x.routed?.disposition === "interrupt");
+  if (interrupts.length > 0) {
+    lines.push("### Interrupts", "");
+    for (const { finding, routed } of interrupts) {
+      lines.push(`- ${finding.check} (${routed!.severity}): ${code(finding.claim)}`);
+      for (const citation of finding.citations) {
+        lines.push(`  - Quoted from ${code(citation.document)}: ${code(citation.quote)}`);
+      }
+      lines.push(`  - Consequence: ${code(finding.consequence)}`);
+      lines.push(
+        `  - Disposition: interrupt — reported confidence at or above the calibrated threshold for ${routed!.severity} findings.`
+      );
+    }
+    lines.push("");
+  }
+
+  lines.push(
+    calibrated ? "### Findings (annex — the complete record)" : "### Findings (UNCALIBRATED — annex only)",
+    ""
+  );
   if (findings.length === 0) {
     lines.push("No Tier 1 findings were accepted in this run.", "");
   } else {
-    for (const finding of findings) {
+    findings.forEach((finding, i) => {
+      const routed = dispositions[i];
       lines.push(`- ${finding.check}: ${code(finding.claim)}`);
       for (const citation of finding.citations) {
         lines.push(`  - Quoted from ${code(citation.document)}: ${code(citation.quote)}`);
       }
       lines.push(`  - Consequence: ${code(finding.consequence)}`);
-      lines.push(`  - ${UNCALIBRATED_LABEL}`);
-    }
+      if (!calibrated || routed === undefined) {
+        lines.push(`  - ${UNCALIBRATED_LABEL}`);
+      } else if (routed.disposition === "interrupt") {
+        lines.push(
+          `  - assessed by the checker — severity ${routed.severity}; interrupted above (channel open).`
+        );
+      } else {
+        lines.push(
+          `  - assessed by the checker — severity ${routed.severity}; annex only (channel closed at this severity).`
+        );
+      }
+    });
     lines.push("");
   }
 
