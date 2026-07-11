@@ -40,3 +40,4 @@ Architecture decisions for duckadrift itself, recorded in duckadrift's own vocab
 | [0034](0034-envelope-authentication.md) | Envelope authentication — a document boundary the document cannot forge | Accepted | elevated |
 | [0035](0035-diff-and-decay-checks.md) | The diff-and-decay checks — S2, S3, S5, and the modes they run in | Accepted | elevated |
 | [0036](0036-decay-is-a-dead-premise.md) | Decay is a dead premise, not a cited one | Accepted | elevated |
+| [0037](0037-checkpointed-capture.md) | Checkpointed capture — a paid recording is written once and never re-paid | Accepted | elevated |
