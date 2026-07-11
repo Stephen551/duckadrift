@@ -1,0 +1,92 @@
+{
+  "schemaVersion": 1,
+  "key": {
+    "backend": "api",
+    "model": "claude-sonnet-5",
+    "effort": "high",
+    "checkId": "S4",
+    "promptHash": "080b80bc42c492836000997f6a6987235e02bc8e23c4e9d27bab0aa5e7415fdc"
+  },
+  "recordedAt": "2026-07-11T13:53:54.812Z",
+  "requestDigest": "080b80bc42c492836000997f6a6987235e02bc8e23c4e9d27bab0aa5e7415fdc",
+  "response": {
+    "model": "claude-sonnet-5",
+    "id": "msg_011CcvP84qrDpvnaAZD7crZP",
+    "type": "message",
+    "role": "assistant",
+    "content": [
+      {
+        "type": "tool_use",
+        "id": "toolu_016Hw7hBSpmHpGPanTEbj3UB",
+        "name": "report_findings",
+        "input": {
+          "findings": [
+            {
+              "claim": "ADRs 0040, 0041, 0042, and 0043 form a recurring-revision set: each parks, refines, or bounds the same unresolved primitive—how to build even, well-joined connect-mode kerning/spacing for difficult hands (the 'assembled-glyph feedback' discrimination problem)—without any of them closing it. 0040 parks the contextual kern milestone explicitly pending an assembled-glyph feedback pass; 0041 parks the dense-body kern and defers to a connection-point spec; 0042 bank thin-hand joins at ~B and defers Phase 3; 0043 proves a placement route but explicitly parks it again on the bridge-vs-weld discrimination problem.",
+              "citations": [
+                {
+                  "document": "0040-contextual-connect-kern-parked-needs-assembled-feedback.md",
+                  "quote": "PARK the milestone. Five build-time refinement approaches were each built and measured against the corpus; all five fail for ONE root reason"
+                },
+                {
+                  "document": "0041-connect-rhythm-in-placement-not-kern-densebody-parked.md",
+                  "quote": "PARK the dense-body kern. Two implementations were built and measured; both fail"
+                },
+                {
+                  "document": "0042-phase1-height-prerequisite-not-fix-thin-hand-joins-banked.md",
+                  "quote": "BANK thin-hand join evenness at ~B and defer Phase 3 to a focused milestone (the updated spec)."
+                },
+                {
+                  "document": "0043-eye-body-placement-route-proven-parked-on-bridge-weld-protection.md",
+                  "quote": "It is PARKED at one remaining problem: a placement-aware protection layer that tells a deliberate thin bridge from a body weld."
+                }
+              ],
+              "consequence": "A maintainer following the ADR chain would see four consecutive 'Accepted' records each claiming to make progress on connect-mode join/kern evenness, but none of them actually resolves the underlying question of how to distinguish an intentional connector bridge from a genuine weld at build time; the decision remains open across the whole set and should be tracked as a single still-open item rather than four closed decisions.",
+              "reportedConfidence": 0.72
+            },
+            {
+              "claim": "ADR 0033, 0040, 0041, and 0043 all circle the same unresolved primitive of build-time (vs assembled/rendered) measurement being insufficient to discriminate connect-mode seam defects from legitimate joins, with each record re-stating and re-parking the same 'no build-time measure separates X from Y' problem without resolving it (resolution only arrives later in ADR 0049-0052, which are not part of this set).",
+              "citations": [
+                {
+                  "document": "0040-contextual-connect-kern-parked-needs-assembled-feedback.md",
+                  "quote": "No build-time measure can tell that intentional overlap from a body weld, and the gap the eye actually reads does not exist until the glyphs are ASSEMBLED."
+                },
+                {
+                  "document": "0041-connect-rhythm-in-placement-not-kern-densebody-parked.md",
+                  "quote": "A build-time proxy diverges from the render — the same root as ADR 0040."
+                },
+                {
+                  "document": "0043-eye-body-placement-route-proven-parked-on-bridge-weld-protection.md",
+                  "quote": "That discrimination is ADR 0040's assembled-glyph problem in its minimal, tractable form — the geometry is now known at placement time."
+                }
+              ],
+              "consequence": "If accepted, these three (or four counting 0033's framing) records should be read as one continuously deferred decision about assembled-vs-build-time measurement rather than as three independently closed decisions; downstream ADRs that build on 'ADR 0040 parked' status should be checked to confirm they don't assume it was resolved before ADR 0049.",
+              "reportedConfidence": 0.55
+            }
+          ]
+        },
+        "caller": {
+          "type": "direct"
+        }
+      }
+    ],
+    "stop_reason": "tool_use",
+    "stop_sequence": null,
+    "stop_details": null,
+    "usage": {
+      "input_tokens": 62128,
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 2457,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 0
+      },
+      "output_tokens": 1285,
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      },
+      "service_tier": "standard",
+      "inference_geo": "global"
+    }
+  }
+}

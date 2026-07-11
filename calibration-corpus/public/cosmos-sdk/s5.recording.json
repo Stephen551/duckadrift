@@ -1,0 +1,83 @@
+{
+  "schemaVersion": 1,
+  "key": {
+    "backend": "api",
+    "model": "claude-sonnet-5",
+    "effort": "high",
+    "checkId": "S5",
+    "promptHash": "555d8737e18e3bccaed0cbb1cfcf70fdc92136b30c1f0f838ab327872e5d87c9"
+  },
+  "recordedAt": "2026-07-11T13:54:54.167Z",
+  "requestDigest": "555d8737e18e3bccaed0cbb1cfcf70fdc92136b30c1f0f838ab327872e5d87c9",
+  "response": {
+    "model": "claude-sonnet-5",
+    "id": "msg_011CcvPD3GjLgquBVFPoDHif",
+    "type": "message",
+    "role": "assistant",
+    "content": [
+      {
+        "type": "tool_use",
+        "id": "toolu_017XU1BBCy6q2MV5kquvpqS8",
+        "name": "report_findings",
+        "input": {
+          "findings": [
+            {
+              "claim": "ADR 006 treats the package github.com/99designs/keyring (Keyring by 99designs) as a live, currently-present dependency being adopted to replace the LevelDB-based Keybase backend.",
+              "citations": [
+                {
+                  "document": "adr-006-secret-store-replacement.md",
+                  "quote": "We recommend replacing the current Keybase backend based on LevelDB with [Keyring](https://github.com/99designs/keyring) by 99 designs."
+                }
+              ],
+              "consequence": "If this package no longer exists or is no longer named/pinned as such in the manifest, the ADR's decision premise has decayed and should be flagged for re-verification against the current dependency manifest.",
+              "reportedConfidence": 0.55
+            },
+            {
+              "claim": "ADR 019 treats the package github.com/tendermint/go-amino/ (go-amino) as a live, currently-used dependency underlying the Cosmos SDK's existing encoding, which the decision proposes to move away from.",
+              "citations": [
+                {
+                  "document": "adr-019-protobuf-state-encoding.md",
+                  "quote": "Currently, the Cosmos SDK utilizes [go-amino](https://github.com/tendermint/go-amino/) for binary\nand JSON object encoding over the wire bringing parity between logical objects and persistence objects."
+                }
+              ],
+              "consequence": "If go-amino is no longer present as a pinned/installed dependency, the context's premise about current usage has decayed and should be re-checked against the manifest.",
+              "reportedConfidence": 0.4
+            },
+            {
+              "claim": "ADR 019 treats the package github.com/cosmos/gogoproto (gogoprotobuf) as a live, currently relevant dependency that business logic should use for encoding primitive types.",
+              "citations": [
+                {
+                  "document": "adr-019-protobuf-state-encoding.md",
+                  "quote": "Note, any business logic that needs to encode primitive types like `bool` or `int64` should use\n[gogoprotobuf](https://github.com/cosmos/gogoproto) Value types."
+                }
+              ],
+              "consequence": "If this package is no longer pinned/installed, the premise that modules use gogoproto for value types has decayed and should be re-verified against the manifest.",
+              "reportedConfidence": 0.4
+            }
+          ]
+        },
+        "caller": {
+          "type": "direct"
+        }
+      }
+    ],
+    "stop_reason": "tool_use",
+    "stop_sequence": null,
+    "stop_details": null,
+    "usage": {
+      "input_tokens": 89167,
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 2515,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 0
+      },
+      "output_tokens": 762,
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      },
+      "service_tier": "standard",
+      "inference_geo": "global"
+    }
+  }
+}

@@ -1,0 +1,329 @@
+{
+  "schemaVersion": 1,
+  "key": {
+    "backend": "api",
+    "model": "claude-sonnet-5",
+    "effort": "high",
+    "checkId": "S5",
+    "promptHash": "740c10a32b4779a8e6cc9f5d9eac723517c295923194dc42e43a4995e4c0626e"
+  },
+  "recordedAt": "2026-07-11T13:54:35.655Z",
+  "requestDigest": "740c10a32b4779a8e6cc9f5d9eac723517c295923194dc42e43a4995e4c0626e",
+  "response": {
+    "model": "claude-sonnet-5",
+    "id": "msg_011CcvP9KaeNU8yjBUofYcB9",
+    "type": "message",
+    "role": "assistant",
+    "content": [
+      {
+        "type": "tool_use",
+        "id": "toolu_01VKQ2J2WqhM28erCNUmQsSN",
+        "name": "report_findings",
+        "input": {
+          "findings": [
+            {
+              "claim": "ADR 0003 treats kysely, pinned to 0.28.17 via package.json overrides, as a live/current dependency premise.",
+              "citations": [
+                {
+                  "document": "0003-better-auth-per-request-d1-kysely-pin.md",
+                  "quote": "Pin kysely to 0.28.17 via package.json overrides."
+                }
+              ],
+              "consequence": "If kysely is no longer pinned at 0.28.17 in package.json (e.g. upgraded past the landmine, or Better Auth's dependency changed), this record's decision premise has decayed and should be reconfirmed against the manifest.",
+              "reportedConfidence": 0.95
+            },
+            {
+              "claim": "ADR 0003 treats src/lib/auth.ts as a live file path where createAuth(env) is constructed.",
+              "citations": [
+                {
+                  "document": "0003-better-auth-per-request-d1-kysely-pin.md",
+                  "quote": "constructed per request via a createAuth(env) factory in src/lib/auth.ts"
+                }
+              ],
+              "consequence": "If src/lib/auth.ts no longer exists or has moved, the record's concrete premise about the factory location has decayed.",
+              "reportedConfidence": 0.9
+            },
+            {
+              "claim": "ADR 0005 treats src/lib/sfnt.ts (fixSfntChecksums) as a live file path implementing checksum repair.",
+              "citations": [
+                {
+                  "document": "0005-font-validity-checksums-fonttools.md",
+                  "quote": "repair every SFNT table checksum plus head.checkSumAdjustment (src/lib/sfnt.ts fixSfntChecksums) before the woff2 wrap"
+                }
+              ],
+              "consequence": "If src/lib/sfnt.ts has been removed, renamed, or the function relocated, this concrete premise no longer resolves.",
+              "reportedConfidence": 0.9
+            },
+            {
+              "claim": "ADR 0007 treats astro.config.mjs (injecting __ENGINE_V__) as a live file path implementing the cache-bust token.",
+              "citations": [
+                {
+                  "document": "0007-engine-cache-bust-content-hash.md",
+                  "quote": "Derive the engine ?v= cache-bust token from a content hash of the engine bytes at build time (astro.config.mjs injects __ENGINE_V__)."
+                }
+              ],
+              "consequence": "If astro.config.mjs no longer performs this injection or has been removed, the premise has decayed.",
+              "reportedConfidence": 0.9
+            },
+            {
+              "claim": "ADR 0007 treats font-engine-worker.js as a live file/module that reads the ?v cache-bust token off its own URL.",
+              "citations": [
+                {
+                  "document": "0007-engine-cache-bust-content-hash.md",
+                  "quote": "have font-engine-worker.js read the ?v off its own URL (self.location.search) and reuse it for all importScripts"
+                }
+              ],
+              "consequence": "If font-engine-worker.js no longer exists at that path or no longer implements this behavior, the premise has decayed.",
+              "reportedConfidence": 0.9
+            },
+            {
+              "claim": "ADR 0008 references guessCharsetFromRows as a live named function/module implementing charset fallback.",
+              "citations": [
+                {
+                  "document": "0008-trust-armed-preset-charset-over-geometry-probe.md",
+                  "quote": "fall back to guessCharsetFromRows, which places rows by position"
+                }
+              ],
+              "consequence": "guessCharsetFromRows is named as a function, not a package or file path per the strict concrete definition; flagged for review but likely below the bar since it's a function name not a file/module path.",
+              "reportedConfidence": 0.25
+            },
+            {
+              "claim": "ADR 0010 treats font-engine-gpos.js as a live vendored engine file implementing the GPOS PairPos writer.",
+              "citations": [
+                {
+                  "document": "0010-kerning-via-gpos-pairpos.md",
+                  "quote": "write auto-kerning as a GPOS PairPos table via a new font-engine-gpos.js writer fed by a silhouette analyzer"
+                }
+              ],
+              "consequence": "If font-engine-gpos.js no longer exists at that path, this concrete premise about the writer's location has decayed.",
+              "reportedConfidence": 0.88
+            },
+            {
+              "claim": "ADR 0013 treats a ~100 bound-parameter limit and chunking at 50 as a live constraint on D1, but this is a configuration/limit, not a package or path, so not concrete under this check's definition.",
+              "citations": [
+                {
+                  "document": "0013-r2-then-d1-rollback-publish.md",
+                  "quote": "chunking IN-lists at 50 to stay under D1's bound-parameter limit"
+                }
+              ],
+              "consequence": "Not applicable as a concrete premise per check definition; excluded from findings.",
+              "reportedConfidence": 0.05
+            },
+            {
+              "claim": "ADR 0015 treats src/lib/ratelimit.ts as a live file path implementing the KV-backed rate limiter.",
+              "citations": [
+                {
+                  "document": "0015-kv-rate-limiter-and-signature-upload-gate.md",
+                  "quote": "Add a KV-backed (SESSION) fixed-window rate limiter (src/lib/ratelimit.ts) applied per user to authed mutations"
+                }
+              ],
+              "consequence": "If src/lib/ratelimit.ts has been removed or renamed, this concrete premise has decayed.",
+              "reportedConfidence": 0.9
+            },
+            {
+              "claim": "ADR 0016 treats src/middleware.ts as a live file path setting site-wide security headers and CSP.",
+              "citations": [
+                {
+                  "document": "0016-csp-relaxations-output-escaping-xss.md",
+                  "quote": "Set site-wide security headers and CSP via src/middleware.ts."
+                }
+              ],
+              "consequence": "If src/middleware.ts no longer exists or no longer sets CSP there, the premise has decayed.",
+              "reportedConfidence": 0.9
+            },
+            {
+              "claim": "ADR 0017 treats src/lib/email.ts as a live file path implementing the Resend email helper.",
+              "citations": [
+                {
+                  "document": "0017-transactional-email-via-resend-https.md",
+                  "quote": "through the Resend HTTPS API via a single src/lib/email.ts helper that never throws and no-ops without RESEND_API_KEY"
+                }
+              ],
+              "consequence": "If src/lib/email.ts no longer exists at that path, the premise has decayed.",
+              "reportedConfidence": 0.9
+            },
+            {
+              "claim": "ADR 0018 treats src/lib/banned-words.ts as a live file path curating the banlist.",
+              "citations": [
+                {
+                  "document": "0018-custom-d1-moderation-soft-ban.md",
+                  "quote": "Curate the handle/font-name banlist in code (src/lib/banned-words.ts, one-line edits)"
+                }
+              ],
+              "consequence": "If src/lib/banned-words.ts no longer exists at that path, the premise has decayed.",
+              "reportedConfidence": 0.9
+            },
+            {
+              "claim": "ADR 0026 treats wrangler.cron.jsonc as a live file/module path configuring the standalone cron worker.",
+              "citations": [
+                {
+                  "document": "0026-daily-feature-separate-cron-worker.md",
+                  "quote": "call it nightly from a standalone cron worker (wrangler.cron.jsonc, named fonthead-cron, 06:00 UTC)"
+                }
+              ],
+              "consequence": "If wrangler.cron.jsonc no longer exists or the cron worker config moved, this concrete premise has decayed.",
+              "reportedConfidence": 0.88
+            },
+            {
+              "claim": "ADR 0027 treats .github/workflows/ci.yml as a live file path wiring vitest/Playwright CI.",
+              "citations": [
+                {
+                  "document": "0027-test-harness-vitest-playwright-fonttools.md",
+                  "quote": "wired into .github/workflows/ci.yml"
+                }
+              ],
+              "consequence": "If .github/workflows/ci.yml no longer exists or no longer wires this harness, the premise has decayed.",
+              "reportedConfidence": 0.88
+            },
+            {
+              "claim": "ADR 0028 treats .github/workflows/ci.yml as a live file path containing the deploy job.",
+              "citations": [
+                {
+                  "document": "0028-master-auto-deploy-no-seed-migration-order.md",
+                  "quote": "Make master auto-deploy through a deploy job in .github/workflows/ci.yml that runs npm run deploy"
+                }
+              ],
+              "consequence": "If .github/workflows/ci.yml no longer exists or the deploy job has moved, the premise has decayed.",
+              "reportedConfidence": 0.88
+            },
+            {
+              "claim": "ADR 0029 treats SEED.md as a live file path documenting the honesty trail for OFL stand-ins.",
+              "citations": [
+                {
+                  "document": "0029-launch-wall-ofl-standins-no-fake-makers.md",
+                  "quote": "documenting the honesty trail in SEED.md"
+                }
+              ],
+              "consequence": "If SEED.md no longer exists at that path, this concrete premise has decayed.",
+              "reportedConfidence": 0.85
+            },
+            {
+              "claim": "ADR 0030 treats docs/superpowers/specs/2026-06-28-connected-cursive-design.md as a live spec file path.",
+              "citations": [
+                {
+                  "document": "0030-connect-mode-staged-two-stage.md",
+                  "quote": "Specs: docs/superpowers/specs/2026-06-28-connected-cursive-design.md 'Goal and success bar (staged)' and 'UX and trigger'"
+                }
+              ],
+              "consequence": "If this spec file no longer exists at that path, this concrete premise has decayed.",
+              "reportedConfidence": 0.85
+            },
+            {
+              "claim": "ADR 0035 treats src/lib/maker.ts as a live file path implementing connectGlyphs, faceMetrics, joinClass, anchorAdvance, buildFont branch, editMonoRow, makeTemplateSheet.",
+              "citations": [
+                {
+                  "document": "0035-connect-no-engine-files-pure-core-tests.md",
+                  "quote": "Implementation lives in src/lib/maker.ts (connectGlyphs, faceMetrics, joinClass, anchorAdvance, buildFont branch, editMonoRow threading, makeTemplateSheet guide)"
+                }
+              ],
+              "consequence": "If src/lib/maker.ts no longer exists or these functions have moved, the concrete premise has decayed.",
+              "reportedConfidence": 0.9
+            },
+            {
+              "claim": "ADR 0036 treats public/assets/vendor/font-engine-gsub.js as a live file path implementing GSUB calt logic.",
+              "citations": [
+                {
+                  "document": "0036-natural-variation-gsub-calt-palette.md",
+                  "quote": "`src/lib/maker.ts` mergeVariantSheets/connectGlyphs; `public/assets/vendor/font-engine-gsub.js`."
+                }
+              ],
+              "consequence": "If public/assets/vendor/font-engine-gsub.js no longer exists at that path, the premise has decayed.",
+              "reportedConfidence": 0.88
+            },
+            {
+              "claim": "ADR 0039 treats src/lib/maker.ts:2013 as a live path/location shipping features kerning:true + connectKern.",
+              "citations": [
+                {
+                  "document": "0039-connect-ships-gpos-kern-supersedes-0032.md",
+                  "quote": "At\nsrc/lib/maker.ts:2013 the connect build ships:"
+                }
+              ],
+              "consequence": "If src/lib/maker.ts no longer contains this code at or near that location, the premise has decayed and the ADR's factual anchor needs reconfirmation.",
+              "reportedConfidence": 0.85
+            },
+            {
+              "claim": "ADR 0040 treats font-engine-autokern.js as a live vendored file implementing analyzeConnectKern and related floors.",
+              "citations": [
+                {
+                  "document": "0040-contextual-connect-kern-parked-needs-assembled-feedback.md",
+                  "quote": "The connect-kern internals: `analyzeConnectKern` targetGap =\nmin(median bodyAvg, 0.08·xh), the ±650 clamp, and the collision/body floors at\nfont-engine-autokern.js."
+                }
+              ],
+              "consequence": "If font-engine-autokern.js no longer exists at that path, this concrete premise has decayed.",
+              "reportedConfidence": 0.85
+            },
+            {
+              "claim": "ADR 0041 treats docs/superpowers/specs/2026-07-01-connection-point-spec.md as a live spec file path.",
+              "citations": [
+                {
+                  "document": "0041-connect-rhythm-in-placement-not-kern-densebody-parked.md",
+                  "quote": "Scoped as its own milestone in\n`docs/superpowers/specs/2026-07-01-connection-point-spec.md`."
+                }
+              ],
+              "consequence": "If this spec file no longer exists at that path, this concrete premise has decayed.",
+              "reportedConfidence": 0.85
+            },
+            {
+              "claim": "ADR 0046 treats test/maker-connect.test.ts and e2e/variation.spec.ts (in ADR 0047) as live test file paths; specifically ADR 0047 names these.",
+              "citations": [
+                {
+                  "document": "0047-variation-build-mode-boundary-not-registration.md",
+                  "quote": "**Palette e2e** (`e2e/variation.spec.ts`)"
+                },
+                {
+                  "document": "0047-variation-build-mode-boundary-not-registration.md",
+                  "quote": "**Unit test** (`test/maker-connect.test.ts`)"
+                }
+              ],
+              "consequence": "If either test file no longer exists at that path, the regression-protection premise recorded has decayed.",
+              "reportedConfidence": 0.85
+            },
+            {
+              "claim": "ADR 0051 treats e2e-corpus/corpus.spec.ts as a live file path implementing the sensor functions shapeSeamRuns and senseSeams.",
+              "citations": [
+                {
+                  "document": "0051-assembled-pair-seam-sensor-corpus-rollout.md",
+                  "quote": "Sensor source: e2e-corpus/corpus.spec.ts (`shapeSeamRuns`,\n`senseSeams`)."
+                }
+              ],
+              "consequence": "If e2e-corpus/corpus.spec.ts no longer exists at that path, this concrete premise has decayed.",
+              "reportedConfidence": 0.88
+            },
+            {
+              "claim": "ADR 0052 treats src/lib/maker.ts (senseBuiltSeams, seamVerdict, decideSeamDrops) and test/seam-feedback.test.ts / test/maker-connect.test.ts as live file paths.",
+              "citations": [
+                {
+                  "document": "0052-assembled-seam-feedback-pass-losers-park-themselves.md",
+                  "quote": "Sensor source: src/lib/maker.ts (senseBuiltSeams, seamVerdict,\ndecideSeamDrops); tests: test/seam-feedback.test.ts,\ntest/maker-connect.test.ts (the dropExits park)."
+                }
+              ],
+              "consequence": "If these files/functions no longer exist at these paths, the premise has decayed.",
+              "reportedConfidence": 0.88
+            }
+          ]
+        },
+        "caller": {
+          "type": "direct"
+        }
+      }
+    ],
+    "stop_reason": "tool_use",
+    "stop_sequence": null,
+    "stop_details": null,
+    "usage": {
+      "input_tokens": 62128,
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 2515,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 0
+      },
+      "output_tokens": 4805,
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      },
+      "service_tier": "standard",
+      "inference_geo": "global"
+    }
+  }
+}

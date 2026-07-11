@@ -1,0 +1,380 @@
+{
+  "schemaVersion": 1,
+  "key": {
+    "backend": "api",
+    "model": "claude-sonnet-5",
+    "effort": "high",
+    "checkId": "S5",
+    "promptHash": "997822bc79830d5a55ee1a66f01c3c548509f65cc5a04effe471657b1372d27b"
+  },
+  "recordedAt": "2026-07-11T13:55:51.751Z",
+  "requestDigest": "997822bc79830d5a55ee1a66f01c3c548509f65cc5a04effe471657b1372d27b",
+  "response": {
+    "model": "claude-sonnet-5",
+    "id": "msg_011CcvPFMNxm25itqLR5Fkdz",
+    "type": "message",
+    "role": "assistant",
+    "content": [
+      {
+        "type": "tool_use",
+        "id": "toolu_01WqGVsQBajHk3DR9tb7viFs",
+        "name": "report_findings",
+        "input": {
+          "findings": [
+            {
+              "claim": "ADR-001 treats the SDKv2 VM resource path `proxmoxtf/resource/vm` as a live, currently-present premise in its migration priority list.",
+              "citations": [
+                {
+                  "document": "001-use-plugin-framework.md",
+                  "quote": "1. VM (`proxmoxtf/resource/vm`)"
+                }
+              ],
+              "consequence": "If this path no longer exists in the repository (e.g. already migrated or restructured), the migration priority section is stale and should be revisited.",
+              "reportedConfidence": 0.85
+            },
+            {
+              "claim": "ADR-001 treats the SDKv2 Container resource path `proxmoxtf/resource/container` as a live, currently-present premise in its migration priority list.",
+              "citations": [
+                {
+                  "document": "001-use-plugin-framework.md",
+                  "quote": "2. Container (`proxmoxtf/resource/container`)"
+                }
+              ],
+              "consequence": "If this path no longer exists in the repository, the migration priority section is stale and should be revisited.",
+              "reportedConfidence": 0.85
+            },
+            {
+              "claim": "ADR-001 treats the multiplexer package `tf6muxserver` as a currently-used live dependency enabling dual-framework serving.",
+              "citations": [
+                {
+                  "document": "001-use-plugin-framework.md",
+                  "quote": "The provider currently uses a multiplexer (`tf6muxserver`) to serve both SDKv2 and Framework resources from a single binary, allowing gradual migration."
+                }
+              ],
+              "consequence": "If this package is no longer used/present in the manifest, the stated architecture premise has decayed.",
+              "reportedConfidence": 0.6
+            },
+            {
+              "claim": "ADR-001 names the SDKv2 helper/schema import path as a live premise contributors must avoid, implying it is currently importable/present.",
+              "citations": [
+                {
+                  "document": "001-use-plugin-framework.md",
+                  "quote": "Importing `github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema` in new code"
+                }
+              ],
+              "consequence": "If this dependency is no longer in the module graph, the warning is moot and the record has decayed.",
+              "reportedConfidence": 0.55
+            },
+            {
+              "claim": "ADR-001 names the Framework schema import path as a live, currently-used dependency to be used instead of SDKv2.",
+              "citations": [
+                {
+                  "document": "001-use-plugin-framework.md",
+                  "quote": "use `github.com/hashicorp/terraform-plugin-framework/resource/schema` instead"
+                }
+              ],
+              "consequence": "If this package path changed or is no longer the recommended import, the premise has decayed.",
+              "reportedConfidence": 0.55
+            },
+            {
+              "claim": "ADR-001 treats `fwprovider/provider.go` as a live file where new resources/data sources are currently registered.",
+              "citations": [
+                {
+                  "document": "001-use-plugin-framework.md",
+                  "quote": "Resources are registered in `fwprovider/provider.go` via `Resources()` and `DataSources()` methods"
+                }
+              ],
+              "consequence": "If this file has moved or been renamed, the registration guidance is stale.",
+              "reportedConfidence": 0.7
+            },
+            {
+              "claim": "ADR-001 treats `fwprovider/test/` as a live path currently holding shared test utilities.",
+              "citations": [
+                {
+                  "document": "001-use-plugin-framework.md",
+                  "quote": "acceptance tests colocated with resource; shared test utilities in `fwprovider/test/`"
+                }
+              ],
+              "consequence": "If this path no longer exists, the testing guidance is stale.",
+              "reportedConfidence": 0.6
+            },
+            {
+              "claim": "ADR-002 treats `proxmox/api/client.go` as a live file implementing the base HTTP client.",
+              "citations": [
+                {
+                  "document": "002-api-client-structure.md",
+                  "quote": "### Layer 1: Base API Client (`proxmox/api/client.go`)"
+                }
+              ],
+              "consequence": "If this file no longer exists at this path, the layered architecture description is stale.",
+              "reportedConfidence": 0.7
+            },
+            {
+              "claim": "ADR-002 treats `proxmox/client.go` as a live file implementing the top-level client.",
+              "citations": [
+                {
+                  "document": "002-api-client-structure.md",
+                  "quote": "### Layer 2: Top-Level Client (`proxmox/client.go`)"
+                }
+              ],
+              "consequence": "If this file no longer exists at this path, the architecture description is stale.",
+              "reportedConfidence": 0.7
+            },
+            {
+              "claim": "ADR-002 treats `proxmox/cluster/client.go` as a live file example for a domain client.",
+              "citations": [
+                {
+                  "document": "002-api-client-structure.md",
+                  "quote": "proxmox/cluster/client.go` — Example domain client"
+                }
+              ],
+              "consequence": "If this file has moved, the example reference is stale.",
+              "reportedConfidence": 0.6
+            },
+            {
+              "claim": "ADR-002 treats `proxmox/nodes/client.go` as a live file example for a domain client with a node parameter.",
+              "citations": [
+                {
+                  "document": "002-api-client-structure.md",
+                  "quote": "proxmox/nodes/client.go` — Example with node parameter"
+                }
+              ],
+              "consequence": "If this file has moved, the example reference is stale.",
+              "reportedConfidence": 0.6
+            },
+            {
+              "claim": "ADR-002 treats the `go-querystring` package as a live, currently-used dependency for URL encoding behavior.",
+              "citations": [
+                {
+                  "document": "002-api-client-structure.md",
+                  "quote": "The `comma` modifier makes `go-querystring` serialize as a single `delete=field1,field2` parameter"
+                }
+              ],
+              "consequence": "If this package is no longer a dependency (replaced by another encoder), the described serialization behavior premise has decayed.",
+              "reportedConfidence": 0.6
+            },
+            {
+              "claim": "ADR-003 treats `fwprovider/provider.go` as a live file where resources/data sources are currently registered.",
+              "citations": [
+                {
+                  "document": "003-resource-file-organization.md",
+                  "quote": "New resources and data sources must be registered in `fwprovider/provider.go`:"
+                }
+              ],
+              "consequence": "If this file no longer exists at this path, the registration instructions are stale.",
+              "reportedConfidence": 0.7
+            },
+            {
+              "claim": "ADR-003 treats `fwprovider/test/` as a live path currently holding shared test utilities.",
+              "citations": [
+                {
+                  "document": "003-resource-file-organization.md",
+                  "quote": "Shared test utilities (provider factories, config rendering, assertion helpers) live in `fwprovider/test/`."
+                }
+              ],
+              "consequence": "If this path no longer exists, the test colocation guidance is stale.",
+              "reportedConfidence": 0.6
+            },
+            {
+              "claim": "ADR-004 treats `fwprovider/attribute/` as a live package currently providing the `attribute.ResourceID()` helper and pointer-conversion helpers.",
+              "citations": [
+                {
+                  "document": "004-schema-design-conventions.md",
+                  "quote": "Use the `attribute.ResourceID()` helper from `fwprovider/attribute/` to define the `id` attribute"
+                }
+              ],
+              "consequence": "If this package/path no longer exists, the schema guidance referencing it is stale.",
+              "reportedConfidence": 0.65
+            },
+            {
+              "claim": "ADR-004 treats `fwprovider/validators/` as a live package currently providing project-specific validators.",
+              "citations": [
+                {
+                  "document": "004-schema-design-conventions.md",
+                  "quote": "Use project-specific validators from `fwprovider/validators/` for reusable domain rules (e.g., `validators.SDNID()`)."
+                }
+              ],
+              "consequence": "If this package no longer exists, the validator guidance is stale.",
+              "reportedConfidence": 0.6
+            },
+            {
+              "claim": "ADR-004 treats `fwprovider/nodes/vm/{cpu,vga,rng}` schema packages as live paths currently carrying inherited Optional+Computed settings.",
+              "citations": [
+                {
+                  "document": "004-schema-design-conventions.md",
+                  "quote": "The current `fwprovider/nodes/vm/{cpu,vga,rng}` schemas carry `Optional+Computed` inherited from the SDK"
+                }
+              ],
+              "consequence": "If these packages have since been refactored or moved, the conformance note is stale.",
+              "reportedConfidence": 0.6
+            },
+            {
+              "claim": "ADR-004 treats `fwprovider/nodes/vm/memory/model.go` as a live file serving as the reference for the write-through toAPI variant.",
+              "citations": [
+                {
+                  "document": "004-schema-design-conventions.md",
+                  "quote": "See `fwprovider/nodes/vm/memory/model.go` for the reference."
+                }
+              ],
+              "consequence": "If this file no longer exists at this path, the reference example is stale.",
+              "reportedConfidence": 0.65
+            },
+            {
+              "claim": "ADR-004 treats `fwprovider/types/stringset/` as a live package implementing the `stringset.Value` custom type.",
+              "citations": [
+                {
+                  "document": "004-schema-design-conventions.md",
+                  "quote": "| `stringset.Value`         | `fwprovider/types/stringset/` | Comma-separated list attributes (e.g., node lists) |"
+                }
+              ],
+              "consequence": "If this package no longer exists at this path, the custom types table is stale.",
+              "reportedConfidence": 0.6
+            },
+            {
+              "claim": "ADR-004 treats `fwprovider/types/` as a live package implementing `customtypes.IPAddrValue` and `customtypes.IPCIDRValue`.",
+              "citations": [
+                {
+                  "document": "004-schema-design-conventions.md",
+                  "quote": "| `customtypes.IPAddrValue` | `fwprovider/types/`           | IP address validation                              |"
+                }
+              ],
+              "consequence": "If this package no longer exists at this path, the custom types table is stale.",
+              "reportedConfidence": 0.6
+            },
+            {
+              "claim": "ADR-005 treats `proxmox/nodes/tasks/task_result.go` as the live file implementing `TaskResult.AddDiags`/`AddDiagsAsWarnings`.",
+              "citations": [
+                {
+                  "document": "005-error-handling.md",
+                  "quote": "(`proxmox/nodes/tasks/task_result.go`) pass `summary` straight through to `diags.AddError` / `AddWarning`"
+                }
+              ],
+              "consequence": "If this file no longer exists at this path, the task diagnostics guidance is stale.",
+              "reportedConfidence": 0.65
+            },
+            {
+              "claim": "ADR-005 treats `proxmox/retry/` as the live package centralizing retry logic with named constructors.",
+              "citations": [
+                {
+                  "document": "005-error-handling.md",
+                  "quote": "Retry logic is centralized in the `proxmox/retry/` package, which provides three operation constructors:"
+                }
+              ],
+              "consequence": "If this package no longer exists at this path, the retry policy documentation is stale.",
+              "reportedConfidence": 0.65
+            },
+            {
+              "claim": "ADR-005 treats `proxmox/nodes/ceph/pool/` (specifically `isUnrecognizedPoolErr`) as a live reference implementation for domain-specific not-found translation.",
+              "citations": [
+                {
+                  "document": "005-error-handling.md",
+                  "quote": "see `isUnrecognizedPoolErr` in `proxmox/nodes/ceph/pool/` for the reference."
+                }
+              ],
+              "consequence": "If this function/path no longer exists, the reference example is stale.",
+              "reportedConfidence": 0.6
+            },
+            {
+              "claim": "ADR-005 treats `proxmox/api/errors.go` as the live file defining sentinel errors.",
+              "citations": [
+                {
+                  "document": "005-error-handling.md",
+                  "quote": "`proxmox/api/errors.go` — sentinel error definitions"
+                }
+              ],
+              "consequence": "If this file no longer exists at this path, the references section is stale.",
+              "reportedConfidence": 0.65
+            },
+            {
+              "claim": "ADR-005 treats `proxmox/api/client.go` as the live file implementing HTTP error wrapping.",
+              "citations": [
+                {
+                  "document": "005-error-handling.md",
+                  "quote": "`proxmox/api/client.go` — HTTP error wrapping"
+                }
+              ],
+              "consequence": "If this file no longer exists at this path, the references section is stale.",
+              "reportedConfidence": 0.65
+            },
+            {
+              "claim": "ADR-005 names `proxmox_acme_dns_plugin` as the canonical live implementation reference for write-only attributes.",
+              "citations": [
+                {
+                  "document": "004-schema-design-conventions.md",
+                  "quote": "See `proxmox_acme_dns_plugin` for the canonical implementation."
+                }
+              ],
+              "consequence": "If this resource type no longer exists under this name, the reference example is stale.",
+              "reportedConfidence": 0.55
+            },
+            {
+              "claim": "ADR-008 treats `fwprovider/nodes/vm/cpu/` as the live single-nested reference implementation package.",
+              "citations": [
+                {
+                  "document": "008-sub-block-contract.md",
+                  "quote": "`fwprovider/nodes/vm/cpu/` — single-nested reference implementation"
+                }
+              ],
+              "consequence": "If this package no longer exists at this path, the reference implementation pointer is stale.",
+              "reportedConfidence": 0.65
+            },
+            {
+              "claim": "ADR-008 treats `fwprovider/nodes/vm/cdrom/` as the live map-keyed reference implementation package.",
+              "citations": [
+                {
+                  "document": "008-sub-block-contract.md",
+                  "quote": "`fwprovider/nodes/vm/cdrom/` — map-keyed reference implementation"
+                }
+              ],
+              "consequence": "If this package no longer exists at this path, the reference implementation pointer is stale.",
+              "reportedConfidence": 0.65
+            },
+            {
+              "claim": "ADR-008 treats `fwprovider/attribute/attribute.go` as the live file defining the named attribute helpers (StringPtrFromValue, CheckDeleteBody, DeleteAppender, IsDefined, etc.).",
+              "citations": [
+                {
+                  "document": "008-sub-block-contract.md",
+                  "quote": "`fwprovider/attribute/attribute.go` — `StringPtrFromValue`, `Int64PtrFromValue`, `Float64PtrFromValue`, `CustomBoolPtrFromValue`, `CheckDelete`, `CheckDeleteBody`, `DeleteAppender`, `IsDefined`"
+                }
+              ],
+              "consequence": "If this file no longer exists at this path or lacks these exports, the references section is stale.",
+              "reportedConfidence": 0.6
+            },
+            {
+              "claim": "ADR-008 treats `utils/maps.go` as the live file providing `MapDiff` for map-keyed update diffs.",
+              "citations": [
+                {
+                  "document": "008-sub-block-contract.md",
+                  "quote": "`utils/maps.go` — `MapDiff` for map-keyed update diff"
+                }
+              ],
+              "consequence": "If this file no longer exists at this path, the reference is stale.",
+              "reportedConfidence": 0.6
+            }
+          ]
+        },
+        "caller": {
+          "type": "direct"
+        }
+      }
+    ],
+    "stop_reason": "tool_use",
+    "stop_sequence": null,
+    "stop_details": null,
+    "usage": {
+      "input_tokens": 41287,
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 2515,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 0
+      },
+      "output_tokens": 4725,
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      },
+      "service_tier": "standard",
+      "inference_geo": "global"
+    }
+  }
+}

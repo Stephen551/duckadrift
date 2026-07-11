@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "key": {
+    "backend": "api",
+    "model": "claude-sonnet-5",
+    "effort": "high",
+    "checkId": "S1",
+    "promptHash": "cc1b3cede6dfe0ff0d68d840f4a2b3bbe87cce9e921c45c639956fb7c8cc6303"
+  },
+  "recordedAt": "2026-07-11T13:56:00.301Z",
+  "requestDigest": "cc1b3cede6dfe0ff0d68d840f4a2b3bbe87cce9e921c45c639956fb7c8cc6303",
+  "response": {
+    "model": "claude-sonnet-5",
+    "id": "msg_011CcvPHyeaw3URTfXiuTug3",
+    "type": "message",
+    "role": "assistant",
+    "content": [
+      {
+        "type": "tool_use",
+        "id": "toolu_01N4ZhK5PD4idZc5b9rnGEW1",
+        "name": "report_findings",
+        "input": {
+          "findings": [
+            {
+              "claim": "ADR 012 (One cluster for dev/staging/prod) requires a single Kubernetes cluster hosting all workload types with namespace-based partitioning, while ADR 036 (Multi-cluster) and ADR 048 (Per Business Unit Clusters) require splitting workloads across multiple separate clusters by environment type and business unit. Both records are marked Accepted, and their core infrastructure requirements (one cluster vs many clusters) are mutually exclusive for the same codebase/platform at the same time.",
+              "citations": [
+                {
+                  "document": "012-One-cluster-for-dev-staging-prod.md",
+                  "quote": "After consideration of the pros and cons of each approach we went with one cluster, using namespaces to partition different workloads."
+                },
+                {
+                  "document": "048-per-business-unit-clusters.md",
+                  "quote": "We will give a non-live and a live cluster for each business unit."
+                }
+              ],
+              "consequence": "A maintainer reading the live decision log would be told simultaneously to run one cluster for all workloads and to run separate clusters per business unit and per environment type, which cannot both be implemented; the log needs ADR 012 marked Superseded (as ADR 036 already claims to move on from it) to remove the contradiction.",
+              "reportedConfidence": 0.35
+            }
+          ]
+        },
+        "caller": {
+          "type": "direct"
+        }
+      }
+    ],
+    "stop_reason": "tool_use",
+    "stop_sequence": null,
+    "stop_details": null,
+    "usage": {
+      "input_tokens": 35085,
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 2390,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 0
+      },
+      "output_tokens": 452,
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      },
+      "service_tier": "standard",
+      "inference_geo": "global"
+    }
+  }
+}

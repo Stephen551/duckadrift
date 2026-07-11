@@ -1,0 +1,69 @@
+{
+  "schemaVersion": 1,
+  "key": {
+    "backend": "api",
+    "model": "claude-sonnet-5",
+    "effort": "high",
+    "checkId": "S4",
+    "promptHash": "9638d5891183bc69565adcd2eea2bc85d710d6040160b6e4f9f89171f599a8e0"
+  },
+  "recordedAt": "2026-07-11T13:55:16.706Z",
+  "requestDigest": "9638d5891183bc69565adcd2eea2bc85d710d6040160b6e4f9f89171f599a8e0",
+  "response": {
+    "model": "claude-sonnet-5",
+    "id": "msg_011CcvPEciAtPspzwfKr2iY6",
+    "type": "message",
+    "role": "assistant",
+    "content": [
+      {
+        "type": "tool_use",
+        "id": "toolu_01Jzg8B1ZdpgP1cnBdzcPgnw",
+        "name": "report_findings",
+        "input": {
+          "findings": [
+            {
+              "claim": "The cpu.cores/cpu.sockets Optional+Computed carve-out question is raised and resolved (abandoned) consistently across ADR-004 and ADR-008, and the broader cpu/vga/rng conformance work is tracked as ongoing under issue #1231 without any ADR closing it out — three Accepted records (001-related framework migration umbrella, 004, and 008) each touch the same unresolved primitive of which VM sub-block fields should be Optional-only vs Optional+Computed, and none of them records the conformance work as done.",
+              "citations": [
+                {
+                  "document": "004-schema-design-conventions.md",
+                  "quote": "conformance — dropping `Computed` from all `cpu`/`vga`/`rng`/`memory` attributes — is tracked under [#1231](https://github.com/bpg/terraform-provider-proxmox/issues/1231). The originally-proposed `Optional+Computed` carve-out on `cpu.cores`/`cpu.sockets` was abandoned after empirical testing showed PVE does not auto-populate those keys on Read."
+                },
+                {
+                  "document": "008-sub-block-contract.md",
+                  "quote": "`cpu`/`vga`/`rng` schemas carry `Optional+Computed` on fields that should drop `Computed` per [ADR-004 §Provider Defaults vs PVE Defaults]"
+                },
+                {
+                  "document": "008-sub-block-contract.md",
+                  "quote": "the `cpu.cores`/`cpu.sockets` candidates for this carve-out were empirically disproved (verified under [#1231](https://github.com/bpg/terraform-provider-proxmox/issues/1231)) and the `cpu` sub-package went Optional-only on all attributes."
+                }
+              ],
+              "consequence": "Maintainers reading only the ADR log would believe the cpu/vga/rng/memory Optional+Computed-to-Optional conformance is a settled, closed matter, when in fact both ADRs point to the same still-open tracking issue (#1231) for the actual code change; a reader might close out review of this area prematurely.",
+              "reportedConfidence": 0.35
+            }
+          ]
+        },
+        "caller": {
+          "type": "direct"
+        }
+      }
+    ],
+    "stop_reason": "tool_use",
+    "stop_sequence": null,
+    "stop_details": null,
+    "usage": {
+      "input_tokens": 41287,
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 2457,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 0
+      },
+      "output_tokens": 730,
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      },
+      "service_tier": "standard",
+      "inference_geo": "global"
+    }
+  }
+}
