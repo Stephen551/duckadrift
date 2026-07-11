@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "key": {
+    "backend": "api",
+    "model": "claude-sonnet-5",
+    "effort": "high",
+    "checkId": "S1",
+    "promptHash": "b5627cbbb908e63ab2fc6212dc5eff75995952da2e50b239790fe006d1adb130"
+  },
+  "recordedAt": "2026-07-11T01:49:23.324Z",
+  "requestDigest": "b5627cbbb908e63ab2fc6212dc5eff75995952da2e50b239790fe006d1adb130",
+  "response": {
+    "model": "claude-sonnet-5",
+    "id": "msg_011CcuRsxkBu6pCKKq6uD3TR",
+    "type": "message",
+    "role": "assistant",
+    "content": [
+      {
+        "type": "tool_use",
+        "id": "toolu_01JNMtuAJZnMRJmHKhTizhrL",
+        "name": "report_findings",
+        "input": {
+          "findings": [
+            {
+              "claim": "ADR 0032 states connect mode sets features.kerning=false and ships without a GPOS kerning table, while ADR 0039 states connect mode ships kerning:true with a GPOS PairPos kern table (connectKern) — both are marked Accepted, and ADR 0039 explicitly acknowledges the disagreement and supersedes ADR 0032 only on this point rather than marking ADR 0032 as Superseded.",
+              "citations": [
+                {
+                  "document": "0032-connect-sibling-of-trim-mutually-exclusive.md",
+                  "quote": "set features.kerning=false (changing the previously hardcoded {kerning:true}) and keep opticalSidebearings:false"
+                },
+                {
+                  "document": "0039-connect-ships-gpos-kern-supersedes-0032.md",
+                  "quote": "Connect mode ships a GPOS PairPos kern table via `kerning:true` and `connectKern:{}`.\n**ADR 0032 is superseded on its kerning point only**"
+                }
+              ],
+              "consequence": "A maintainer reading the ADR log at face value would find two Accepted records making opposite claims about whether connect mode emits a GPOS kern table; because ADR 0032's status field was never changed to Superseded, tooling or readers that filter by status alone will treat both as currently binding, risking a revert of kerning:true if ADR 0032 is followed literally.",
+              "reportedConfidence": 0.72
+            }
+          ]
+        },
+        "caller": {
+          "type": "direct"
+        }
+      }
+    ],
+    "stop_reason": "tool_use",
+    "stop_sequence": null,
+    "stop_details": null,
+    "usage": {
+      "input_tokens": 62128,
+      "cache_creation_input_tokens": 2390,
+      "cache_read_input_tokens": 0,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 2390,
+        "ephemeral_1h_input_tokens": 0
+      },
+      "output_tokens": 500,
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      },
+      "service_tier": "standard",
+      "inference_geo": "global"
+    }
+  }
+}
