@@ -57,7 +57,7 @@ function looksLikePath(token: string): boolean {
 }
 
 /** Every package.json at and under repoRoot, containment-safe and defensively parsed. */
-function repoDependencyNames(ctx: AdrLogContext): Set<string> {
+function repoDependencyNames(ctx: Pick<AdrLogContext, "repoRoot">): Set<string> {
   const names = new Set<string>();
   for (const file of walkRepoFiles(ctx.repoRoot)) {
     if (basename(file.relativePath) !== "package.json") continue;
@@ -125,4 +125,21 @@ export function confirmDeadPremise(finding: Tier1Finding, ctx: AdrLogContext): P
     return { dead: false, reason: "referent-present" };
   }
   return { dead: false, reason: "no-concrete-referent" };
+}
+
+/**
+ * Whether ONE named referent is absent from a repository root — the EXACT
+ * existence checks the confirmation above runs, exported so the M4.3 labeling
+ * annotation can probe the same referent against a second tree (committed vs
+ * live disk) without duplicating the logic. Off every verdict path: only the
+ * review-generation tooling calls this.
+ */
+export function referentAbsent(
+  referent: { kind: "dependency" | "path"; value: string },
+  repoRoot: string
+): boolean {
+  if (referent.kind === "path") {
+    return resolveWithinRepo(repoRoot, referent.value, repoRoot) === undefined;
+  }
+  return !repoDependencyNames({ repoRoot }).has(referent.value);
 }

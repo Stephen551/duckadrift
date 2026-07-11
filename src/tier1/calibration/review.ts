@@ -26,6 +26,8 @@ export interface ReviewFinding {
   repo?: string;
   /** Optional display context: "whole-log" or "diff <sha12>". Display-only. */
   sourceKind?: string;
+  /** Optional machine annotations (M4.3, S5 only): per-referent existence probes so the labeler's pass is agree/override, not filesystem work. Display-only — the parser reads none of it; the label stays the human's. */
+  machineNotes?: string[];
 }
 
 export interface GenerateReviewOptions {
@@ -92,6 +94,7 @@ export function generateReview(
     lines.push(`claim: ${oneLine(f.claim)}`);
     lines.push("evidence:");
     for (const c of f.citations) lines.push(`> ${oneLine(c.quote)} — ${c.document}`);
+    for (const note of f.machineNotes ?? []) lines.push(`machine: ${oneLine(note)}`);
     lines.push("label: ____");
     lines.push("");
   });

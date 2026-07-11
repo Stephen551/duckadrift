@@ -29,6 +29,7 @@ const { TIER1_CHECKS } = await import(pathToFileURL(join(DIST, "tier1/checks.js"
 const { loadRecording } = await import(pathToFileURL(join(DIST, "tier1/recording.js")));
 const { generateReview } = await import(pathToFileURL(join(DIST, "tier1/calibration/review.js")));
 const { deriveFindingSeverity } = await import(pathToFileURL(join(DIST, "tier1/calibration/severity.js")));
+const { confirmDeadPremise, referentAbsent } = await import(pathToFileURL(join(DIST, "tier1/confirm-premise.js")));
 
 // wholeLog is 28, not the yield table's original 27: the director's M4.3 ruling
 // fixed the S5 confirmation context as the COMMITTED tree at the captured SHA
@@ -68,7 +69,15 @@ not an inconvenience.`;
 const git = (cwd, a) => execFileSync("git", a, { cwd, encoding: "utf-8", maxBuffer: 64 * 1024 * 1024 });
 
 const { values } = parseArgs({
-  options: { manifest: { type: "string" }, harvest: { type: "string" } },
+  options: {
+    manifest: { type: "string" },
+    harvest: { type: "string" },
+    // --only private regenerates ONLY the private file (e.g. adding S5 machine
+    // annotations without touching the committed REVIEW-public.md's bytes).
+    only: { type: "string" },
+    // --stamp pins the header timestamp for a targeted regeneration.
+    stamp: { type: "string" },
+  },
 });
 if (!values.manifest || !values.harvest) {
   console.error("generate-corpus-review: --manifest and --harvest are required.");
@@ -78,8 +87,8 @@ const manifest = JSON.parse(readFileSync(resolve(values.manifest), "utf-8"));
 const harvest = JSON.parse(readFileSync(resolve(values.harvest), "utf-8"));
 mkdirSync(WT, { recursive: true });
 
-/** Replays one recording in a prepared ctx and returns ReviewFinding[] for its accepted findings. */
-async function replayToReviewFindings(ctx, recordingPath, relPath, repoLabel, sourceKind, adrsByFileName) {
+/** Replays one recording in a prepared ctx and returns ReviewFinding[] for its accepted findings. `annotate(finding)` may return machine-note strings (M4.3: private S5 only). */
+async function replayToReviewFindings(ctx, recordingPath, relPath, repoLabel, sourceKind, adrsByFileName, annotate) {
   const checkId = loadRecording(recordingPath).key.checkId;
   const check = TIER1_CHECKS.find((c) => c.id === checkId);
   const r = await runTier1Checks(ctx, [check], replayTransport(recordingPath));
@@ -95,7 +104,33 @@ async function replayToReviewFindings(ctx, recordingPath, relPath, repoLabel, so
     source: { recordingPath: relPath, findingIndex: index },
     repo: repoLabel,
     sourceKind,
+    ...(annotate ? { machineNotes: annotate(finding) } : {}),
   }));
+}
+
+/**
+ * The S5 machine annotation (M4.3): the same existence logic the deterministic
+ * confirmation runs, probed against BOTH trees, so the director's S5 pass is
+ * agree/override rather than filesystem work. A referent PRESENT on the live
+ * disk (the untracked-artifact class) is flagged loudly — likely label: false.
+ * Human ground-truth checks (S1/S3/S4) are never annotated.
+ */
+function s5MachineAnnotator(committedCtx, sha12, liveRoot) {
+  return (finding) => {
+    const verdict = confirmDeadPremise(finding, committedCtx);
+    if (!verdict.dead) {
+      // Unreachable for an accepted S5 finding; if it happens, say so rather than guess.
+      return [`confirmation disagreed on re-run (${verdict.reason}) — treat manually`];
+    }
+    const { kind, value } = verdict.referent;
+    const absentLive = referentAbsent(verdict.referent, liveRoot);
+    const liveDesc =
+      kind === "path"
+        ? `${absentLive ? "absent" : "PRESENT"} on live disk at ${liveRoot}/${value}`
+        : `${absentLive ? "absent from every package.json manifest" : "PRESENT in a package.json manifest"} on live disk at ${liveRoot}`;
+    const loud = absentLive ? "" : " ⚠ VERIFY — likely label: false (untracked-artifact class)";
+    return [`${value} (${kind}) — absent from committed tree @ ${sha12}; ${liveDesc}${loud}`];
+  };
 }
 
 const bySide = { public: [], private: [] };
@@ -127,8 +162,16 @@ for (const spec of manifest) {
       const ctx = loadAdrLog(wt, undefined, spec.adrDir ?? undefined);
       const adrsByFileName = new Map(ctx.adrs.map((a) => [a.fileName, a]));
       for (const f of wholeLogRecordings) {
+        // Private S5 gets the machine annotation; S1/S3/S4 stay unassisted
+        // (human ground truth by design), as does the public side (no S5
+        // findings exist there, and the rule is check-scoped anyway).
+        const isS5 = /(^|\/)s5\.recording\.json$/i.test(f);
+        const annotate =
+          spec.side === "private" && isS5
+            ? s5MachineAnnotator(ctx, spec.capturedHead, resolve(spec.root))
+            : undefined;
         const found = await replayToReviewFindings(
-          ctx, join(repoDir, f), `${spec.side}/${spec.label}/${f}`, spec.label, "whole-log", adrsByFileName
+          ctx, join(repoDir, f), `${spec.side}/${spec.label}/${f}`, spec.label, "whole-log", adrsByFileName, annotate
         );
         wholeLogAccepted += found.length;
         bySide[spec.side].push(...found);
@@ -189,13 +232,17 @@ const corpusComparator = (a, b) => {
   return a.source.findingIndex - b.source.findingIndex;
 };
 
-const generatedAt = new Date().toISOString();
-const publicMd = generateReview(bySide.public, generatedAt, { preamble: RUBRIC, comparator: corpusComparator });
-const privateMd = generateReview(bySide.private, generatedAt, { preamble: RUBRIC, comparator: corpusComparator });
-writeFileSync(resolve("calibration-corpus", "REVIEW-public.md"), publicMd, "utf-8");
-mkdirSync(resolve("calibration-corpus", "private"), { recursive: true });
-writeFileSync(resolve("calibration-corpus", "private", "REVIEW-private.md"), privateMd, "utf-8");
+const generatedAt = values.stamp ?? new Date().toISOString();
+if (values.only === undefined || values.only === "public") {
+  const publicMd = generateReview(bySide.public, generatedAt, { preamble: RUBRIC, comparator: corpusComparator });
+  writeFileSync(resolve("calibration-corpus", "REVIEW-public.md"), publicMd, "utf-8");
+}
+if (values.only === undefined || values.only === "private") {
+  const privateMd = generateReview(bySide.private, generatedAt, { preamble: RUBRIC, comparator: corpusComparator });
+  mkdirSync(resolve("calibration-corpus", "private"), { recursive: true });
+  writeFileSync(resolve("calibration-corpus", "private", "REVIEW-private.md"), privateMd, "utf-8");
+}
 
 console.log(
-  `REVIEW-public.md: ${bySide.public.length} finding(s); REVIEW-private.md: ${bySide.private.length} finding(s); total ${bySide.public.length + bySide.private.length} (${wholeLogAccepted} whole-log + ${diffAccepted} diff) — matches the yield tables.`
+  `${values.only === "private" ? "(public untouched) " : ""}REVIEW-public: ${bySide.public.length} finding(s); REVIEW-private: ${bySide.private.length} finding(s); total ${bySide.public.length + bySide.private.length} (${wholeLogAccepted} whole-log + ${diffAccepted} diff) — matches the yield tables.`
 );
