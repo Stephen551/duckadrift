@@ -1,0 +1,100 @@
+{
+  "entries": [
+    {
+      "corpusHash": "33e0192d62615014d8d1aaff0d1aeb9601d5a34a5e89a1f8b32f3d84705e37a3",
+      "generatedAt": "2026-07-10T00:00:00.000Z",
+      "key": {
+        "backend": "api",
+        "effort": "medium",
+        "model": "claude-sonnet-5"
+      },
+      "perSeverity": {
+        "critical": {
+          "curve": [
+            {
+              "confidence": 0.92,
+              "n": 1,
+              "precision": 1,
+              "truePositives": 1,
+              "wilsonLower": 0.20654329147389294
+            },
+            {
+              "confidence": 0.88,
+              "n": 2,
+              "precision": 1,
+              "truePositives": 2,
+              "wilsonLower": 0.3423719528896193
+            },
+            {
+              "confidence": 0.8,
+              "n": 3,
+              "precision": 1,
+              "truePositives": 3,
+              "wilsonLower": 0.4384939195509822
+            }
+          ],
+          "floor": 0.75,
+          "lowerBound": 0.4384939195509822,
+          "pointPrecision": 1,
+          "sampleSize": 3,
+          "threshold": null
+        },
+        "elevated": {
+          "curve": [
+            {
+              "confidence": 0.9,
+              "n": 1,
+              "precision": 1,
+              "truePositives": 1,
+              "wilsonLower": 0.20654329147389294
+            },
+            {
+              "confidence": 0.7,
+              "n": 2,
+              "precision": 0.5,
+              "truePositives": 1,
+              "wilsonLower": 0.09452865480086611
+            }
+          ],
+          "floor": 0.9,
+          "lowerBound": 0.20654329147389294,
+          "pointPrecision": 1,
+          "sampleSize": 2,
+          "threshold": null
+        },
+        "routine": {
+          "curve": [
+            {
+              "confidence": 0.85,
+              "n": 1,
+              "precision": 1,
+              "truePositives": 1,
+              "wilsonLower": 0.20654329147389294
+            },
+            {
+              "confidence": 0.75,
+              "n": 2,
+              "precision": 1,
+              "truePositives": 2,
+              "wilsonLower": 0.3423719528896193
+            },
+            {
+              "confidence": 0.6,
+              "n": 3,
+              "precision": 0.6666666666666666,
+              "truePositives": 2,
+              "wilsonLower": 0.20765495512648788
+            }
+          ],
+          "floor": 0.95,
+          "lowerBound": 0.3423719528896193,
+          "pointPrecision": 1,
+          "sampleSize": 3,
+          "threshold": null
+        }
+      },
+      "sampleSize": 9
+    }
+  ],
+  "schemaVersion": 1
+}
