@@ -13,3 +13,10 @@ dist/
 
 # Local privacy-guard denylist — the actual forbidden names, never committed.
 .privacy-denylist.local
+
+# Private side of the calibration corpus (ADR-0040). Recordings, usage records,
+# and review files captured from the two private internal logs carry their full
+# decision-record text; they live only on the director's machine and are never
+# tracked. The public side (calibration-corpus/public/) IS committed. This rule
+# ships before the first private byte is captured, so the boundary is structural.
+/calibration-corpus/private/
