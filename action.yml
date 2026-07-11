@@ -105,10 +105,20 @@ runs:
         fi
         echo "failing-count=$FAILING" >> "$GITHUB_OUTPUT"
 
+        # The calibrated interrupt push (ADR-0042). Under the shipped
+        # calibration every channel is CLOSED, so this prints "0 interrupt(s)"
+        # and provably never invokes gh — the eventual opening is a data
+        # change, not a code change. A push failure warns and never blocks:
+        # the annex in the job summary already carries every finding.
+        if [ "${{ github.event_name }}" = "pull_request" ] && [ -f duckadrift-report.json ]; then
+          node "${{ github.action_path }}/action/emit-interrupts.mjs" duckadrift-report.json pr "${{ github.event.pull_request.number }}" || echo "::warning title=duckadrift::interrupt push failed (comment permissions?) — interrupting findings remain in the annex and the job summary."
+        fi
+
         # schedule / workflow_dispatch route findings to the tracking issue and
         # stay green — the issue IS the interrupt (PDR §2.1, ADR-0027). Those two
         # events are the only ones with a channel other than the job status.
         if { [ "${{ github.event_name }}" = "schedule" ] || [ "${{ github.event_name }}" = "workflow_dispatch" ]; } && [ -f duckadrift-report.json ]; then
+          node "${{ github.action_path }}/action/emit-interrupts.mjs" duckadrift-report.json schedule || echo "::warning title=duckadrift::interrupt push failed — interrupting findings remain in the sweep issue body."
           bash "${{ github.action_path }}/action/issue-sweep.sh" duckadrift-report.md duckadrift-report.json
           exit 0
         fi
