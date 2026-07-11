@@ -44,3 +44,4 @@ Architecture decisions for duckadrift itself, recorded in duckadrift's own vocab
 | [0038](0038-threshold-opens-on-lower-bound.md) | A threshold opens on the lower bound, never the point estimate | Accepted | elevated |
 | [0039](0039-one-status-recognizer.md) | One status recognizer — a decision's state is read the same way everywhere | Accepted | elevated |
 | [0040](0040-calibration-corpus-privacy-split.md) | The calibration corpus splits at the privacy boundary | Accepted | elevated |
+| [0041](0041-corpus-diffs-are-real.md) | The corpus diffs are real — commit history as the pull-request proxy | Accepted | elevated |

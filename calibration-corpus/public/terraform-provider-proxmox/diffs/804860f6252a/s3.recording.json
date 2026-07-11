@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "key": {
+    "backend": "api",
+    "model": "claude-sonnet-5",
+    "effort": "high",
+    "checkId": "S3",
+    "promptHash": "2391280e80959618169deccc9d37519525ce35caab0908c6113e01c442c0bb24"
+  },
+  "recordedAt": "2026-07-11T14:54:39.876Z",
+  "requestDigest": "2391280e80959618169deccc9d37519525ce35caab0908c6113e01c442c0bb24",
+  "response": {
+    "model": "claude-sonnet-5",
+    "id": "msg_011CcvTmWHJ3uAmzg5SmtpwW",
+    "type": "message",
+    "role": "assistant",
+    "content": [
+      {
+        "type": "tool_use",
+        "id": "toolu_01ELmYo9NHRyYh6AmtdzG59q",
+        "name": "report_findings",
+        "input": {
+          "findings": [
+            {
+              "claim": "go.mod adds a new direct dependency on github.com/go-git/go-git/v5 (via go.sum entries), which introduces a full git implementation into the provider — a significant new capability that would need an explanation of why the provider now needs to perform git operations.",
+              "citations": [
+                {
+                  "document": "go.sum",
+                  "quote": "github.com/go-git/go-git/v5 v5.18.0 h1:O831KI+0PR51hM2kep6T8k+w0/LIAD490gvqMCvL5hM="
+                }
+              ],
+              "consequence": "A maintainer six months from now would not know why the provider depends on a git client library, what feature relies on it, or whether it is required at runtime or only for tooling, since go.mod's require blocks do not list it directly and no decision record explains its introduction.",
+              "reportedConfidence": 0.35
+            }
+          ]
+        },
+        "caller": {
+          "type": "direct"
+        }
+      }
+    ],
+    "stop_reason": "tool_use",
+    "stop_sequence": null,
+    "stop_details": null,
+    "usage": {
+      "input_tokens": 26306,
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 2366,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 0
+      },
+      "output_tokens": 305,
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      },
+      "service_tier": "standard",
+      "inference_geo": "global"
+    }
+  }
+}
