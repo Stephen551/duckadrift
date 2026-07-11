@@ -206,8 +206,7 @@ const INTERRUPT_SEVERITIES: InterruptSeverity[] = ["critical", "elevated", "rout
  */
 export function assembleCalibrationEntry(
   labeled: readonly LabeledReviewFinding[],
-  key: CalibrationEntry["key"],
-  generatedAt: string
+  key: CalibrationEntry["key"]
 ): CalibrationEntry {
   const perSeverity = {} as CalibrationEntry["perSeverity"];
   for (const severity of INTERRUPT_SEVERITIES) {
@@ -220,7 +219,6 @@ export function assembleCalibrationEntry(
     key,
     corpusHash: corpusHash(labeled),
     sampleSize: labeled.length,
-    generatedAt,
     perSeverity,
   };
 }

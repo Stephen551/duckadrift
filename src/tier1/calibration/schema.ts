@@ -55,7 +55,9 @@ export interface CalibrationEntry {
   corpusHash: string;
   /** Total labeled findings in this entry's corpus. */
   sampleSize: number;
-  generatedAt: string; // ISO
+  // No timestamp: provenance is corpusHash + key, and a wall-clock field would
+  // make two fits on identical labeled inputs differ by bytes — spurious churn
+  // in a committed artifact (M4.3 verifier pre-check; gate: byte-stable fit).
   perSeverity: Record<InterruptSeverity, SeverityCalibration>;
   // cosmetic never interrupts (§2.5) — deliberately absent from perSeverity.
 }

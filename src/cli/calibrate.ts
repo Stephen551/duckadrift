@@ -239,7 +239,7 @@ async function executeFit(argv: string[]): Promise<number> {
         throw err;
       }
     });
-    const entry = assembleCalibrationEntry(labeled, key, new Date().toISOString());
+    const entry = assembleCalibrationEntry(labeled, key);
 
     const file = loadCalibrationFile(outPath);
     const others = file.entries.filter((e) => !sameKey(e.key, key));

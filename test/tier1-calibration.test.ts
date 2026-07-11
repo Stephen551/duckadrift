@@ -236,7 +236,7 @@ describe("corpusHash — stable regardless of finding order", () => {
 describe("assembleCalibrationEntry — cosmetic counts but never channels", () => {
   it("counts every labeled finding in sampleSize while excluding cosmetic from perSeverity", () => {
     const { labeled } = loadFixtureCorpus();
-    const entry = assembleCalibrationEntry(labeled, KEY, FIXED_ISO);
+    const entry = assembleCalibrationEntry(labeled, KEY);
     // Nine findings: one is cosmetic — in the total, absent from every channel.
     expect(entry.sampleSize).toBe(labeled.length);
     expect(Object.keys(entry.perSeverity).sort()).toEqual(["critical", "elevated", "routine"]);
@@ -249,7 +249,7 @@ describe("assembleCalibrationEntry — cosmetic counts but never channels", () =
 
   it("keeps a small corpus honest — every channel closed", () => {
     const { labeled } = loadFixtureCorpus();
-    const entry = assembleCalibrationEntry(labeled, KEY, FIXED_ISO);
+    const entry = assembleCalibrationEntry(labeled, KEY);
     expect(entry.perSeverity.critical.threshold).toBeNull();
     expect(entry.perSeverity.elevated.threshold).toBeNull();
     expect(entry.perSeverity.routine.threshold).toBeNull();
@@ -259,15 +259,15 @@ describe("assembleCalibrationEntry — cosmetic counts but never channels", () =
 describe("serialization is byte-stable against the committed golden", () => {
   it("reproduces calibration.expected.json exactly", () => {
     const { labeled } = loadFixtureCorpus();
-    const bytes = serializeCalibration({ schemaVersion: 1, entries: [assembleCalibrationEntry(labeled, KEY, FIXED_ISO)] });
+    const bytes = serializeCalibration({ schemaVersion: 1, entries: [assembleCalibrationEntry(labeled, KEY)] });
     const golden = readFileSync(join(FIXTURE, "calibration.expected.json"), "utf-8");
     expect(bytes).toBe(golden);
   });
 
   it("is idempotent across repeated serialization", () => {
     const { labeled } = loadFixtureCorpus();
-    const once = serializeCalibration({ schemaVersion: 1, entries: [assembleCalibrationEntry(labeled, KEY, FIXED_ISO)] });
-    const twice = serializeCalibration({ schemaVersion: 1, entries: [assembleCalibrationEntry(labeled, KEY, FIXED_ISO)] });
+    const once = serializeCalibration({ schemaVersion: 1, entries: [assembleCalibrationEntry(labeled, KEY)] });
+    const twice = serializeCalibration({ schemaVersion: 1, entries: [assembleCalibrationEntry(labeled, KEY)] });
     expect(once).toBe(twice);
   });
 });
@@ -385,8 +385,9 @@ describe("the calibrate CLI runs network-free end to end", () => {
       ]);
       expect(code).toBe(0);
     }
-    const strip = (s: string) => s.replace(/"generatedAt": "[^"]+"/, '"generatedAt": "T"');
-    expect(strip(readFileSync(o1, "utf-8"))).toBe(strip(readFileSync(o2, "utf-8")));
+    // Raw byte-identity — no timestamp exists to strip (M4.3 verifier
+    // pre-check: a committed artifact must not diff on every re-fit).
+    expect(readFileSync(o1, "utf-8")).toBe(readFileSync(o2, "utf-8"));
   });
 
   it("generateReview emits preamble and repo/source display lines the parser ignores (M4.3)", () => {
