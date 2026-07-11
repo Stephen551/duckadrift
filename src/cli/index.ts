@@ -8,6 +8,7 @@ import { SetupError } from "../errors.js";
 import { renderMarkdownReport } from "../report/write.js";
 import { tier1CredentialsPresent } from "../tier1/credentials.js";
 import { resolveTier1Status } from "../tier1/gate.js";
+import { executeCapture } from "./capture.js";
 import { executeReport } from "./report.js";
 
 function printUsage(): void {
@@ -105,6 +106,10 @@ async function main(): Promise<void> {
         break;
       case "report":
         await runReport(rest);
+        break;
+      case "capture":
+        // The paid capture path (ADR-0037) — never on a verdict path.
+        process.exitCode = await executeCapture(rest);
         break;
       default:
         printUsage();
