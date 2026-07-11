@@ -22,6 +22,19 @@ export interface ReviewFinding {
   citations: Array<{ quote: string; document: string }>;
   /** Deterministic ordering source — recording path then finding index within it. */
   source: { recordingPath: string; findingIndex: number };
+  /** Optional display context for corpus-scale reviews (M4.3): the repo the finding came from (genericized on the private side). Display-only — the parser reads none of it. */
+  repo?: string;
+  /** Optional display context: "whole-log" or "diff <sha12>". Display-only. */
+  sourceKind?: string;
+  /** Optional machine annotations (M4.3, S5 only): per-referent existence probes so the labeler's pass is agree/override, not filesystem work. Display-only — the parser reads none of it; the label stays the human's. */
+  machineNotes?: string[];
+}
+
+export interface GenerateReviewOptions {
+  /** Markdown block printed between the header and the first finding — the labeling rubric ships in the artifact (M4.3). */
+  preamble?: string;
+  /** Overrides the default (check, recordingPath, index) ordering — corpus-scale reviews order by (repo, sha, check, index). The chosen order is still deterministic; the parser's sequential-id rule holds either way. */
+  comparator?: (a: ReviewFinding, b: ReviewFinding) => number;
 }
 
 export interface LabeledReviewFinding {
@@ -52,8 +65,14 @@ function oneLine(text: string): string {
 }
 
 /** Emits the review markdown. `label: ____` is the unfilled slot the human replaces with `true` or `false`. */
-export function generateReview(findings: readonly ReviewFinding[], generatedAt: string): string {
-  const ordered = orderReviewFindings(findings);
+export function generateReview(
+  findings: readonly ReviewFinding[],
+  generatedAt: string,
+  options: GenerateReviewOptions = {}
+): string {
+  const ordered = options.comparator
+    ? [...findings].sort(options.comparator)
+    : orderReviewFindings(findings);
   const shortHash = corpusHashUnlabeled(ordered).slice(0, 12);
   const lines: string[] = [
     `# duckadrift calibration review — generated ${generatedAt}, corpus ${shortHash}`,
@@ -61,14 +80,21 @@ export function generateReview(findings: readonly ReviewFinding[], generatedAt: 
     `${ordered.length} finding(s). Replace each blank label slot with exactly \`true\` or \`false\` (case-sensitive).`,
     "",
   ];
+  if (options.preamble !== undefined) {
+    lines.push(options.preamble.trimEnd());
+    lines.push("");
+  }
   ordered.forEach((f, i) => {
     lines.push(`## finding ${pad3(i + 1)}`);
+    if (f.repo !== undefined) lines.push(`repo: ${f.repo}`);
+    if (f.sourceKind !== undefined) lines.push(`source: ${f.sourceKind}`);
     lines.push(`check: ${f.check}`);
     lines.push(`severity: ${f.severity}`);
     lines.push(`confidence: ${f.confidence}`);
     lines.push(`claim: ${oneLine(f.claim)}`);
     lines.push("evidence:");
     for (const c of f.citations) lines.push(`> ${oneLine(c.quote)} — ${c.document}`);
+    for (const note of f.machineNotes ?? []) lines.push(`machine: ${oneLine(note)}`);
     lines.push("label: ____");
     lines.push("");
   });
@@ -183,8 +209,7 @@ const INTERRUPT_SEVERITIES: InterruptSeverity[] = ["critical", "elevated", "rout
  */
 export function assembleCalibrationEntry(
   labeled: readonly LabeledReviewFinding[],
-  key: CalibrationEntry["key"],
-  generatedAt: string
+  key: CalibrationEntry["key"]
 ): CalibrationEntry {
   const perSeverity = {} as CalibrationEntry["perSeverity"];
   for (const severity of INTERRUPT_SEVERITIES) {
@@ -197,7 +222,6 @@ export function assembleCalibrationEntry(
     key,
     corpusHash: corpusHash(labeled),
     sampleSize: labeled.length,
-    generatedAt,
     perSeverity,
   };
 }

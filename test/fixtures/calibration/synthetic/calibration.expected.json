@@ -2,7 +2,6 @@
   "entries": [
     {
       "corpusHash": "33e0192d62615014d8d1aaff0d1aeb9601d5a34a5e89a1f8b32f3d84705e37a3",
-      "generatedAt": "2026-07-10T00:00:00.000Z",
       "key": {
         "backend": "api",
         "effort": "medium",

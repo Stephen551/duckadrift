@@ -37,7 +37,7 @@ export async function executeCalibrate(argv: string[]): Promise<number> {
       return executeFit(rest);
     default:
       console.error(
-        "duckadrift calibrate: expected a subcommand — `generate <recordings-dir> --adr-root <p> --out <review.md>` or `fit <review.md> --key backend=api,model=…,effort=… --out <calibration.json>`."
+        "duckadrift calibrate: expected a subcommand — `generate <recordings-dir> --adr-root <p> --out <review.md>` or `fit <review.md> [--review <more.md>]… --key backend=api,model=…,effort=… --out <calibration.json>`."
       );
       return 2;
   }
@@ -193,28 +193,33 @@ function sameKey(a: CalibrationEntry["key"], b: CalibrationEntry["key"]): boolea
 }
 
 /**
- * `calibrate fit <review.md> --key backend=api,model=…,effort=… --out <calibration.json>`
- * Reads the human-labeled review (refusal-first — any bad label fails the whole
- * read), computes every severity threshold on the Wilson lower bound, and
- * upserts the entry into calibration.json. Byte-stable output. Exit: 0 wrote,
- * 1 a bad review or unreadable existing file, 2 a missing flag.
+ * `calibrate fit <review.md> [--review <more.md>]… --key backend=api,model=…,effort=… --out <calibration.json>`
+ * Reads one or more human-labeled reviews (refusal-first — any defect in ANY
+ * file fails the whole fit; a corpus that is partly unreadable is not a
+ * corpus), unions the labeled findings across files (M4.3: the corpus splits
+ * at the privacy boundary but calibrates as one set, ADR-0040), computes every
+ * severity threshold on the Wilson lower bound, and upserts the entry into
+ * calibration.json. The corpusHash is the union's — one hash, all files,
+ * order-independent. Byte-stable output. Exit: 0 wrote, 1 a bad review or
+ * unreadable existing file, 2 a missing flag.
  */
 async function executeFit(argv: string[]): Promise<number> {
   const { values, positionals } = parseArgs({
     args: argv,
     options: {
+      review: { type: "string", multiple: true },
       key: { type: "string" },
       out: { type: "string" },
     },
     allowPositionals: true,
   });
 
-  const reviewPath = positionals[0];
+  const reviewPaths = [...positionals, ...(values.review ?? [])];
   const keyRaw = values.key;
   const out = values.out;
-  if (reviewPath === undefined || keyRaw === undefined || out === undefined) {
+  if (reviewPaths.length === 0 || keyRaw === undefined || out === undefined) {
     console.error(
-      "duckadrift calibrate fit: <review.md>, --key backend=api,model=…,effort=…, and --out <calibration.json> are required."
+      "duckadrift calibrate fit: at least one review (positional or --review), --key backend=api,model=…,effort=…, and --out <calibration.json> are required."
     );
     return 2;
   }
@@ -222,8 +227,19 @@ async function executeFit(argv: string[]): Promise<number> {
   const outPath = resolve(out);
   try {
     const key = parseKey(keyRaw);
-    const labeled = parseReview(readFileSync(resolve(reviewPath), "utf-8"));
-    const entry = assembleCalibrationEntry(labeled, key, new Date().toISOString());
+    // Parse EVERY file before fitting anything: a malformed label in the last
+    // file must fail the fit before the first file's findings enter any curve.
+    const labeled = reviewPaths.flatMap((p) => {
+      try {
+        return parseReview(readFileSync(resolve(p), "utf-8"));
+      } catch (err) {
+        if (err instanceof ReviewParseError) {
+          throw new ReviewParseError(`${p}: ${err.message}`);
+        }
+        throw err;
+      }
+    });
+    const entry = assembleCalibrationEntry(labeled, key);
 
     const file = loadCalibrationFile(outPath);
     const others = file.entries.filter((e) => !sameKey(e.key, key));
@@ -238,7 +254,7 @@ async function executeFit(argv: string[]): Promise<number> {
       (s) => entry.perSeverity[s].threshold !== null
     );
     console.log(
-      `duckadrift calibrate fit: ${labeled.length} labeled finding(s) → ${outPath} (${basename(outPath)}). Channels open: ${openable.length === 0 ? "none — corpus too small to clear any floor (a correct outcome; grow the corpus)" : openable.join(", ")}.`
+      `duckadrift calibrate fit: ${labeled.length} labeled finding(s) from ${reviewPaths.length} review file(s) → ${outPath} (${basename(outPath)}). Channels open: ${openable.length === 0 ? "none — corpus too small to clear any floor (a correct outcome; grow the corpus)" : openable.join(", ")}.`
     );
     return 0;
   } catch (err) {

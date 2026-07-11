@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -236,7 +236,7 @@ describe("corpusHash — stable regardless of finding order", () => {
 describe("assembleCalibrationEntry — cosmetic counts but never channels", () => {
   it("counts every labeled finding in sampleSize while excluding cosmetic from perSeverity", () => {
     const { labeled } = loadFixtureCorpus();
-    const entry = assembleCalibrationEntry(labeled, KEY, FIXED_ISO);
+    const entry = assembleCalibrationEntry(labeled, KEY);
     // Nine findings: one is cosmetic — in the total, absent from every channel.
     expect(entry.sampleSize).toBe(labeled.length);
     expect(Object.keys(entry.perSeverity).sort()).toEqual(["critical", "elevated", "routine"]);
@@ -249,7 +249,7 @@ describe("assembleCalibrationEntry — cosmetic counts but never channels", () =
 
   it("keeps a small corpus honest — every channel closed", () => {
     const { labeled } = loadFixtureCorpus();
-    const entry = assembleCalibrationEntry(labeled, KEY, FIXED_ISO);
+    const entry = assembleCalibrationEntry(labeled, KEY);
     expect(entry.perSeverity.critical.threshold).toBeNull();
     expect(entry.perSeverity.elevated.threshold).toBeNull();
     expect(entry.perSeverity.routine.threshold).toBeNull();
@@ -259,15 +259,15 @@ describe("assembleCalibrationEntry — cosmetic counts but never channels", () =
 describe("serialization is byte-stable against the committed golden", () => {
   it("reproduces calibration.expected.json exactly", () => {
     const { labeled } = loadFixtureCorpus();
-    const bytes = serializeCalibration({ schemaVersion: 1, entries: [assembleCalibrationEntry(labeled, KEY, FIXED_ISO)] });
+    const bytes = serializeCalibration({ schemaVersion: 1, entries: [assembleCalibrationEntry(labeled, KEY)] });
     const golden = readFileSync(join(FIXTURE, "calibration.expected.json"), "utf-8");
     expect(bytes).toBe(golden);
   });
 
   it("is idempotent across repeated serialization", () => {
     const { labeled } = loadFixtureCorpus();
-    const once = serializeCalibration({ schemaVersion: 1, entries: [assembleCalibrationEntry(labeled, KEY, FIXED_ISO)] });
-    const twice = serializeCalibration({ schemaVersion: 1, entries: [assembleCalibrationEntry(labeled, KEY, FIXED_ISO)] });
+    const once = serializeCalibration({ schemaVersion: 1, entries: [assembleCalibrationEntry(labeled, KEY)] });
+    const twice = serializeCalibration({ schemaVersion: 1, entries: [assembleCalibrationEntry(labeled, KEY)] });
     expect(once).toBe(twice);
   });
 });
@@ -328,6 +328,86 @@ describe("the calibrate CLI runs network-free end to end", () => {
     expect(parsed.entries).toHaveLength(1);
     // Two-of-two critical: point clears, bound does not → closed, still honest.
     expect(parsed.entries[0].perSeverity.critical.threshold).toBeNull();
+  });
+
+  it("fit unions multiple --review files under one corpusHash (M4.3)", async () => {
+    // The two-sided corpus: file A (as if public), file B (as if private).
+    const a = join(workdir, "a.md");
+    const b = join(workdir, "b.md");
+    const outPath = join(workdir, "cal.json");
+    writeFileSync(a, "## finding 001\ncheck: S3\nseverity: routine\nconfidence: 0.9\nclaim: pa\nlabel: true\n", "utf-8");
+    writeFileSync(b, "## finding 001\ncheck: S3\nseverity: routine\nconfidence: 0.7\nclaim: pb\nlabel: false\n", "utf-8");
+    const code = await executeCalibrate([
+      "fit", a, "--review", b,
+      "--key", "backend=api,model=claude-sonnet-5,effort=high",
+      "--out", outPath,
+    ]);
+    expect(code).toBe(0);
+    const parsed = JSON.parse(readFileSync(outPath, "utf-8"));
+    expect(parsed.entries[0].sampleSize).toBe(2); // both files' findings, one entry
+    // The union hash equals corpusHash over the concatenated labeled sets —
+    // order-independent, so (A,B) and (B,A) agree.
+    const union = [
+      { check: "S3", severity: "routine" as const, confidence: 0.9, label: true },
+      { check: "S3", severity: "routine" as const, confidence: 0.7, label: false },
+    ];
+    expect(parsed.entries[0].corpusHash).toBe(corpusHash(union));
+    expect(corpusHash([...union].reverse())).toBe(corpusHash(union));
+  });
+
+  it("fit refuses the WHOLE fit when the second file is malformed (M4.3)", async () => {
+    const a = join(workdir, "good.md");
+    const b = join(workdir, "bad.md");
+    const outPath = join(workdir, "never.json");
+    writeFileSync(a, "## finding 001\ncheck: S3\nseverity: routine\nconfidence: 0.9\nclaim: ok\nlabel: true\n", "utf-8");
+    writeFileSync(b, "## finding 001\ncheck: S3\nseverity: routine\nconfidence: 0.7\nclaim: bad\nlabel: ____\n", "utf-8");
+    const code = await executeCalibrate([
+      "fit", a, "--review", b,
+      "--key", "backend=api,model=claude-sonnet-5,effort=high",
+      "--out", outPath,
+    ]);
+    expect(code).toBe(1);
+    expect(existsSync(outPath)).toBe(false); // nothing written — no partial corpus
+  });
+
+  it("multi-review fit output is byte-stable across two runs on the same inputs", async () => {
+    const a = join(workdir, "s1.md");
+    const b = join(workdir, "s2.md");
+    writeFileSync(a, "## finding 001\ncheck: S1\nseverity: critical\nconfidence: 0.9\nclaim: x\nlabel: true\n", "utf-8");
+    writeFileSync(b, "## finding 001\ncheck: S3\nseverity: routine\nconfidence: 0.8\nclaim: y\nlabel: false\n", "utf-8");
+    const o1 = join(workdir, "c1.json");
+    const o2 = join(workdir, "c2.json");
+    for (const o of [o1, o2]) {
+      const code = await executeCalibrate([
+        "fit", a, "--review", b,
+        "--key", "backend=api,model=claude-sonnet-5,effort=high",
+        "--out", o,
+      ]);
+      expect(code).toBe(0);
+    }
+    // Raw byte-identity — no timestamp exists to strip (M4.3 verifier
+    // pre-check: a committed artifact must not diff on every re-fit).
+    expect(readFileSync(o1, "utf-8")).toBe(readFileSync(o2, "utf-8"));
+  });
+
+  it("generateReview emits preamble and repo/source display lines the parser ignores (M4.3)", () => {
+    const md = generateReview(
+      [{
+        check: "S3", severity: "routine", confidence: 0.8, claim: "c",
+        citations: [{ quote: "q", document: "package.json" }],
+        source: { recordingPath: "r", findingIndex: 0 },
+        repo: "first-internal-log", sourceKind: "diff abc123def456",
+      }],
+      FIXED_ISO,
+      { preamble: "## Labeling rubric\n\n- rule one" }
+    );
+    expect(md).toContain("## Labeling rubric");
+    expect(md).toContain("repo: first-internal-log");
+    expect(md).toContain("source: diff abc123def456");
+    // The parser reads through the display lines and still refuses the unfilled slot.
+    expect(() => parseReview(md)).toThrow(ReviewParseError);
+    const labeled = parseReview(md.replace("label: ____", "label: true"));
+    expect(labeled).toEqual([{ check: "S3", severity: "routine", confidence: 0.8, label: true }]);
   });
 
   it("fit rejects a review with an unfilled label (exit 1)", async () => {

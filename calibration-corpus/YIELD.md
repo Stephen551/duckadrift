@@ -26,13 +26,23 @@ wrong-root confirmation and must be treated as a counting defect, not a yield.
 | edgex-docs | e204cc7b6e07 | 2/31 | 8,919 | S1: 0f/0lp/0d · 5K in/34 out · $0.0074<br>S4: 0f/0lp/0d · 5K in/34 out · $0.0074<br>S5: 0f/0lp/0d · 5K in/34 out · $0.0074 | $0.0222 | $1.3643 |
 | terraform-provider-proxmox | 04894bdf3c23 | 8/8 | 106,598 | S1: 0f/0lp/0d · 43K in/34 out · $0.0834<br>S4: 0f/0lp/1d · 43K in/730 out · $0.0904<br>S5: 0f/29lp/1d · 43K in/4725 out · $0.1303 | $0.3041 | $1.6684 |
 | cloud-platform | dab45455f22f | 34/49 | 86,965 | S1: 1f/0lp/0d · 37K in/452 out · $0.0752<br>S4: 1f/0lp/1d · 37K in/1154 out · $0.0822<br>S5: 0f/0lp/0d · 37K in/34 out · $0.0710 | $0.2284 | $1.8968 |
-| first-internal-log | (local) | 42/53 | 298,440 | S1: 0f/0lp/2d · 132K in/701 out · $0.2671<br>S4: 0f/0lp/1d · 132K in/565 out · $0.2658<br>S5: 21f/22lp/12d · 132K in/13036 out · $0.3905 | $0.9235 | $2.8202 |
+| first-internal-log | (local) | 42/53 | 298,440 | S1: 0f/0lp/2d · 132K in/701 out · $0.2671<br>S4: 0f/0lp/1d · 132K in/565 out · $0.2658<br>S5: 22f/21lp/12d¹ · 132K in/13036 out · $0.3905 | $0.9235 | $2.8202 |
 | second-internal-log | (local) | 4/4 | 20,839 | S1: 0f/0lp/0d · 10K in/34 out · $0.0178<br>S4: 0f/0lp/0d · 10K in/34 out · $0.0178<br>S5: 2f/5lp/1d · 10K in/1812 out · $0.0356 | $0.0712 | $2.8914 |
 
-**Totals: 27 accepted findings across 24 captured calls — 4 public
-(S1: 1, S4: 3, S5: 0) and 23 private (all S5). +3 honest backstage
+**Totals: 28 accepted findings across 24 captured calls — 4 public
+(S1: 1, S4: 3, S5: 0) and 24 private (all S5). +3 honest backstage
 no-input skips; zero cap-skips — every accepted log fits the 600KB ADR-0032 bound.
 Total measured spend $2.89139. The $6.00 stop-gate never tripped.**
+
+¹ Corrected at M4.3 (was 21f/22lp, totals 27/23): the director fixed the S5
+confirmation context as the COMMITTED tree at the captured SHA, reconstructed in
+a guarded worktree — reproducible from git alone, and the same state a
+production CI checkout sees (untracked artifacts exist in neither). Under the
+prior live-tree reading, one first-internal-log premise (a decision record's
+named model artifact, present on disk but never committed) read as alive; under
+the committed tree it is dead, the finding is accepted, and the director labels
+it — recording the real precision cost production S5 pays on untracked-artifact
+premises rather than hiding it.
 
 **S5's public zero is the no-false-positive invariant working, not a failed capture.** The
 model extracted 56 candidate decayed premises across the public repos; the deterministic
