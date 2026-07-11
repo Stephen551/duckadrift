@@ -12,6 +12,8 @@ At v0.1.0 that sentence has three practical consequences. The tool runs continuo
 
 And when semantic checks arrive, they earn the right to interrupt you only by measurement: a labeled corpus establishes how often a given confidence level is actually right, and the tool interrupts only above the level that clears a declared precision floor. Confidence thresholds are measured, never typed into a config. That doctrine is why the semantic tier isn't here yet — it does not ship until it can be calibrated.
 
+As of v0.2.0, that bar is met and the semantic tier ships calibrated. Five model-driven checks read your decision records against the code and each other, every finding quoting its evidence verbatim or being discarded aloud. Every semantic finding lands in the report's annex — the complete record, always. A finding may additionally interrupt (a PR comment, or a tracking issue on scheduled runs) only when its severity's channel is open, and a channel opens only when the published calibration proves that findings at that confidence are right often enough to clear the severity's precision floor, by Wilson lower bound rather than lucky average. The first shipped calibration — 56 hand-labeled findings from nine real repositories, curve published in `calibration.json` — opens nothing. That is the honest reading of a first corpus: the annex works today, the interrupt is earned by data, and the report shows each severity's exact distance to opening.
+
 ## When the siren was wrong
 
 There is no screenshot here. Instead, the pre-launch verification record, because a tool whose pitch is "the siren is never wrong" should show you what happened when it was.

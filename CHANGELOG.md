@@ -2,6 +2,36 @@
 
 All notable changes to duckadrift are documented here.
 
+## [0.2.0] — 2026-07-11
+
+duckadrift now measures its own semantic precision and publishes the curve; no channel
+opens until the data earns it.
+
+### Added
+
+- The semantic tier: five model-driven checks (S1 inter-record contradiction, S2
+  code-versus-decision, S3 unrecorded decision, S4 recurring revision, S5 dead premise)
+  run under the `report` command when `tier1.enabled` is set and an API key is present.
+  Every finding must quote its evidence verbatim from the documents it read, or it is
+  discarded and the discard is counted. The tier survived a dedicated adversarial round;
+  document boundaries are authenticated with per-request nonce delimiters, so a scanned
+  file cannot forge its way into the prompt's frame.
+- The calibration doctrine (ADR-0038): confidence thresholds are measured from a labeled
+  corpus, never typed into a config, and a severity's interrupt channel opens only when
+  the Wilson 95% lower confidence bound of its measured precision clears its declared
+  floor — never a point estimate, so small-corpus luck cannot open a siren.
+- The first published calibration: 56 findings captured from nine real repositories
+  (whole-log and real-commit-history diff modes), labeled by hand, fitted, and shipped
+  as `calibration.json` with the full precision-versus-confidence curve. Every threshold
+  is null — the honest reading of a first corpus — and the report states each severity's
+  channel state with its numbers, so the distance to opening is always visible.
+- The interrupt gate: wired, closed, and waiting on data. When a floor clears on a
+  future re-fit, findings at or above the measured threshold post as PR comments (or to
+  a tracking issue on scheduled runs); everything, interrupting or not, remains in the
+  report's annex. The gate re-derives the opening condition from the calibration's own
+  curve at every run, so a hand-edited artifact cannot open a channel by decree. A
+  repository may ship its own `calibration.json` to override the shipped one.
+
 ## [0.1.10] — 2026-07-10
 
 The never-silent release: failing findings are no longer absorbed without a signal on
