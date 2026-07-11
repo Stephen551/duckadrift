@@ -71,7 +71,7 @@ describe("Wilson score lower bound — the small-sample interval, exact", () => 
   });
 
   it("is always at or below the point estimate", () => {
-    for (const [k, n] of [[1, 1], [5, 6], [50, 60], [99, 100]]) {
+    for (const [k, n] of [[1, 1], [5, 6], [50, 60], [99, 100]] as const) {
       expect(wilsonLowerBound(k, n)).toBeLessThanOrEqual(k / n);
     }
   });
