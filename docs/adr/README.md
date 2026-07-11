@@ -38,3 +38,5 @@ Architecture decisions for duckadrift itself, recorded in duckadrift's own vocab
 | [0032](0032-tier1-input-bounds.md) | Tier 1 input bounds — a log too large to read is skipped aloud, never trimmed in silence | Accepted | elevated |
 | [0033](0033-adversarial-round-citation-doctrine.md) | The adversarial round — the citation validator guarantees verbatim evidence and structural coverage, not semantic sufficiency | Accepted | elevated |
 | [0034](0034-envelope-authentication.md) | Envelope authentication — a document boundary the document cannot forge | Accepted | elevated |
+| [0035](0035-diff-and-decay-checks.md) | The diff-and-decay checks — S2, S3, S5, and the modes they run in | Accepted | elevated |
+| [0036](0036-decay-is-a-dead-premise.md) | Decay is a dead premise, not a cited one | Accepted | elevated |
