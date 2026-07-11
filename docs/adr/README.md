@@ -42,3 +42,4 @@ Architecture decisions for duckadrift itself, recorded in duckadrift's own vocab
 | [0036](0036-decay-is-a-dead-premise.md) | Decay is a dead premise, not a cited one | Accepted | elevated |
 | [0037](0037-checkpointed-capture.md) | Checkpointed capture — a paid recording is written once and never re-paid | Accepted | elevated |
 | [0038](0038-threshold-opens-on-lower-bound.md) | A threshold opens on the lower bound, never the point estimate | Accepted | elevated |
+| [0039](0039-one-status-recognizer.md) | One status recognizer — a decision's state is read the same way everywhere | Accepted | elevated |

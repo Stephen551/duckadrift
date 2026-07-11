@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { governedTouches } from "../adr/governs.js";
 import { ADR_FILENAME_RE } from "../adr/parse.js";
+import { isAccepted } from "../adr/status.js";
 import type { AdrLogContext, ParsedAdr } from "../adr/types.js";
 import type { CheckInput } from "./checks.js";
 import { DEPENDENCY_MANIFESTS, basenameOf, isStorageSchemaFile } from "./gate.js";
@@ -35,16 +36,15 @@ export function isSkip(result: SelectResult): result is Exclude<SelectResult, Ch
  * properly at M4; the successor (batched selection) is named in the ADR. */
 export const TIER1_INPUT_CAP_BYTES = 600_000;
 
-// Loose-dialect status (ADR-0004/0006): a real log records status as a bold
-// title-block line with no frontmatter at all — the S4 specimen fixture is
-// exactly this shape. A full-log check that read only frontmatter.status
-// would silently skip the flagship corpus. Explicit non-accepted statuses
-// (superseded, rejected, ...) stay excluded in either dialect.
-const LOOSE_ACCEPTED_RE = /^\s*[-*]?\s*\*\*Status:?\*\*\s*Accepted\b/im;
-
+// Status recognition lives in one shared primitive (ADR-0040). The selector was
+// the second recognizer to grow — reading a bold-line dialect the parser missed —
+// and a `## Status` heading needed a third. Two recognizers disagreeing about
+// one fact is the drift this tool catches, so isAcceptedAdr delegates: the
+// frontmatter and bold-line dialects it matched before resolve byte-identically,
+// and the heading dialect is now recognized too. Non-accepted statuses stay
+// excluded in every dialect.
 export function isAcceptedAdr(adr: ParsedAdr): boolean {
-  if (adr.frontmatter.status !== undefined) return adr.frontmatter.status === "accepted";
-  return LOOSE_ACCEPTED_RE.test(adr.raw);
+  return isAccepted(adr);
 }
 
 /**
