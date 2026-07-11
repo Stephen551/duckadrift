@@ -45,3 +45,4 @@ Architecture decisions for duckadrift itself, recorded in duckadrift's own vocab
 | [0039](0039-one-status-recognizer.md) | One status recognizer — a decision's state is read the same way everywhere | Accepted | elevated |
 | [0040](0040-calibration-corpus-privacy-split.md) | The calibration corpus splits at the privacy boundary | Accepted | elevated |
 | [0041](0041-corpus-diffs-are-real.md) | The corpus diffs are real — commit history as the pull-request proxy | Accepted | elevated |
+| [0042](0042-interrupt-gate-consumes-calibration.md) | The interrupt gate consumes the calibration — and refuses decreed openings | Accepted | elevated |
