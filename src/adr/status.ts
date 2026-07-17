@@ -81,13 +81,13 @@ function isStatusHeadingLine(line: string): boolean {
  * candidates are paired positionally against the status-heading lines found
  * in the raw text: same count means same document order, and the first
  * candidate whose line survives the fence mask is the real section. The
- * leading frontmatter block is excluded from the scan — it is YAML, not
+ * leading frontmatter block is excluded from the scan: it is YAML, not
  * document prose, and a `# Status` comment line inside it is not a heading
  * (verifier probe D). When the counts still disagree (a status-shaped line
  * inside an HTML comment is visible to one scan and not the other), pairing
  * is unreliable and the heading claim is refused outright: null, never a
  * guess at which candidate is real, so recognition degrades to the
- * bold-line path and then to none — a visible non-claim.
+ * bold-line path and then to none, a visible non-claim.
  */
 function selectUnfencedStatusSection(
   raw: string,
