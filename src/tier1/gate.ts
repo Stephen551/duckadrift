@@ -1,4 +1,5 @@
 import { governedTouches } from "../adr/governs.js";
+import { isAccepted } from "../adr/status.js";
 import type { AdrLogContext } from "../adr/types.js";
 import type { Tier1Config } from "../config/load.js";
 import type { Tier1Status } from "../report/write.js";
@@ -93,7 +94,7 @@ export function relevanceGate(ctx: AdrLogContext): GateResult {
   const signals: Tier1Signal[] = [];
 
   for (const adr of ctx.adrs) {
-    if (adr.frontmatter.status !== "accepted") continue;
+    if (!isAccepted(adr)) continue;
     const globs = adr.frontmatter.governs;
     if (!globs || globs.length === 0) continue;
     const files = governedTouches(changedFiles, globs);

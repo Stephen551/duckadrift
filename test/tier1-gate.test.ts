@@ -138,6 +138,12 @@ describe("relevance gate: status through the shared recognizer (ADR-0039)", () =
       { kind: "governed-path", adr: "0001-api-surface.md", files: ["src/api/routes.ts"] },
     ]);
   });
+
+  it("a fenced status token is not a declaration: the gate stays silent", () => {
+    const base = loadAdrLog(join(GATE_FIXTURES, "fenced-status-governed"));
+    const ctx = withPrContext(base, { changedFiles: ["src/api/routes.ts"] });
+    expect(relevanceGate(ctx)).toEqual({ decision: "no-signal", signals: [] });
+  });
 });
 
 describe("relevance gate: PR-mode only contract", () => {
