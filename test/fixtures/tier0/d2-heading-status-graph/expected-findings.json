@@ -1,0 +1,15 @@
+[
+  {
+    "check": "D2",
+    "claim": "ADR-0001 and ADR-0002 are both Accepted and each claims to supersede the other.",
+    "evidence": [
+      {
+        "adr": "0001-storage-engine.md"
+      },
+      {
+        "adr": "0002-storage-engine-revision.md"
+      }
+    ],
+    "consequence": "Mutual supersession between two live decisions leaves no single decision in force."
+  }
+]
