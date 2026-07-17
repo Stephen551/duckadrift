@@ -12,6 +12,10 @@ import type { AdrLogContext, PrContext } from "../src/adr/types.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const TIER1_FIXTURES = join(__dirname, "fixtures", "tier1");
+// Gate-only fixtures: tiny ADR logs for relevance-gate unit tests, outside
+// test/fixtures/tier1/ so the S-check corpus's structural contract (manifest,
+// recordings, S4 invariants) does not sweep them in.
+const GATE_FIXTURES = join(__dirname, "fixtures", "tier1-gate");
 
 function withPrContext(base: AdrLogContext, prContext: PrContext): AdrLogContext {
   return { ...base, prContext };
@@ -121,6 +125,18 @@ describe("relevance gate: no D5 exemptions imported (ADR-0029)", () => {
     });
     expect(relevanceGate(ctx).decision).toBe("signal");
     expect(d5GovernedPathGate(ctx)).toEqual([]);
+  });
+});
+
+describe("relevance gate: status through the shared recognizer (ADR-0039)", () => {
+  it("a heading-declared Accepted ADR's governed path signals", () => {
+    const base = loadAdrLog(join(GATE_FIXTURES, "heading-status-governed"));
+    const ctx = withPrContext(base, { changedFiles: ["src/api/routes.ts"] });
+    const result = relevanceGate(ctx);
+    expect(result.decision).toBe("signal");
+    expect(result.signals).toEqual([
+      { kind: "governed-path", adr: "0001-api-surface.md", files: ["src/api/routes.ts"] },
+    ]);
   });
 });
 
