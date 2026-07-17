@@ -80,11 +80,14 @@ function isStatusHeadingLine(line: string): boolean {
  * region. The parser's sections are fence-blind and carry no offsets, so the
  * candidates are paired positionally against the status-heading lines found
  * in the raw text: same count means same document order, and the first
- * candidate whose line survives the fence mask is the real section. When the
- * counts disagree (a status-shaped line inside frontmatter or an HTML
- * comment is visible to one scan and not the other), pairing is unreliable
- * and the fallback is the conservative veto: the parser's first candidate
- * stands only if at least one status heading line survives the mask at all.
+ * candidate whose line survives the fence mask is the real section. The
+ * leading frontmatter block is excluded from the scan — it is YAML, not
+ * document prose, and a `# Status` comment line inside it is not a heading
+ * (verifier probe D). When the counts still disagree (a status-shaped line
+ * inside an HTML comment is visible to one scan and not the other), pairing
+ * is unreliable and the heading claim is refused outright: null, never a
+ * guess at which candidate is real, so recognition degrades to the
+ * bold-line path and then to none — a visible non-claim.
  */
 function selectUnfencedStatusSection(
   raw: string,
@@ -93,13 +96,19 @@ function selectUnfencedStatusSection(
 ): AdrSection | null {
   const rawLines = raw.split(/\r?\n/);
   const maskedLines = maskedRaw.split(/\r?\n/);
+  // Mirror the parser's frontmatter boundary (FRONTMATTER_RE): a block opens
+  // only when line 0 is exactly `---` and closes at the next bare `---`; an
+  // opener that never closes is not frontmatter, and the whole text scans.
+  let scanStart = 0;
+  if (rawLines[0] === "---") {
+    const close = rawLines.indexOf("---", 1);
+    if (close !== -1) scanStart = close + 1;
+  }
   const statusLineIndexes: number[] = [];
-  for (let i = 0; i < rawLines.length; i++) {
+  for (let i = scanStart; i < rawLines.length; i++) {
     if (isStatusHeadingLine(rawLines[i]!)) statusLineIndexes.push(i);
   }
-  const unfenced = statusLineIndexes.filter((i) => isStatusHeadingLine(maskedLines[i] ?? ""));
-  if (unfenced.length === 0) return null;
-  if (statusLineIndexes.length !== candidates.length) return candidates[0] ?? null;
+  if (statusLineIndexes.length !== candidates.length) return null;
   for (let c = 0; c < candidates.length; c++) {
     if (isStatusHeadingLine(maskedLines[statusLineIndexes[c]!] ?? "")) return candidates[c]!;
   }
