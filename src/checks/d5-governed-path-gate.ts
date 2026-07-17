@@ -1,5 +1,6 @@
 import { adrRepoPath, governedTouches } from "../adr/governs.js";
 import { formatAdrRef, padAdrNumber } from "../adr/refs.js";
+import { isAccepted } from "../adr/status.js";
 import type { AdrLogContext } from "../adr/types.js";
 import { code } from "../report/write.js";
 import type { Finding } from "../types.js";
@@ -29,7 +30,7 @@ export function d5GovernedPathGate(ctx: AdrLogContext): Finding[] {
   const findings: Finding[] = [];
 
   for (const adr of ctx.adrs) {
-    if (adr.number === null || adr.frontmatter.status !== "accepted") continue;
+    if (adr.number === null || !isAccepted(adr)) continue;
     const globs = adr.frontmatter.governs;
     if (!globs || globs.length === 0) continue;
     if (acked.has(adr.number)) continue;
