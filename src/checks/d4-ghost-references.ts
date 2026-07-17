@@ -1,5 +1,6 @@
 import { formatAdrRef, parseAdrRef } from "../adr/refs.js";
 import { isPathInside } from "../adr/paths.js";
+import { effectiveStatus } from "../adr/status.js";
 import type { AdrLogContext } from "../adr/types.js";
 import { walkRepoFiles } from "../repo/walk.js";
 import { code } from "../report/write.js";
@@ -32,7 +33,7 @@ export function d4GhostReferences(ctx: AdrLogContext): Finding[] {
       for (const match of line.matchAll(ADR_MENTION_RE)) {
         const num = Number.parseInt(match[1]!, 10);
         const target = byNumber.get(num);
-        const status = target?.frontmatter.status;
+        const status = target ? effectiveStatus(target).value : null;
         if (!target || !status || !DEAD_STATUSES.has(status)) continue;
 
         const supersededBy = parseAdrRef(target.frontmatter["superseded-by"]);

@@ -2,6 +2,7 @@ import { dirname, relative, sep } from "node:path";
 import { formatAdrRef, padAdrNumber } from "../adr/refs.js";
 import { parseAdrRef, parseAdrRefList } from "../adr/refs.js";
 import { makeBasenameFinder, resolveReference } from "../adr/resolve.js";
+import { isAccepted } from "../adr/status.js";
 import { code } from "../report/write.js";
 import type { AdrLogContext, NumberingScope, ParsedAdr } from "../adr/types.js";
 import type { Finding } from "../types.js";
@@ -319,10 +320,10 @@ function findMutualSupersession(
   const reportedPairs = new Set<string>();
 
   for (const adr of adrs) {
-    if (adr.number === null || adr.frontmatter.status !== "accepted") continue;
+    if (adr.number === null || !isAccepted(adr)) continue;
     for (const rawRef of rawSupersedes(adr)) {
       const target = resolveRef(adr, rawRef);
-      if (!target || target.number === null || target.frontmatter.status !== "accepted") continue;
+      if (!target || target.number === null || !isAccepted(target)) continue;
       const back = rawSupersedes(target).some((r) => resolveRef(target, r)?.fileName === adr.fileName);
       if (!back) continue;
 
@@ -351,7 +352,7 @@ function findStaleSupersession(
 ): Finding[] {
   const findings: Finding[] = [];
   for (const adr of adrs) {
-    if (adr.number === null || adr.frontmatter.status !== "accepted") continue;
+    if (adr.number === null || !isAccepted(adr)) continue;
     for (const rawRef of rawSupersedes(adr)) {
       const target = resolveRef(adr, rawRef);
       // "Earlier supersedes later" compares the resolved target's number — for a
@@ -359,7 +360,7 @@ function findStaleSupersession(
       // this is identical to the old declared-number compare; a path ref uses the
       // real target's number.
       if (!target || target.number === null || target.number <= adr.number) continue;
-      if (target.frontmatter.status !== "accepted") continue;
+      if (!isAccepted(target)) continue;
       // Skip pairs already reported as mutual, matched by fileName identity so a
       // same-numbered mutual pair in another directory can't suppress this one
       // (fix 4).

@@ -1,0 +1,5 @@
+{
+  "changedFiles": ["src/api/routes.ts"],
+  "commitMessage": "Add pagination to the list endpoint",
+  "prBody": "Adds cursor pagination. No ADR touched, no override marker present. This is the seeded violation."
+}

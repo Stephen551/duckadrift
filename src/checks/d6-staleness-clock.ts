@@ -1,4 +1,5 @@
 import { formatAdrRef } from "../adr/refs.js";
+import { isAccepted } from "../adr/status.js";
 import { code } from "../report/write.js";
 import type { AdrLogContext } from "../adr/types.js";
 import type { Finding } from "../types.js";
@@ -7,7 +8,7 @@ import type { Finding } from "../types.js";
 export function d6StalenessClock(ctx: AdrLogContext, now: Date = new Date()): Finding[] {
   const findings: Finding[] = [];
   for (const adr of ctx.adrs) {
-    if (adr.number === null || adr.frontmatter.status !== "accepted") continue;
+    if (adr.number === null || !isAccepted(adr)) continue;
     const reviewBy = adr.frontmatter["review-by"];
     if (!reviewBy) continue;
 

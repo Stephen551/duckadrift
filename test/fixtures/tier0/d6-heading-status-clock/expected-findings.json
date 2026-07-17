@@ -1,0 +1,8 @@
+[
+  {
+    "check": "D6",
+    "claim": "ADR-0001 is Accepted with `review-by: 2025-06-01`, which has passed.",
+    "evidence": [{ "adr": "0001-dependency-review.md" }],
+    "consequence": "An expired review-by date means the team asked to be reminded to re-examine this decision, and nobody has."
+  }
+]

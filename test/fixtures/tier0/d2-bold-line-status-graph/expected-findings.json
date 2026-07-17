@@ -1,0 +1,15 @@
+[
+  {
+    "check": "D2",
+    "claim": "ADR-0001 (Accepted) claims to supersede the later ADR-0002, which is still Accepted.",
+    "evidence": [
+      {
+        "adr": "0001-cache-strategy.md"
+      },
+      {
+        "adr": "0002-cache-strategy-revision.md"
+      }
+    ],
+    "consequence": "An earlier decision cannot supersede a later one that was never updated — one status is stale."
+  }
+]
