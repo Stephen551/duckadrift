@@ -79,7 +79,7 @@ export async function captureOne(opts: {
     }
   }
 
-  const response = await transport.send(request);
+  const { response, usage } = await transport.send(request);
 
   const recording: Recording = {
     schemaVersion: 1,
@@ -92,13 +92,10 @@ export async function captureOne(opts: {
 
   // Write the recording FIRST, then the usage sibling — the recording is the
   // paid artifact; if the process dies between the two writes, the recording
-  // (the expensive thing) is safe and the usage can be re-read from it.
+  // (the expensive thing) is safe and the usage can be re-read from it. The
+  // sibling's block is the seam's own extraction (ADR-0044).
   writeFileSync(recordingPath, `${JSON.stringify(recording, null, 2)}\n`, "utf-8");
-  const usage =
-    typeof response === "object" && response !== null
-      ? (response as Record<string, unknown>).usage ?? null
-      : null;
-  writeFileSync(usageSiblingPath(recordingPath), `${JSON.stringify(usage, null, 2)}\n`, "utf-8");
+  writeFileSync(usageSiblingPath(recordingPath), `${JSON.stringify(usage ?? null, null, 2)}\n`, "utf-8");
 
   return { status: "captured", checkId: check.id, recordingPath, usage };
 }

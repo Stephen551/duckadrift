@@ -13,9 +13,9 @@ import { replayTransport } from "../src/tier1/transport.js";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const TIER1 = join(__dirname, "fixtures", "tier1");
 const S5_FIXTURE = join(TIER1, "s5-decay");
-const S5_RECORDING = join(S5_FIXTURE, "recordings", "s5.recording.json");
+const S5_RECORDING = join(S5_FIXTURE, "recordings", "s5.api.recording.json");
 const BASELINE = join(TIER1, "clean-baseline");
-const BASELINE_RECORDING = join(BASELINE, "recordings", "s5.recording.json");
+const BASELINE_RECORDING = join(BASELINE, "recordings", "s5.api.recording.json");
 
 describe("S5 against the decay specimen", () => {
   it("surviving findings name both dead premises, each confirmed dead by the deterministic pass", async () => {

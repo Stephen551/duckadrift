@@ -41,12 +41,12 @@ export interface Tier1RunResult {
   usage: Tier1CheckUsage[];
 }
 
-/** Reads the four usage fields off an untrusted response body, defensively — any absent field is 0 (a replay body may omit them). */
-function readUsage(check: Tier1CheckId, response: unknown): Tier1CheckUsage {
+/** Reads the four usage fields off the seam's untrusted usage block, defensively: any absent field is 0 (a replay body may omit them). The block arrives already extracted by the transport (ADR-0044); the runner never learns an envelope shape. */
+function readUsage(check: Tier1CheckId, usageBlock: unknown): Tier1CheckUsage {
   const num = (v: unknown): number => (typeof v === "number" && Number.isFinite(v) ? v : 0);
   const usage =
-    typeof response === "object" && response !== null
-      ? ((response as Record<string, unknown>).usage as Record<string, unknown> | undefined)
+    typeof usageBlock === "object" && usageBlock !== null
+      ? (usageBlock as Record<string, unknown>)
       : undefined;
   return {
     check,
@@ -121,12 +121,12 @@ export async function runTier1Checks(
     // propagates", not "the validator handles impossible inputs"; ADR-0033,
     // S3-16/S3-17). Any throw becomes a counted error and the run continues.
     try {
-      const response = await transport.send(request);
+      const { response, usage } = await transport.send(request);
 
       // A call was made (live or replay) — its measured usage is recorded
       // whatever the response's shape, before any refusal or discard, so cost
       // is reported from observation (ADR-0035, PDR §2.8).
-      result.usage.push(readUsage(check.id, response));
+      result.usage.push(readUsage(check.id, usage));
 
       const extracted = extractToolInput(response);
       if (!extracted.ok) {

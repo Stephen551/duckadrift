@@ -20,7 +20,7 @@ describe("per-check usage accumulation", () => {
     const result = await runTier1Checks(
       loadAdrLog(join(TIER1, "s4-recurring-revision")),
       [s4RecurringRevision],
-      replayTransport(join(TIER1, "s4-recurring-revision", "recordings", "s4.recording.json"))
+      replayTransport(join(TIER1, "s4-recurring-revision", "recordings", "s4.api.recording.json"))
     );
     expect(result.usage).toHaveLength(1);
     const u = result.usage[0]!;
@@ -37,7 +37,7 @@ describe("per-check usage accumulation", () => {
     const result = await runTier1Checks(
       noPr,
       [s2CodeVsDecision],
-      replayTransport(join(TIER1, "s4-recurring-revision", "recordings", "s4.recording.json"))
+      replayTransport(join(TIER1, "s4-recurring-revision", "recordings", "s4.api.recording.json"))
     );
     expect(result.skipped.map((s) => s.check)).toContain("S2");
     expect(result.usage).toEqual([]);
@@ -47,7 +47,7 @@ describe("per-check usage accumulation", () => {
     const result = await runTier1Checks(
       loadAdrLog(join(TIER1, "s4-recurring-revision")),
       [s4RecurringRevision],
-      replayTransport(join(TIER1, "s4-recurring-revision", "recordings", "s4.recording.json"))
+      replayTransport(join(TIER1, "s4-recurring-revision", "recordings", "s4.api.recording.json"))
     );
     const status = withTier1Run({ enabled: true, status: "eligible", signals: [] }, result);
     const json = buildJsonReport([], "docs/adr", [], status);

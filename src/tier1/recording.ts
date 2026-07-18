@@ -9,8 +9,11 @@ import { readFileSync } from "node:fs";
 // stale recording silently replayed is a false green, and the harness throws
 // instead.
 
+/** The closed set of transports with recordings (ADR-0044). Widening it is a contract change, never a string. */
+export type RecordingBackend = "api" | "claude-code";
+
 export interface RecordingKey {
-  backend: "api";
+  backend: RecordingBackend;
   model: string;
   effort: string;
   checkId: string; // "S1".."S5"
@@ -92,13 +95,13 @@ export function loadRecording(path: string): Recording {
     fail(path, `"key" must be an object`);
   }
   const key = candidate.key as Record<string, unknown>;
-  if (key.backend !== "api") {
-    fail(path, `key.backend must be "api" (the only backend with recordings in M3)`);
+  if (key.backend !== "api" && key.backend !== "claude-code") {
+    fail(path, `key.backend must be "api" or "claude-code" (the transport contract's closed set, ADR-0044)`);
   }
   const recording: Recording = {
     schemaVersion: 1,
     key: {
-      backend: "api",
+      backend: key.backend,
       model: assertString(key.model, "key.model", path),
       effort: assertString(key.effort, "key.effort", path),
       checkId: assertString(key.checkId, "key.checkId", path),

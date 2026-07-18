@@ -57,7 +57,10 @@ function transportReturning(...toolInputs: unknown[]): Tier1Transport {
   return {
     async send() {
       return {
-        content: toolInputs.map((input) => ({ type: "tool_use", name: "report_findings", input })),
+        response: {
+          content: toolInputs.map((input) => ({ type: "tool_use", name: "report_findings", input })),
+        },
+        usage: null,
       };
     },
   };
@@ -354,7 +357,9 @@ function statefulTransport(...responses: unknown[]): Tier1Transport {
     async send() {
       const r = responses[Math.min(i, responses.length - 1)];
       i += 1;
-      return r;
+      const usage =
+        typeof r === "object" && r !== null ? ((r as Record<string, unknown>).usage ?? null) : null;
+      return { response: r, usage };
     },
   };
 }
