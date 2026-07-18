@@ -32,8 +32,10 @@ const CONFIG = { model: "claude-sonnet-5", effort: "high" };
 /** A transport that returns a canned body and counts its calls — a live call would throw if it were reached when it must not be. */
 function countingTransport(body: unknown): { transport: Tier1Transport; calls: () => number } {
   let calls = 0;
+  const usage =
+    typeof body === "object" && body !== null ? ((body as Record<string, unknown>).usage ?? null) : null;
   return {
-    transport: { async send() { calls += 1; return body; } },
+    transport: { async send() { calls += 1; return { response: body, usage }; } },
     calls: () => calls,
   };
 }
