@@ -47,3 +47,4 @@ Architecture decisions for duckadrift itself, recorded in duckadrift's own vocab
 | [0041](0041-corpus-diffs-are-real.md) | The corpus diffs are real — commit history as the pull-request proxy | Accepted | elevated |
 | [0042](0042-interrupt-gate-consumes-calibration.md) | The interrupt gate consumes the calibration — and refuses decreed openings | Accepted | elevated |
 | [0043](0043-calibration-entries-by-discipline.md) | Calibration entries satisfy gates by discipline, not by floors met | Accepted | elevated |
+| [0044](0044-transport-contract.md) | The transport contract: one seam, owned deadlines, hermetic spawns | Proposed | elevated |
