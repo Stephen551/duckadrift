@@ -1,0 +1,200 @@
+import { createHash } from "node:crypto";
+import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import type { AdrLogContext } from "../adr/types.js";
+import type { RecordingKey } from "./recording.js";
+
+// The sweep checkpoint (ADR-0045): pause visibly, resume exactly, refuse
+// loudly. Checkpointing lives here and in the runner, transport-agnostic; the
+// transport only classifies (ADR-0044), the runner decides. The artifact shape
+// is the ADR-0045 contract; a resume depends on it.
+
+/** A completed unit's outcome, stored verbatim: the seam's own result for a responded unit, the error message for an errored one. */
+export type SweepUnitOutcome =
+  | { status: "responded"; response: unknown; usage: unknown }
+  | { status: "errored"; message: string };
+
+export interface SweepCheckpoint {
+  /** The stored outcome for a unit, or undefined when the unit is incomplete. */
+  lookup(key: RecordingKey): SweepUnitOutcome | undefined;
+  /** Stores a unit's outcome and persists the artifact immediately (durability before the next call, the ADR-0037 pattern). */
+  record(key: RecordingKey, outcome: SweepUnitOutcome): void;
+  /** The sweep's total unit count, persisted as the artifact's progress denominator (ADR-0045). */
+  noteTotal(total: number): void;
+  /** Completed units on record. */
+  completedCount(): number;
+  /** A completed sweep deletes its checkpoint; a stale artifact must not poison the next run (ADR-0045). */
+  finalize(): void;
+}
+
+export interface OpenedSweepCheckpoint {
+  checkpoint: SweepCheckpoint;
+  /** Present when an existing artifact was refused (changed tree, foreign sweep key, unparseable bytes): the sweep restarts from zero and the report names the refusal. */
+  refusal?: string;
+}
+
+/**
+ * The tree identity a sweep runs against (ADR-0045): a digest over every
+ * decision record's file name and content hash, plus the ADR directory.
+ * Resuming across changed bytes silently narrows coverage; identity inequality
+ * refuses instead.
+ */
+export function treeIdentityOf(ctx: AdrLogContext): string {
+  const hash = createHash("sha256");
+  hash.update(String((ctx as { adrDir?: string }).adrDir ?? ""));
+  const adrs = Array.isArray(ctx.adrs) ? ctx.adrs : [];
+  for (const adr of [...adrs].sort((a, b) => a.fileName.localeCompare(b.fileName))) {
+    hash.update("\u0000");
+    hash.update(adr.fileName);
+    hash.update("\u0000");
+    hash.update(createHash("sha256").update(adr.raw, "utf-8").digest("hex"));
+  }
+  return hash.digest("hex");
+}
+
+export interface SweepIdentity {
+  backend: string;
+  model: string;
+  effort: string;
+  treeIdentity: string;
+}
+
+/**
+ * Opens (or creates) the checkpoint artifact at `path` for the given sweep
+ * identity. Refusal-first (ADR-0045): an artifact that cannot be trusted is
+ * never partially trusted.
+ */
+interface CheckpointFileShape {
+  schemaVersion: 1;
+  sweep: SweepIdentity;
+  progress: { completed: number; total: number | null };
+  units: Array<{ key: RecordingKey; outcome: SweepUnitOutcome }>;
+}
+
+function keyOf(key: RecordingKey): string {
+  return [key.backend, key.model, key.effort, key.checkId, key.promptHash].join("|");
+}
+
+function isValidKey(value: unknown): value is RecordingKey {
+  if (typeof value !== "object" || value === null) return false;
+  const key = value as Record<string, unknown>;
+  return (
+    (key.backend === "api" || key.backend === "claude-code") &&
+    typeof key.model === "string" &&
+    typeof key.effort === "string" &&
+    typeof key.checkId === "string" &&
+    typeof key.promptHash === "string"
+  );
+}
+
+function isValidOutcome(value: unknown): value is SweepUnitOutcome {
+  if (typeof value !== "object" || value === null) return false;
+  const outcome = value as Record<string, unknown>;
+  if (outcome.status === "responded") return "response" in outcome && "usage" in outcome;
+  if (outcome.status === "errored") return typeof outcome.message === "string";
+  return false;
+}
+
+/**
+ * Parses and validates an existing artifact against the expected sweep
+ * identity. Returns the trusted units, or the refusal reason. Refusal-first
+ * (ADR-0045): an artifact that cannot be trusted is never partially trusted,
+ * and refusal means restart-with-report, never skip.
+ */
+function readExisting(
+  path: string,
+  expected: SweepIdentity
+): { units: Map<string, { key: RecordingKey; outcome: SweepUnitOutcome }> } | { refusal: string } {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(readFileSync(path, "utf-8"));
+  } catch (err) {
+    return {
+      refusal: `the checkpoint artifact is unreadable or malformed (${err instanceof Error ? err.message.split("\n")[0] : String(err)}).`,
+    };
+  }
+  if (typeof parsed !== "object" || parsed === null || (parsed as Record<string, unknown>).schemaVersion !== 1) {
+    return { refusal: "the checkpoint artifact does not carry schemaVersion 1." };
+  }
+  const candidate = parsed as Record<string, unknown>;
+  const sweep = candidate.sweep as Record<string, unknown> | undefined;
+  if (
+    typeof sweep !== "object" ||
+    sweep === null ||
+    sweep.backend !== expected.backend ||
+    sweep.model !== expected.model ||
+    sweep.effort !== expected.effort
+  ) {
+    return { refusal: "the checkpoint was recorded for a different sweep key (backend, model, effort)." };
+  }
+  if (sweep.treeIdentity !== expected.treeIdentity) {
+    return {
+      refusal:
+        "the checkpoint was recorded against a different tree; resuming across changed bytes would silently narrow coverage.",
+    };
+  }
+  if (!Array.isArray(candidate.units)) {
+    return { refusal: "the checkpoint artifact carries no units array." };
+  }
+  const units = new Map<string, { key: RecordingKey; outcome: SweepUnitOutcome }>();
+  for (const entry of candidate.units) {
+    const unit = entry as Record<string, unknown>;
+    if (!isValidKey(unit.key) || !isValidOutcome(unit.outcome)) {
+      return { refusal: "a checkpoint unit does not match the ADR-0045 contract." };
+    }
+    units.set(keyOf(unit.key), { key: unit.key, outcome: unit.outcome });
+  }
+  return { units };
+}
+
+export function openSweepCheckpoint(path: string, expected: SweepIdentity): OpenedSweepCheckpoint {
+  let refusal: string | undefined;
+  let units = new Map<string, { key: RecordingKey; outcome: SweepUnitOutcome }>();
+  if (existsSync(path)) {
+    const existing = readExisting(path, expected);
+    if ("refusal" in existing) {
+      refusal = existing.refusal;
+      units = new Map(); // restart from zero; the first record() overwrites the artifact
+    } else {
+      units = existing.units;
+    }
+  }
+
+  let total: number | null = null;
+  const persist = (): void => {
+    const artifact: CheckpointFileShape = {
+      schemaVersion: 1,
+      sweep: expected,
+      progress: { completed: units.size, total },
+      units: [...units.values()],
+    };
+    writeFileSync(path, `${JSON.stringify(artifact, null, 2)}\n`, "utf-8");
+  };
+
+  const checkpoint: SweepCheckpoint = {
+    lookup: (key) => units.get(keyOf(key))?.outcome,
+    record: (key, outcome) => {
+      units.set(keyOf(key), { key, outcome });
+      persist();
+    },
+    noteTotal: (t) => {
+      total = t;
+    },
+    completedCount: () => units.size,
+    finalize: () => rmSync(path, { force: true }),
+  };
+  return refusal !== undefined ? { checkpoint, refusal } : { checkpoint };
+}
+
+/**
+ * The estimated window reopening, in the PDR 2.8 tilde format (~HH:MM, UTC).
+ * The window length is the documented subscription reset cadence; the estimate
+ * is prescribed by the PDR and ADR-0045, not a measured number.
+ */
+const QUOTA_WINDOW_MS = 5 * 60 * 60 * 1000;
+
+export function quotaResumeEstimate(now: Date): string {
+  const reopen = new Date(now.getTime() + QUOTA_WINDOW_MS);
+  const hh = String(reopen.getUTCHours()).padStart(2, "0");
+  const mm = String(reopen.getUTCMinutes()).padStart(2, "0");
+  return `~${hh}:${mm}`;
+}

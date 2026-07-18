@@ -23,6 +23,10 @@ export type Tier1Status =
       signals: Tier1Signal[]; // always computed in PR mode, [] otherwise
       /** On no-credentials: WHICH env var is missing, named by the transport module's backend map (ADR-0044) so the skip line says exactly what the run lacked. */
       credentialName?: string;
+      /** The sweep pause block (ADR-0045, PDR 2.8): completed and total units, the units not checked, and the estimated window reopening (~HH:MM, the caller's clock). */
+      paused?: { completed: number; total: number; notChecked: string[]; resumeAt?: string };
+      /** A refused checkpoint (changed tree, foreign key, unparseable bytes): named loudly; the sweep restarted from zero (ADR-0045). */
+      checkpointRefusal?: string;
       findings?: Tier1RunResult["findings"];
       discarded?: Tier1RunResult["discarded"];
       droppedCitations?: Tier1RunResult["droppedCitations"];
@@ -153,6 +157,23 @@ function renderTier1Block(tier1: Tier1Status): string[] {
     );
   } else {
     lines.push(`Tier 1 eligible: ${tier1.signals.length} signal(s) detected.`, "");
+  }
+  // The sweep's checkpoint states (ADR-0045), loud and first among the run
+  // details: a refused checkpoint names its reason and the restart; a pause
+  // carries the PDR 2.8 block with the unchecked units enumerated by name,
+  // never summarized.
+  if (tier1.checkpointRefusal !== undefined) {
+    lines.push(
+      `Tier 1 sweep checkpoint refused: ${tier1.checkpointRefusal} The sweep restarted from zero.`,
+      ""
+    );
+  }
+  if (tier1.paused !== undefined) {
+    lines.push(
+      `Tier 1 sweep paused: ${tier1.paused.completed} of ${tier1.paused.total} ADRs checked; resuming at ${tier1.paused.resumeAt ?? "~--:--"}`,
+      `Not checked: ${tier1.paused.notChecked.join(", ")}`,
+      ""
+    );
   }
   // Signals render for any status that carries them — under no-credentials the
   // gate still ran (it is free) and its output is coverage truth (ADR-0029).
