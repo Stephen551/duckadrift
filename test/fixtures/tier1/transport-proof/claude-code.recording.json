@@ -10,17 +10,16 @@
   "recordedAt": "2026-07-17T00:00:00.000Z",
   "requestDigest": "1ba0dc7070c1dada91e2bf5d3d453b9c14a426e49bf4c215ece98e5a799557f5",
   "response": {
-    "type": "result",
-    "subtype": "success",
-    "is_error": false,
-    "api_error_status": null,
-    "duration_ms": 2460,
-    "duration_api_ms": 2419,
-    "num_turns": 1,
-    "result": "pong",
-    "stop_reason": "end_turn",
-    "session_id": "6c78eafa-7f96-4589-b134-b5192555d404",
-    "total_cost_usd": 0.19473475,
+    "content": [
+      {
+        "type": "tool_use",
+        "id": "toolu_claude_code_structured_output",
+        "name": "report_findings",
+        "input": {
+          "findings": []
+        }
+      }
+    ],
     "usage": {
       "input_tokens": 2,
       "cache_creation_input_tokens": 29289,
@@ -50,22 +49,6 @@
         }
       ],
       "speed": "standard"
-    },
-    "modelUsage": {
-      "claude-sonnet-5": {
-        "inputTokens": 2,
-        "outputTokens": 65,
-        "cacheReadInputTokens": 20087,
-        "cacheCreationInputTokens": 29289,
-        "webSearchRequests": 0,
-        "costUSD": 0.19473475,
-        "contextWindow": 200000,
-        "maxOutputTokens": 32000
-      }
-    },
-    "permission_denials": [],
-    "terminal_reason": "completed",
-    "fast_mode_state": "off",
-    "uuid": "1fedaf80-5b56-492d-94a3-7de85da4c71e"
+    }
   }
 }

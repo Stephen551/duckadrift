@@ -1,4 +1,7 @@
 import { execFile, spawn } from "node:child_process";
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { delimiter, join } from "node:path";
 import Anthropic from "@anthropic-ai/sdk";
 import type { Tier1Config } from "../config/load.js";
 import { claudeCodeCredentialsPresent, tier1CredentialsPresent } from "./credentials.js";
@@ -137,6 +140,67 @@ function requestField(request: object, path: string[], label: string): string {
   return cursor;
 }
 
+/** The request's system blocks, joined: our own static doctrine and check instructions, never repo bytes (those ride the user message). Carried via --system-prompt-file, REPLACING the CLI's default system prompt so the call's context is exactly the api backend's. */
+function systemTextOf(request: object): string {
+  const system = (request as Record<string, unknown>).system;
+  if (!Array.isArray(system) || system.length === 0) {
+    throw new Tier1TransportError("transport", "request carries no system blocks; cannot realize the call");
+  }
+  const texts = system.map((block) =>
+    typeof block === "object" && block !== null ? (block as Record<string, unknown>).text : undefined
+  );
+  if (texts.some((t) => typeof t !== "string")) {
+    throw new Tier1TransportError("transport", "a system block carries no text; cannot realize the call");
+  }
+  return (texts as string[]).join("\n\n");
+}
+
+/** The forced report_findings tool's input schema, realized as --json-schema: the CLI validates the structured output against it, the headless equivalent of the api backend's forced tool call (measured, PR D probe). */
+function findingsSchemaOf(request: object): string {
+  const tools = (request as Record<string, unknown>).tools;
+  const tool = Array.isArray(tools)
+    ? tools.find(
+        (t) => typeof t === "object" && t !== null && (t as Record<string, unknown>).name === "report_findings"
+      )
+    : undefined;
+  const schema = tool !== undefined ? (tool as Record<string, unknown>).input_schema : undefined;
+  if (typeof schema !== "object" || schema === null) {
+    throw new Tier1TransportError(
+      "transport",
+      "request carries no report_findings tool schema; cannot realize the forced call"
+    );
+  }
+  return JSON.stringify(schema);
+}
+
+interface ResolvedClaudeSpawn {
+  file: string;
+  argsPrefix: string[];
+  /** True only on the Windows shim fallback, where args transit a shell. Real runs never take it: payload argv would be mangled. */
+  shell: boolean;
+}
+
+/**
+ * Resolves how to spawn the CLI. POSIX: execFile("claude") shell-free; PATH
+ * lookup and shebang handle the rest, identically for the real install and
+ * the fake harness. Windows: the npm shim is a .cmd wrapping a NATIVE
+ * claude.exe (measured, PR D); the exe is derived from the shim's directory
+ * and spawned directly, shell-free, so payload argv (the JSON schema)
+ * arrives pristine. A shim directory with no derivable exe (the fake
+ * harness) falls back to the shell path, where the fakes ignore argv.
+ */
+function resolveClaudeSpawn(env: NodeJS.ProcessEnv): ResolvedClaudeSpawn {
+  if (process.platform !== "win32") return { file: "claude", argsPrefix: [], shell: false };
+  for (const dir of (env.PATH ?? "").split(delimiter)) {
+    if (dir === "") continue;
+    if (!existsSync(join(dir, "claude.cmd")) && !existsSync(join(dir, "claude"))) continue;
+    const exe = join(dir, "node_modules", "@anthropic-ai", "claude-code", "bin", "claude.exe");
+    if (existsSync(exe)) return { file: exe, argsPrefix: [], shell: false };
+    return { file: "claude", argsPrefix: [], shell: true };
+  }
+  return { file: "claude", argsPrefix: [], shell: true };
+}
+
 /**
  * The live claude-code backend (ADR-0044): spawns the claude CLI per the PR B
  * canonical invocation (json output, pinned model, effort passthrough,
@@ -170,12 +234,23 @@ export function claudeCodeTransport(opts: ClaudeCodeTransportOptions): Tier1Tran
         }
       }
       const prompt = requestField(request, ["messages", "0", "content"], "user message content");
+      const systemText = systemTextOf(request);
+      const schemaJson = findingsSchemaOf(request);
 
       const spawnEnv: NodeJS.ProcessEnv = {};
       for (const key of CLAUDE_CODE_ENV_ALLOWLIST) {
         if (sourceEnv[key] !== undefined) spawnEnv[key] = sourceEnv[key];
       }
       spawnEnv.CLAUDE_CODE_OAUTH_TOKEN = token;
+
+      // Per-send scratch: the system prompt rides a FILE (argv-size and
+      // quoting safe), and the scratch dir is the child's cwd, so the CLI's
+      // CLAUDE.md auto-discovery finds nothing and the call's context is
+      // exactly the request (hermeticity, ADR-0044 decision 3; the scanned
+      // repo's own CLAUDE.md must never bleed into a check prompt).
+      const scratch = mkdtempSync(join(tmpdir(), "duckadrift-claude-code-"));
+      const systemFile = join(scratch, "system-prompt.txt");
+      writeFileSync(systemFile, systemText, "utf-8");
 
       const args = [
         "-p",
@@ -187,21 +262,33 @@ export function claudeCodeTransport(opts: ClaudeCodeTransportOptions): Tier1Tran
         effort,
         "--no-session-persistence",
         "--strict-mcp-config",
+        "--tools",
+        "",
+        "--system-prompt-file",
+        systemFile,
+        "--json-schema",
+        schemaJson,
       ];
+      const resolved = resolveClaudeSpawn(spawnEnv);
 
       const deadlineMs = opts.deadlineSeconds * 1000;
-      const { stdout, exitCode } = await new Promise<{ stdout: string; exitCode: number | string }>(
+      let stdout: string;
+      let exitCode: number | string;
+      try {
+        ({ stdout, exitCode } = await new Promise<{ stdout: string; exitCode: number | string }>(
         (resolvePromise, rejectPromise) => {
           let settled = false;
           const child = execFile(
-            "claude",
-            args,
+            resolved.file,
+            [...resolved.argsPrefix, ...args],
             {
               env: spawnEnv,
-              // The claude shim needs a shell to resolve cross-platform; the
-              // argv is fixed tokens only (see SAFE_ARG_RE above), so the
-              // measured Windows concatenation hazard has nothing to swallow.
-              shell: true,
+              cwd: scratch,
+              // Real runs spawn shell-free with pristine argv (POSIX shebang,
+              // or the native claude.exe derived from the Windows shim); only
+              // the harness fallback transits a shell, and the fakes ignore
+              // argv (resolveClaudeSpawn above).
+              shell: resolved.shell,
               maxBuffer: 64 * 1024 * 1024,
             },
             (error, out) => {
@@ -247,7 +334,17 @@ export function claudeCodeTransport(opts: ClaudeCodeTransportOptions): Tier1Tran
           child.stdin?.on("error", () => {});
           child.stdin?.end(prompt);
         }
-      );
+      ));
+      } finally {
+        // The per-send scratch (system-prompt file, hermetic cwd) is
+        // disposable; a kill can hold the dir briefly, so failure to remove
+        // is swallowed rather than masking the call's own outcome.
+        try {
+          rmSync(scratch, { recursive: true, force: true });
+        } catch {
+          // best-effort cleanup only
+        }
+      }
 
       let envelope: unknown;
       try {
@@ -292,7 +389,30 @@ export function claudeCodeTransport(opts: ClaudeCodeTransportOptions): Tier1Tran
         );
       }
 
-      return { response: envelope, usage: USAGE_EXTRACTORS["claude-code"](envelope) };
+      // Extraction (PR D): the CLI's schema-validated structured_output IS
+      // the forced report_findings call's input (measured: the probe's
+      // envelope carries it as a dedicated field). The transport maps it into
+      // the canonical response shape the api backend produces, so the runner
+      // and the citation validator see the same shapes and no caller changes.
+      const structured = body.structured_output;
+      if (typeof structured !== "object" || structured === null) {
+        throw new Tier1TransportError(
+          "transport",
+          "malformed envelope: no structured_output despite a success result; the forced call did not land"
+        );
+      }
+      const response = {
+        content: [
+          {
+            type: "tool_use",
+            id: "toolu_claude_code_structured_output",
+            name: "report_findings",
+            input: structured,
+          },
+        ],
+        usage: body.usage ?? null,
+      };
+      return { response, usage: USAGE_EXTRACTORS["claude-code"](response) };
     },
   };
 }

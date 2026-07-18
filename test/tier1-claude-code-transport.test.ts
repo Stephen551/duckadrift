@@ -22,10 +22,16 @@ function scenarioEnv(scenario: string): NodeJS.ProcessEnv {
 }
 
 function request(model = "claude-sonnet-5"): object {
+  // The realized surface (PR D): system blocks ride --system-prompt-file,
+  // the forced tool's schema rides --json-schema, the user message rides
+  // stdin. The fakes ignore argv; the REQUEST must still carry all three or
+  // the transport refuses to realize it.
   return {
     model,
     max_tokens: 1024,
     output_config: { effort: "high" },
+    system: [{ type: "text", text: "You are the harness probe." }],
+    tools: [{ name: "report_findings", input_schema: { type: "object", properties: { findings: { type: "array" } }, required: ["findings"] } }],
     messages: [{ role: "user", content: "Reply with exactly: pong" }],
   };
 }
@@ -43,12 +49,14 @@ async function errorFrom(promise: Promise<unknown>): Promise<Tier1TransportError
 }
 
 describe("claude-code transport: the taxonomy against the real spawn path (ADR-0044)", () => {
-  it("canonical envelope: returns {response, usage} with the spike's measured numbers", async () => {
+  it("canonical envelope: extraction maps structured_output into the api-canonical tool call, usage intact", async () => {
     const transport = claudeCodeTransport({ ...DEADLINE, env: scenarioEnv("canonical") });
     const result = await transport.send(request());
-    const envelope = result.response as Record<string, unknown>;
-    expect(envelope.type).toBe("result");
-    expect(envelope.is_error).toBe(false);
+    const response = result.response as { content: Array<Record<string, unknown>>; usage: Record<string, unknown> };
+    expect(response.content).toHaveLength(1);
+    expect(response.content[0]!.type).toBe("tool_use");
+    expect(response.content[0]!.name).toBe("report_findings");
+    expect(response.content[0]!.input).toEqual({ findings: [] });
     const usage = result.usage as Record<string, unknown>;
     expect(usage.input_tokens).toBe(2);
     expect(usage.output_tokens).toBe(65);

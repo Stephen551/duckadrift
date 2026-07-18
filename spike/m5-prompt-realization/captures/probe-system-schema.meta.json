@@ -1,0 +1,24 @@
+{
+  "argv": [
+    "claude.exe",
+    "-p",
+    "--output-format",
+    "json",
+    "--model",
+    "claude-sonnet-5",
+    "--effort",
+    "high",
+    "--no-session-persistence",
+    "--strict-mcp-config",
+    "--tools",
+    "",
+    "--system-prompt-file",
+    "<system-file>",
+    "--json-schema",
+    "{\"type\":\"object\",\"properties\":{\"system_token\":{\"type\":\"string\"},\"echo\":{\"type\":\"string\"}},\"required\":[\"system_token\",\"echo\"]}"
+  ],
+  "exitCode": 0,
+  "durationMs": 7472,
+  "stderr": "",
+  "spawn": "direct claude.exe, shell free, prompt via stdin, empty cwd"
+}
