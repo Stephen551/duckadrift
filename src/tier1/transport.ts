@@ -238,6 +238,13 @@ export function claudeCodeTransport(opts: ClaudeCodeTransportOptions): Tier1Tran
               )
             );
           }, deadlineMs);
+          // A child that dies before draining stdin (spawn failure, the
+          // deadline kill) EPIPEs the pending prompt write. The exec callback
+          // and the deadline path already own that outcome; the write error is
+          // their echo, not a new event, so the handler is a no-op BY DESIGN.
+          // Without it the echo is an unhandled stream error that can crash
+          // the host process mid-check (PR #54 verifier finding, 3/3 Linux).
+          child.stdin?.on("error", () => {});
           child.stdin?.end(prompt);
         }
       );
