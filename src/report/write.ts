@@ -23,6 +23,10 @@ export type Tier1Status =
       signals: Tier1Signal[]; // always computed in PR mode, [] otherwise
       /** On no-credentials: WHICH env var is missing, named by the transport module's backend map (ADR-0044) so the skip line says exactly what the run lacked. */
       credentialName?: string;
+      /** The sweep pause block (ADR-0045, PDR 2.8): completed and total units, the units not checked, and the estimated window reopening (~HH:MM, the caller's clock). */
+      paused?: { completed: number; total: number; notChecked: string[]; resumeAt?: string };
+      /** A refused checkpoint (changed tree, foreign key, unparseable bytes): named loudly; the sweep restarted from zero (ADR-0045). */
+      checkpointRefusal?: string;
       findings?: Tier1RunResult["findings"];
       discarded?: Tier1RunResult["discarded"];
       droppedCitations?: Tier1RunResult["droppedCitations"];

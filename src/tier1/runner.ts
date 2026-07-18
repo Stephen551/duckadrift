@@ -6,6 +6,7 @@ import { validateCitations } from "./citations.js";
 import type { CitationVerdict, Tier1Finding } from "./citations.js";
 import { confirmDeadPremise } from "./confirm-premise.js";
 import { buildRequest } from "./prompt.js";
+import type { SweepCheckpoint } from "./sweep.js";
 import type { Tier1Transport } from "./transport.js";
 
 // The one runner (ADR-0031). Sequential over the checks; per check:
@@ -39,6 +40,13 @@ export interface Tier1RunResult {
   livePremises: Array<{ check: "S5"; claim: string }>;
   /** One entry per check that made a call (live or replay); skipped checks contribute none. */
   usage: Tier1CheckUsage[];
+  /** Present when quota exhaustion paused the sweep (ADR-0045): completed and total units, and the units NOT checked, enumerated by name, never summarized (PDR 2.8). */
+  paused?: { completed: number; total: number; notChecked: Tier1CheckId[] };
+}
+
+export interface RunTier1Options {
+  /** The sweep checkpoint (ADR-0045). Absent for gated PR-mode runs; present for sweeps that must pause visibly and resume exactly. */
+  checkpoint?: SweepCheckpoint;
 }
 
 /** Reads the four usage fields off the seam's untrusted usage block, defensively: any absent field is 0 (a replay body may omit them). The block arrives already extracted by the transport (ADR-0044); the runner never learns an envelope shape. */
@@ -86,8 +94,10 @@ function extractToolInput(response: unknown): Extracted {
 export async function runTier1Checks(
   ctx: AdrLogContext,
   checks: readonly CheckDefinition[],
-  transport: Tier1Transport
+  transport: Tier1Transport,
+  opts: RunTier1Options = {}
 ): Promise<Tier1RunResult> {
+  void opts; // consumed by the ADR-0045 checkpoint integration (green commit)
   // Model and effort come from the repo's config — the same values that key
   // the recording (ADR-0028) and, at M4, the calibration entry (PDR §2.6).
   // Quiet load: any per-run config notices were already emitted by the
