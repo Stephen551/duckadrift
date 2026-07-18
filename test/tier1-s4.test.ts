@@ -19,9 +19,9 @@ import { replayTransport } from "../src/tier1/transport.js";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const TIER1 = join(__dirname, "fixtures", "tier1");
 const S4_FIXTURE = join(TIER1, "s4-recurring-revision");
-const S4_RECORDING = join(S4_FIXTURE, "recordings", "s4.recording.json");
+const S4_RECORDING = join(S4_FIXTURE, "recordings", "s4.api.recording.json");
 const BASELINE = join(TIER1, "clean-baseline");
-const BASELINE_RECORDING = join(BASELINE, "recordings", "s4.recording.json");
+const BASELINE_RECORDING = join(BASELINE, "recordings", "s4.api.recording.json");
 
 describe("S4 against the 0040-0043 specimen (the G3 criterion)", () => {
   it("accepts at least one finding naming the bridge-vs-weld primitive across >=3 documents", async () => {

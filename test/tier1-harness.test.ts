@@ -13,7 +13,7 @@ import { canonicalRequestHash, loadRecording, replayOrFail } from "../src/tier1/
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const HARNESS_DIR = join(__dirname, "fixtures", "tier1", "harness-proof");
 const REQUEST_PATH = join(HARNESS_DIR, "request.json");
-const RECORDING_PATH = join(HARNESS_DIR, "recording.json");
+const RECORDING_PATH = join(HARNESS_DIR, "api.recording.json");
 const BAD_SCHEMA_PATH = join(HARNESS_DIR, "bad-schema-version.json");
 
 interface StubRequest {

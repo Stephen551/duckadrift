@@ -18,7 +18,7 @@ import { PROOF_CHECK } from "./fixtures/tier1/pipeline-proof/proof-check.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PROOF_DIR = join(__dirname, "fixtures", "tier1", "pipeline-proof");
-const RECORDING = join(PROOF_DIR, "recording.json");
+const RECORDING = join(PROOF_DIR, "api.recording.json");
 
 function proofContext() {
   return loadAdrLog(PROOF_DIR);

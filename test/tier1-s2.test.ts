@@ -15,7 +15,7 @@ import { isSkip } from "../src/tier1/select.js";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const TIER1 = join(__dirname, "fixtures", "tier1");
 const S2_FIXTURE = join(TIER1, "s2-code-vs-decision");
-const S2_RECORDING = join(S2_FIXTURE, "recordings", "s2.recording.json");
+const S2_RECORDING = join(S2_FIXTURE, "recordings", "s2.api.recording.json");
 
 function ctxWithPr(): AdrLogContext {
   return loadAdrLog(S2_FIXTURE, join(S2_FIXTURE, "pr-context.json"));

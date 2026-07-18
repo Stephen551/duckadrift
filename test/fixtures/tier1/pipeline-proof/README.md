@@ -8,7 +8,7 @@ API call. It is NOT an S-check fixture: `test/tier1-fixtures.test.ts` skips it
 - `proof-check.ts` — the test-only `CheckDefinition` driven through the real
   runner by `test/tier1-runner.test.ts`. It is not in the production registry;
   `TIER1_CHECKS` ships empty until M3.3.
-- `recording.json` — hand-seeded ADR-0028 recording for the proof check's
+- `api.recording.json` — hand-seeded ADR-0028 recording for the proof check's
   canonical request (hash computed with the built modules, not by hand). Its
   response carries three findings: one well-cited, one with a fabricated
   quote, one uncited — the runner must accept exactly one and name both

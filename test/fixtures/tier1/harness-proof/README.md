@@ -5,7 +5,7 @@ seeded by hand to prove the replay loop before any prompt is written.
 
 - `request.json` — the stub request. `test/tier1-harness.test.ts` reads it, replays it,
   then mutates one byte and proves the stale-recording refusal fires.
-- `recording.json` — the hand-seeded recording for that request. Its `key.promptHash`
+- `api.recording.json` — the hand-seeded recording for that request. Its `key.promptHash`
   and `requestDigest` are both the sha256 of the canonical (sorted-keys, no-whitespace)
   serialization of `request.json`; no live call was made, so the canonical serialization
   stands in for the wire body. Its `response` is a stub shaped like a Messages API

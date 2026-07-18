@@ -16,9 +16,9 @@ import { replayTransport } from "../src/tier1/transport.js";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const TIER1 = join(__dirname, "fixtures", "tier1");
 const S1_FIXTURE = join(TIER1, "s1-contradiction");
-const S1_RECORDING = join(S1_FIXTURE, "recordings", "s1.recording.json");
+const S1_RECORDING = join(S1_FIXTURE, "recordings", "s1.api.recording.json");
 const BASELINE = join(TIER1, "clean-baseline");
-const BASELINE_RECORDING = join(BASELINE, "recordings", "s1.recording.json");
+const BASELINE_RECORDING = join(BASELINE, "recordings", "s1.api.recording.json");
 
 const PAIR_A = "0001-embedded-file-local-persistence.md";
 const PAIR_B = "0003-postgresql-system-of-record.md";
