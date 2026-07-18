@@ -10,3 +10,15 @@ export function tier1CredentialsPresent(env: NodeJS.ProcessEnv = process.env): b
   // landed here on schedule with M3.2).
   return key !== undefined && key.trim() !== "";
 }
+
+/**
+ * True when CLAUDE_CODE_OAUTH_TOKEN is present and non-empty: the claude-code
+ * backend's credential, same quarantine doctrine as the API key (ADR-0029
+ * extended by ADR-0044). This module knows only env-var presence; WHICH
+ * backend needs WHICH credential is the transport module's map, the one place
+ * a backend conditional is permitted.
+ */
+export function claudeCodeCredentialsPresent(env: NodeJS.ProcessEnv = process.env): boolean {
+  const token = env.CLAUDE_CODE_OAUTH_TOKEN;
+  return token !== undefined && token.trim() !== "";
+}

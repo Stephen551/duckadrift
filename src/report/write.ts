@@ -21,6 +21,8 @@ export type Tier1Status =
       enabled: true;
       status: "no-credentials" | "no-signal" | "eligible";
       signals: Tier1Signal[]; // always computed in PR mode, [] otherwise
+      /** On no-credentials: WHICH env var is missing, named by the transport module's backend map (ADR-0044) so the skip line says exactly what the run lacked. */
+      credentialName?: string;
       findings?: Tier1RunResult["findings"];
       discarded?: Tier1RunResult["discarded"];
       droppedCitations?: Tier1RunResult["droppedCitations"];
@@ -131,9 +133,10 @@ function renderTier1Block(tier1: Tier1Status): string[] {
   }
   if (tier1.status === "no-credentials") {
     // PDR §2.8 fork doctrine: partial blindness is permitted, unannounced
-    // blindness is not.
+    // blindness is not. The missing credential is NAMED per backend (the
+    // transport module's map supplies it); api output stays byte-identical.
     lines.push(
-      "Tier 1 is enabled, but ANTHROPIC_API_KEY is not present in the environment — semantic checks skipped; Tier 0 coverage only. Fork-triggered PRs never receive secrets; the absence is expected there.",
+      `Tier 1 is enabled, but ${tier1.credentialName ?? "ANTHROPIC_API_KEY"} is not present in the environment — semantic checks skipped; Tier 0 coverage only. Fork-triggered PRs never receive secrets; the absence is expected there.`,
       ""
     );
   } else if (tier1.status === "no-signal") {

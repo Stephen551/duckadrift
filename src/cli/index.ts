@@ -6,7 +6,7 @@ import { runAllTierZeroChecks } from "../checks/index.js";
 import { loadConfig } from "../config/load.js";
 import { SetupError } from "../errors.js";
 import { renderMarkdownReport } from "../report/write.js";
-import { tier1CredentialsPresent } from "../tier1/credentials.js";
+import { backendCredentialsPresent } from "../tier1/transport.js";
 import { resolveTier1Status } from "../tier1/gate.js";
 import { executeCalibrate } from "./calibrate.js";
 import { executeCapture } from "./capture.js";
@@ -71,12 +71,11 @@ function runCheck(argv: string[]): void {
   const failing = findings.filter((f) => !f.advisory).length;
 
   // Second config load is quiet: loadAdrLog's internal load already emitted
-  // any per-run notices (config/load.ts documents this contract).
-  const tier1 = resolveTier1Status(
-    loadConfig(repoRoot, { quiet: true }).tier1,
-    tier1CredentialsPresent(),
-    ctx
-  );
+  // any per-run notices (config/load.ts documents this contract). Credential
+  // presence is asked per configured backend through the transport module's
+  // one map (ADR-0044).
+  const tier1Config = loadConfig(repoRoot, { quiet: true }).tier1;
+  const tier1 = resolveTier1Status(tier1Config, backendCredentialsPresent(tier1Config.backend), ctx);
   console.log(renderMarkdownReport(findings, ctx.unrecognizedFiles, tier1));
   if (failing === 0) {
     console.error(
