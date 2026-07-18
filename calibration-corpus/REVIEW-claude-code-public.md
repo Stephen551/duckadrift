@@ -20,7 +20,7 @@ evidence:
 > After consideration of the pros and cons of each approach we went with one cluster, using namespaces to partition different workloads. — 012-One-cluster-for-dev-staging-prod.md
 > start adopting multi-cluster by splitting out workloads by _environment type_, i.e. _production_ and _non-production_ — 036-multi-cluster.md
 machine: no byte-identical api-tuple counterpart
-label: ____
+label: true
 
 ## finding 002
 repo: cloud-platform
@@ -33,7 +33,7 @@ evidence:
 > We decided to manage the kubernetes cluster ourselves rather than using EKS mainly for the below reasons: — 014-Why-we-build-our-own-kubernetes-cluster.md
 > Use Amazon EKS for running the main cluster, which hosts MOJ service teams' applications. This replaces usage of kOps. — 022-EKS.md
 machine: no byte-identical api-tuple counterpart
-label: ____
+label: true
 
 ## finding 003
 repo: cloud-platform
@@ -46,7 +46,7 @@ evidence:
 > Replace self hosted Jenkins with self hosted Concourse CI pipeline — 003-Use-Concourse-CI.md
 > We will switch to using GitHub Actions for our deployment pipelines. — 040-use-github-actions.md
 machine: no byte-identical api-tuple counterpart
-label: ____
+label: true
 
 ## finding 004
 repo: duckadrift
@@ -59,7 +59,7 @@ evidence:
 > Loose asserts zero required sections — a genuinely freer template shouldn't be measured against Nygard's structure at all. — 0004-dialect-detection-widened.md
 > `REQUIRED_SECTIONS.loose` reverts to `["context", "decision"]` — the same requirement as nygard. — 0006-loose-dialect-correction.md
 machine: no byte-identical api-tuple counterpart
-label: ____
+label: false
 
 ## finding 005
 repo: fonthead
@@ -72,7 +72,7 @@ evidence:
 > Connected fonts always build non-italic, ship without a GPOS kerning table, and bypass optical sidebearing optimization — 0032-connect-sibling-of-trim-mutually-exclusive.md
 > Connect mode ships a GPOS PairPos kern table via `kerning:true` and `connectKern:{}`. — 0039-connect-ships-gpos-kern-supersedes-0032.md
 machine: no byte-identical api-tuple counterpart
-label: ____
+label: false
 
 ## finding 006
 repo: duckadrift
@@ -87,7 +87,7 @@ evidence:
 > A second pipeline is the parallel-primitive failure this repository has already shipped once and now treats as a standing audit concern. — 0031-prompt-architecture.md
 > Status is resolved by one shared primitive. — 0039-one-status-recognizer.md
 machine: no byte-identical api-tuple counterpart
-label: ____
+label: true
 
 ## finding 007
 repo: terraform-provider-proxmox
@@ -101,7 +101,7 @@ evidence:
 > `proxmox_virtual_environment_{domain}_{name}` (legacy, pre-ADR-007) — 003-resource-file-organization.md
 > SDK resources (`proxmoxtf/`) are feature-frozen. As part of v1.0, each SDK resource is rewritten in the Framework provider with the new `proxmox_*` name directly. — 007-resource-type-name-migration.md
 machine: no byte-identical api-tuple counterpart
-label: ____
+label: false
 
 ## finding 008
 repo: cosmos-sdk
@@ -113,7 +113,7 @@ claim: ADR-021's Decision section names the concrete file path x/bank/types/type
 evidence:
 > // x/bank/types/types.proto — adr-021-protobuf-query-encoding.md
 machine: no byte-identical api-tuple counterpart
-label: ____
+label: false
 
 ## finding 009
 repo: cosmos-sdk
@@ -125,7 +125,7 @@ claim: ADR-021's Decision section names the concrete file path x/gov/types/types
 evidence:
 > // x/gov/types/types.proto — adr-021-protobuf-query-encoding.md
 machine: no byte-identical api-tuple counterpart
-label: ____
+label: false
 
 ## finding 010
 repo: fonthead
@@ -137,5 +137,5 @@ claim: ADR 0005 treats fontkit as a live dependency explicitly distrusted for va
 evidence:
 > never rely on fontkit/opentype.js to validate — 0005-font-validity-checksums-fonttools.md
 machine: no byte-identical api-tuple counterpart
-label: ____
+label: false
 
