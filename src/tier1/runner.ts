@@ -41,7 +41,7 @@ export interface Tier1RunResult {
   usage: Tier1CheckUsage[];
 }
 
-/** Reads the four usage fields off the seam's untrusted usage block, defensively — any absent field is 0 (a replay body may omit them). The block arrives already extracted by the transport (ADR-0044); the runner never learns an envelope shape. */
+/** Reads the four usage fields off the seam's untrusted usage block, defensively: any absent field is 0 (a replay body may omit them). The block arrives already extracted by the transport (ADR-0044); the runner never learns an envelope shape. */
 function readUsage(check: Tier1CheckId, usageBlock: unknown): Tier1CheckUsage {
   const num = (v: unknown): number => (typeof v === "number" && Number.isFinite(v) ? v : 0);
   const usage =
