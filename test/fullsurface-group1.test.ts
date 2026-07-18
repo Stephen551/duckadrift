@@ -98,7 +98,7 @@ describe("B-10 — the file-size cap applies to the config read", () => {
     const dir = writeRepo({ ".duckadrift.yml": oversized });
     // Full defaults — no dialect adopted, tier1 at its always-populated default (ADR-0029).
     expect(loadConfig(dir)).toEqual({
-      tier1: { enabled: false, backend: "api", model: "claude-sonnet-5", effort: "high" },
+      tier1: { enabled: false, backend: "api", model: "claude-sonnet-5", effort: "high", deadline_seconds: 120 },
     });
   });
 });

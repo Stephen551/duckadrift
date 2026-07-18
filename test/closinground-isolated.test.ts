@@ -63,7 +63,7 @@ describe("Workstream E — config load hardened (NEW-E, NEW-F)", () => {
     mkdirSync(join(dir, ".duckadrift.yml", "nested"), { recursive: true }); // a DIRECTORY of that name
     // Full defaults — tier1 at its always-populated default (ADR-0029).
     expect(loadConfig(dir)).toEqual({
-      tier1: { enabled: false, backend: "api", model: "claude-sonnet-5", effort: "high" },
+      tier1: { enabled: false, backend: "api", model: "claude-sonnet-5", effort: "high", deadline_seconds: 120 },
     });
   });
 
