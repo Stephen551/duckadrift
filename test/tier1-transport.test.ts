@@ -30,20 +30,20 @@ describe("transport contract: the claude-code recording replays with zero creden
     expect(recording.key.promptHash).toBe(canonicalRequestHash(loadStubRequest()));
   });
 
-  it("replay returns the envelope verbatim and the seam extracts its usage block", async () => {
+  it("replay returns the stored seam output verbatim and extracts its usage block", async () => {
     const result = await replayTransport(RECORDING_PATH).send(loadStubRequest());
     const recording = loadRecording(RECORDING_PATH);
+    // The recording stores what the seam RETURNS (PR D: the extracted,
+    // api-canonical shape), so replay and live stay one pipeline and the
+    // runner sees identical shapes from both.
     expect(result.response).toEqual(recording.response);
-    // The seam's own extraction: the headless envelope's top-level usage
-    // block, with the spike's measured numbers intact.
-    const envelope = recording.response as Record<string, unknown>;
-    expect(result.usage).toEqual(envelope.usage);
+    const stored = recording.response as { content: Array<Record<string, unknown>>; usage: Record<string, unknown> };
+    expect(stored.content[0]!.type).toBe("tool_use");
+    expect(stored.content[0]!.name).toBe("report_findings");
+    expect(result.usage).toEqual(stored.usage);
     const usage = result.usage as Record<string, unknown>;
     expect(usage.input_tokens).toBe(2);
     expect(usage.output_tokens).toBe(65);
-    // And the envelope proves which model ran (the contract's decision 4
-    // rests on this measured fact).
-    expect(Object.keys(envelope.modelUsage as Record<string, unknown>)).toEqual(["claude-sonnet-5"]);
   });
 
   it("a stale request still refuses, backend notwithstanding", async () => {
