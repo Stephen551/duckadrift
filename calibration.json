@@ -155,6 +155,141 @@
         }
       },
       "sampleSize": 56
+    },
+    {
+      "corpusHash": "e7ce85d516ea820e6fa7502e7bef16409bcbf39066dbf81f7b00249d6a1613f9",
+      "key": {
+        "backend": "claude-code",
+        "effort": "high",
+        "model": "claude-sonnet-5"
+      },
+      "perSeverity": {
+        "critical": {
+          "curve": [],
+          "floor": 0.75,
+          "lowerBound": null,
+          "pointPrecision": null,
+          "sampleSize": 0,
+          "threshold": null
+        },
+        "elevated": {
+          "curve": [
+            {
+              "confidence": 0.72,
+              "n": 1,
+              "precision": 0,
+              "truePositives": 0,
+              "wilsonLower": 0
+            },
+            {
+              "confidence": 0.5,
+              "n": 2,
+              "precision": 0.5,
+              "truePositives": 1,
+              "wilsonLower": 0.09452865480086611
+            }
+          ],
+          "floor": 0.9,
+          "lowerBound": 0.09452865480086611,
+          "pointPrecision": 0.5,
+          "sampleSize": 2,
+          "threshold": null
+        },
+        "routine": {
+          "curve": [
+            {
+              "confidence": 0.9,
+              "n": 1,
+              "precision": 0,
+              "truePositives": 0,
+              "wilsonLower": 0
+            },
+            {
+              "confidence": 0.88,
+              "n": 2,
+              "precision": 0.5,
+              "truePositives": 1,
+              "wilsonLower": 0.09452865480086611
+            },
+            {
+              "confidence": 0.85,
+              "n": 3,
+              "precision": 0.6666666666666666,
+              "truePositives": 2,
+              "wilsonLower": 0.20765495512648788
+            },
+            {
+              "confidence": 0.8,
+              "n": 5,
+              "precision": 0.6,
+              "truePositives": 3,
+              "wilsonLower": 0.23071993220883702
+            },
+            {
+              "confidence": 0.78,
+              "n": 6,
+              "precision": 0.5,
+              "truePositives": 3,
+              "wilsonLower": 0.1876128068994087
+            },
+            {
+              "confidence": 0.75,
+              "n": 7,
+              "precision": 0.42857142857142855,
+              "truePositives": 3,
+              "wilsonLower": 0.1582169222626268
+            },
+            {
+              "confidence": 0.7,
+              "n": 8,
+              "precision": 0.375,
+              "truePositives": 3,
+              "wilsonLower": 0.13684175946152105
+            },
+            {
+              "confidence": 0.68,
+              "n": 9,
+              "precision": 0.4444444444444444,
+              "truePositives": 4,
+              "wilsonLower": 0.188775429471914
+            },
+            {
+              "confidence": 0.65,
+              "n": 10,
+              "precision": 0.4,
+              "truePositives": 4,
+              "wilsonLower": 0.16817758120350967
+            },
+            {
+              "confidence": 0.6,
+              "n": 11,
+              "precision": 0.45454545454545453,
+              "truePositives": 5,
+              "wilsonLower": 0.21270957543988048
+            },
+            {
+              "confidence": 0.55,
+              "n": 12,
+              "precision": 0.5,
+              "truePositives": 6,
+              "wilsonLower": 0.2537781703934222
+            },
+            {
+              "confidence": 0.42,
+              "n": 13,
+              "precision": 0.46153846153846156,
+              "truePositives": 6,
+              "wilsonLower": 0.23205754301488138
+            }
+          ],
+          "floor": 0.95,
+          "lowerBound": 0.2537781703934222,
+          "pointPrecision": 0.5,
+          "sampleSize": 13,
+          "threshold": null
+        }
+      },
+      "sampleSize": 15
     }
   ],
   "schemaVersion": 1

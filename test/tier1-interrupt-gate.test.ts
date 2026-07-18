@@ -84,6 +84,42 @@ function renderWith(
   return renderMarkdownReport([], [], tier1);
 }
 
+describe("two entries, one artifact: each tuple finds exactly its own (M5.4)", () => {
+  const tmp = mkdtempSync(join(tmpdir(), "duckadrift-gate-"));
+  const CLAUDE_CODE_KEY = { backend: "claude-code", model: "claude-sonnet-5", effort: "high" };
+
+  it("the claude-code tuple consumes its own entry: own corpusHash, sample 15, every channel closed by data", () => {
+    const consumption = consumeCalibration(tmp, CLAUDE_CODE_KEY, SHIPPED);
+    expect(consumption.calibrated).toBe(true);
+    if (consumption.calibrated) {
+      expect(consumption.corpusHash.startsWith("e7ce85d516ea")).toBe(true);
+      expect(consumption.sampleSize).toBe(15);
+      for (const severity of ["critical", "elevated", "routine"] as const) {
+        expect(consumption.perSeverity[severity].state).toBe("closed");
+      }
+    }
+  });
+
+  it("the api tuple's entry is byte-untouched beside it: same corpusHash, same sample as shipped at M4.3", () => {
+    const consumption = consumeCalibration(tmp, KEY, SHIPPED);
+    expect(consumption.calibrated).toBe(true);
+    if (consumption.calibrated) {
+      expect(consumption.corpusHash.startsWith("5e7d357ae09d")).toBe(true);
+      expect(consumption.sampleSize).toBe(56);
+    }
+  });
+
+  it("a mismatched tuple refuses loudly: no entry means uncalibrated, with the tuple named", () => {
+    const mismatch = { backend: "claude-code", model: "claude-haiku-4-5-20251001", effort: "high" };
+    const consumption = consumeCalibration(tmp, mismatch, SHIPPED);
+    expect(consumption.calibrated).toBe(false);
+    if (!consumption.calibrated) {
+      expect(consumption.reason).toBe("no-entry");
+      expect(consumption.detail).toContain("claude-haiku-4-5-20251001");
+    }
+  });
+});
+
 describe("closed-stays-closed — the SHIPPED artifact opens nothing", () => {
   const tmp = mkdtempSync(join(tmpdir(), "duckadrift-gate-"));
 
