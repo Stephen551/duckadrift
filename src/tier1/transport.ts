@@ -10,7 +10,7 @@ import type { RecordingBackend } from "./recording.js";
 //
 // The seam carries exactly two things out (ADR-0044): the verbatim response
 // body and its usage block. Usage is extracted HERE, per backend, so no caller
-// ever learns a backend's envelope shape — a conditional on backend anywhere
+// ever learns a backend's envelope shape: a conditional on backend anywhere
 // outside this module is the rejected pattern the contract names.
 
 export interface Tier1TransportResult {
@@ -75,7 +75,7 @@ export function replayTransport(recordingPath: string): Tier1Transport {
   return {
     async send(request: object): Promise<Tier1TransportResult> {
       const response = replayOrFail(request, recordingPath);
-      // The recording's own key names the backend whose envelope this is —
+      // The recording's own key names the backend whose envelope this is;
       // the replay extracts usage exactly as that backend's live transport
       // would, so replay and live stay the same pipeline (ADR-0028).
       const backend = loadRecording(recordingPath).key.backend;

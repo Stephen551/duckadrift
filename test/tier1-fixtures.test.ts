@@ -20,8 +20,8 @@ const TIER1_DIR = join(__dirname, "fixtures", "tier1");
 // harness-proof holds the hand-seeded recording for tier1-harness.test.ts,
 // pipeline-proof holds the M3.2 pipeline's end-to-end fixture (test-only check
 // + recording, driven by tier1-runner.test.ts), and transport-proof holds the
-// ADR-0044 claude-code recording proof (tier1-transport.test.ts) — proof
-// fixtures, not S-check repo fixtures: no manifest.json, not part of the
+// ADR-0044 claude-code recording proof (tier1-transport.test.ts): proof
+// fixtures, not S-check repo fixtures, no manifest.json, not part of the
 // S-check corpus contract.
 const PROOF_FIXTURES = new Set(["harness-proof", "pipeline-proof", "transport-proof"]);
 const REPO_FIXTURES = listFixtureDirs(TIER1_DIR).filter((name) => !PROOF_FIXTURES.has(name));
