@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// THROWAWAY SPIKE — M5.0 PR B evidence collector. Not production code, not
+// THROWAWAY SPIKE: M5.0 PR B evidence collector. Not production code, not
 // imported by anything, never wired into the build. It measures Claude Code
 // headless (`claude -p`) behavior and writes captured artifacts for the PR
 // ledger: two same-prompt captures (schema stability), an auth-failure
