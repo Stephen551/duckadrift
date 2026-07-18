@@ -59,7 +59,7 @@ for (const [checkId, rel] of Object.entries(FIXTURES)) {
   const selection = check.selectInput(ctx);
   if (isSkip(selection)) {
     summary.push({ check: checkId, status: "skipped", skip: selection.skip });
-    console.log(`${checkId}: skipped (${selection.skip}) — no call`);
+    console.log(`${checkId}: skipped (${selection.skip}); no call`);
     continue;
   }
   const request = buildRequest(check, selection, { model: "claude-sonnet-5", effort: "high" });
