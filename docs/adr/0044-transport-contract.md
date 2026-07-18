@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 date: 2026-07-17
 severity: elevated
 ---
@@ -8,7 +8,7 @@ severity: elevated
 
 ## Status
 
-Proposed, 2026-07-17. The director flips this to Accepted on the merge ruling.
+Accepted, 2026-07-17.
 
 ## Context
 
