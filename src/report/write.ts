@@ -170,7 +170,7 @@ function renderTier1Block(tier1: Tier1Status): string[] {
   }
   if (tier1.paused !== undefined) {
     lines.push(
-      `Tier 1 sweep paused: ${tier1.paused.completed} of ${tier1.paused.total} ADRs checked; resuming at ${tier1.paused.resumeAt ?? "~--:--"}`,
+      `Tier 1 sweep paused: ${tier1.paused.completed} of ${tier1.paused.total} checks completed; resuming at ${tier1.paused.resumeAt ?? "~--:--"}`,
       `Not checked: ${tier1.paused.notChecked.join(", ")}`,
       ""
     );

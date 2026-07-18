@@ -136,7 +136,7 @@ describe("starved world: quota pauses at exactly K completed units, loudly (ADR-
     const status = withTier1Run({ enabled: true, status: "eligible", signals: [] }, run);
     if (status.enabled && status.paused) status.paused.resumeAt = "~19:45";
     const md = renderMarkdownReport([], [], status);
-    expect(md).toContain("Tier 1 sweep paused: 2 of 3 ADRs checked; resuming at ~19:45");
+    expect(md).toContain("Tier 1 sweep paused: 2 of 3 checks completed; resuming at ~19:45");
     expect(md).toContain("Not checked: S5");
   });
 });
