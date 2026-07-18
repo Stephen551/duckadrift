@@ -1,0 +1,37 @@
+{
+  "label": "capture-a",
+  "argv": [
+    "claude",
+    "-p",
+    "Reply with exactly: pong",
+    "--output-format",
+    "json",
+    "--model",
+    "claude-sonnet-5",
+    "--effort",
+    "high",
+    "--no-session-persistence"
+  ],
+  "exitCode": 0,
+  "killed": false,
+  "durationMs": 11343,
+  "stderr": "",
+  "envPassedThrough": [
+    "PATH",
+    "SYSTEMROOT",
+    "SYSTEMDRIVE",
+    "WINDIR",
+    "COMSPEC",
+    "TEMP",
+    "TMP",
+    "USERPROFILE",
+    "HOMEDRIVE",
+    "HOMEPATH",
+    "HOME",
+    "APPDATA",
+    "LOCALAPPDATA",
+    "PROGRAMDATA",
+    "USERNAME"
+  ],
+  "cwd": "an empty scratch directory outside any repository"
+}
