@@ -1,5 +1,5 @@
 import { writeFileSync } from "node:fs";
-import { relative, resolve } from "node:path";
+import { dirname, join, relative, resolve } from "node:path";
 import { loadAdrLog } from "../adr/load.js";
 import { runAllTierZeroChecks } from "../checks/index.js";
 import { loadConfig } from "../config/load.js";
@@ -10,6 +10,7 @@ import { routeFindings } from "../tier1/calibration/route.js";
 import { TIER1_CHECKS } from "../tier1/checks.js";
 import { resolveTier1Status } from "../tier1/gate.js";
 import { runTier1Checks } from "../tier1/runner.js";
+import { openSweepCheckpoint, quotaResumeEstimate, treeIdentityOf } from "../tier1/sweep.js";
 import { backendCredentialsPresent, liveTransportFor } from "../tier1/transport.js";
 
 export interface ReportOptions {
@@ -17,6 +18,8 @@ export interface ReportOptions {
   prContextPath?: string;
   out?: string;
   adrDir?: string;
+  /** The clock for the pause block's ~HH:MM estimate (ADR-0045). Injectable for deterministic tests; production callers omit it. */
+  now?: Date;
 }
 
 /**
@@ -51,7 +54,27 @@ export async function executeReport(opts: ReportOptions): Promise<number> {
     // (PDR §2.5). Transport construction happens AFTER the status gate, so a
     // disabled / no-credentials / no-signal run provably never builds one.
     if (tier1.enabled && tier1.status === "eligible" && TIER1_CHECKS.length > 0) {
-      const run = await runTier1Checks(ctx, TIER1_CHECKS, liveTransportFor(tier1Config));
+      // Schedule mode is the sweep (PDR 2.8): checkpointed and resumable, the
+      // artifact living beside the report it feeds. PR-mode runs are gated
+      // and small; they carry no checkpoint.
+      let checkpoint;
+      let checkpointRefusal: string | undefined;
+      if (!ctx.prContext) {
+        const opened = openSweepCheckpoint(join(dirname(mdPath), "duckadrift-sweep-checkpoint.json"), {
+          backend: tier1Config.backend,
+          model: tier1Config.model,
+          effort: tier1Config.effort,
+          treeIdentity: treeIdentityOf(ctx),
+        });
+        checkpoint = opened.checkpoint;
+        checkpointRefusal = opened.refusal;
+      }
+      const run = await runTier1Checks(
+        ctx,
+        TIER1_CHECKS,
+        liveTransportFor(tier1Config),
+        checkpoint !== undefined ? { checkpoint } : {}
+      );
       // Calibration consumption + routing (ADR-0042): the artifact is read
       // (repo-local overrides shipped), each severity's channel state derived
       // from its own measurements, and each finding routed. On the shipped
@@ -64,6 +87,17 @@ export async function executeReport(opts: ReportOptions): Promise<number> {
       const adrsByFileName = new Map(ctx.adrs.map((a) => [a.fileName, a]));
       const dispositions = routeFindings(run.findings, adrsByFileName, consumption);
       tier1 = withTier1Run(tier1, run, consumption, dispositions);
+      if (tier1.enabled) {
+        if (checkpointRefusal !== undefined) tier1.checkpointRefusal = checkpointRefusal;
+        if (tier1.paused !== undefined) {
+          // The pause is visible, the exit is success (a pause is not a
+          // failure, ADR-0045), and the estimate is the PDR's own format.
+          tier1.paused.resumeAt = quotaResumeEstimate(opts.now ?? new Date());
+        } else {
+          // A completed sweep deletes its checkpoint (ADR-0045).
+          checkpoint?.finalize();
+        }
+      }
     }
     const markdown = renderMarkdownReport(findings, ctx.unrecognizedFiles, tier1);
     const adrDirRelative = relative(opts.repoRoot, ctx.adrDir).split("\\").join("/");

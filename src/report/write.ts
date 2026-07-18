@@ -158,6 +158,23 @@ function renderTier1Block(tier1: Tier1Status): string[] {
   } else {
     lines.push(`Tier 1 eligible: ${tier1.signals.length} signal(s) detected.`, "");
   }
+  // The sweep's checkpoint states (ADR-0045), loud and first among the run
+  // details: a refused checkpoint names its reason and the restart; a pause
+  // carries the PDR 2.8 block with the unchecked units enumerated by name,
+  // never summarized.
+  if (tier1.checkpointRefusal !== undefined) {
+    lines.push(
+      `Tier 1 sweep checkpoint refused: ${tier1.checkpointRefusal} The sweep restarted from zero.`,
+      ""
+    );
+  }
+  if (tier1.paused !== undefined) {
+    lines.push(
+      `Tier 1 sweep paused: ${tier1.paused.completed} of ${tier1.paused.total} ADRs checked; resuming at ${tier1.paused.resumeAt ?? "~--:--"}`,
+      `Not checked: ${tier1.paused.notChecked.join(", ")}`,
+      ""
+    );
+  }
   // Signals render for any status that carries them — under no-credentials the
   // gate still ran (it is free) and its output is coverage truth (ADR-0029).
   if (tier1.signals.length > 0) {

@@ -6,8 +6,11 @@ import { validateCitations } from "./citations.js";
 import type { CitationVerdict, Tier1Finding } from "./citations.js";
 import { confirmDeadPremise } from "./confirm-premise.js";
 import { buildRequest } from "./prompt.js";
+import { canonicalRequestHash } from "./recording.js";
+import type { RecordingKey } from "./recording.js";
 import type { SweepCheckpoint } from "./sweep.js";
-import type { Tier1Transport } from "./transport.js";
+import { Tier1TransportError } from "./transport.js";
+import type { Tier1Transport, Tier1TransportResult } from "./transport.js";
 
 // The one runner (ADR-0031). Sequential over the checks; per check:
 // selectInput → build request → transport → validate citations → accumulate.
@@ -97,17 +100,27 @@ export async function runTier1Checks(
   transport: Tier1Transport,
   opts: RunTier1Options = {}
 ): Promise<Tier1RunResult> {
-  void opts; // consumed by the ADR-0045 checkpoint integration (green commit)
   // Model and effort come from the repo's config — the same values that key
   // the recording (ADR-0028) and, at M4, the calibration entry (PDR §2.6).
   // Quiet load: any per-run config notices were already emitted by the
-  // loadAdrLog that produced ctx.
-  const { model, effort } = loadConfig(ctx.repoRoot, { quiet: true }).tier1;
+  // loadAdrLog that produced ctx. Backend is data here, never a fork
+  // (ADR-0044): it only labels the checkpoint's unit keys.
+  const { backend, model, effort } = loadConfig(ctx.repoRoot, { quiet: true }).tier1;
 
   const result: Tier1RunResult = { findings: [], discarded: [], droppedCitations: [], skipped: [], errors: [], livePremises: [], usage: [] };
 
-  for (const check of checks) {
-    const selection = check.selectInput(ctx);
+  // Selections run once, up front: they are deterministic and free, and the
+  // sweep's total unit count (the pause block's denominator, ADR-0045) must
+  // be known before quota can cut the loop short.
+  const selections = checks.map((check) => check.selectInput(ctx));
+  const totalUnits = selections.filter((selection) => !isSkip(selection)).length;
+  opts.checkpoint?.noteTotal(totalUnits);
+
+  let quotaPaused = false;
+  const notChecked: Tier1CheckId[] = [];
+
+  for (const [index, check] of checks.entries()) {
+    const selection = selections[index]!;
     if (isSkip(selection)) {
       // Loud, never silent (the Pact; ADR-0032): a check with nothing to read
       // is a reported skip, and a check with too much to read in one call is
@@ -121,7 +134,25 @@ export async function runTier1Checks(
       continue;
     }
 
+    // Quota already paused the sweep: everything after the exhausted unit is
+    // enumerated as not-checked, never silently absorbed (PDR 2.8).
+    if (quotaPaused) {
+      notChecked.push(check.id);
+      continue;
+    }
+
     const request = buildRequest(check, selection, { model, effort });
+    const unitKey: RecordingKey = { backend, model, effort, checkId: check.id, promptHash: canonicalRequestHash(request) };
+    const stored = opts.checkpoint?.lookup(unitKey);
+
+    // A completed unit is never re-sent (ADR-0045): a stored error replays as
+    // the same counted error, and a stored response re-enters the pipeline
+    // below exactly where a live one would, so a resumed sweep's report is
+    // byte-identical to an uninterrupted one.
+    if (stored !== undefined && stored.status === "errored") {
+      result.errors.push({ check: check.id, message: stored.message });
+      continue;
+    }
 
     // The whole untrusted-response handling — transport, extract, validate —
     // is inside one try/catch: one check's failure never silently costs
@@ -131,7 +162,35 @@ export async function runTier1Checks(
     // propagates", not "the validator handles impossible inputs"; ADR-0033,
     // S3-16/S3-17). Any throw becomes a counted error and the run continues.
     try {
-      const { response, usage } = await transport.send(request);
+      let seamResult: Tier1TransportResult;
+      if (stored !== undefined) {
+        seamResult = { response: stored.response, usage: stored.usage };
+      } else {
+        try {
+          seamResult = await transport.send(request);
+        } catch (err) {
+          // Quota exhaustion pauses the sweep with the unit on the incomplete
+          // side, always (ADR-0045): it is never recorded, and the resume
+          // re-runs it exactly once. Every other transport failure is the
+          // unit's outcome: recorded complete, counted, never retried by a
+          // resume.
+          if (err instanceof Tier1TransportError && err.kind === "quota") {
+            quotaPaused = true;
+            notChecked.push(check.id);
+            continue;
+          }
+          const message = err instanceof Error ? err.message : String(err);
+          opts.checkpoint?.record(unitKey, { status: "errored", message });
+          result.errors.push({ check: check.id, message });
+          continue;
+        }
+        opts.checkpoint?.record(unitKey, {
+          status: "responded",
+          response: seamResult.response,
+          usage: seamResult.usage,
+        });
+      }
+      const { response, usage } = seamResult;
 
       // A call was made (live or replay) — its measured usage is recorded
       // whatever the response's shape, before any refusal or discard, so cost
@@ -182,6 +241,10 @@ export async function runTier1Checks(
         message: err instanceof Error ? err.message : String(err),
       });
     }
+  }
+
+  if (quotaPaused) {
+    result.paused = { completed: totalUnits - notChecked.length, total: totalUnits, notChecked };
   }
 
   return result;
