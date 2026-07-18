@@ -1,4 +1,4 @@
-import { execFile } from "node:child_process";
+import { execFile, spawn } from "node:child_process";
 import Anthropic from "@anthropic-ai/sdk";
 import { loadRecording, replayOrFail } from "./recording.js";
 import type { RecordingBackend } from "./recording.js";
@@ -187,8 +187,10 @@ export function claudeCodeTransport(opts: ClaudeCodeTransportOptions): Tier1Tran
         "--strict-mcp-config",
       ];
 
+      const deadlineMs = opts.deadlineSeconds * 1000;
       const { stdout, exitCode } = await new Promise<{ stdout: string; exitCode: number | string }>(
         (resolvePromise, rejectPromise) => {
+          let settled = false;
           const child = execFile(
             "claude",
             args,
@@ -201,6 +203,9 @@ export function claudeCodeTransport(opts: ClaudeCodeTransportOptions): Tier1Tran
               maxBuffer: 64 * 1024 * 1024,
             },
             (error, out) => {
+              if (settled) return; // the deadline already rejected; this is the kill's echo
+              settled = true;
+              clearTimeout(deadline);
               if (error !== null && out.length === 0 && error.code === "ENOENT") {
                 rejectPromise(
                   new Tier1TransportError("transport", "spawn failure: the claude CLI is not on PATH")
@@ -210,6 +215,27 @@ export function claudeCodeTransport(opts: ClaudeCodeTransportOptions): Tier1Tran
               resolvePromise({ stdout: String(out), exitCode: error === null ? 0 : (error.code ?? 1) });
             }
           );
+          // The owned deadline (ADR-0044 decision 2): the CLI is proven never
+          // to self-terminate under transport denial, so waiting on it is a
+          // dormancy violation. On expiry the whole process tree dies (the
+          // shell shim spawns the real CLI as a child; killing only the shim
+          // would leave the CLI running) and a terminal transport error
+          // surfaces naming the deadline.
+          const deadline = setTimeout(() => {
+            if (settled) return;
+            settled = true;
+            if (process.platform === "win32" && child.pid !== undefined) {
+              spawn("taskkill", ["/pid", String(child.pid), "/T", "/F"], { shell: true });
+            } else {
+              child.kill("SIGKILL");
+            }
+            rejectPromise(
+              new Tier1TransportError(
+                "transport",
+                `deadline of ${opts.deadlineSeconds}s expired; killed the process tree (the CLI does not self-terminate under transport denial, measured in PR B)`
+              )
+            );
+          }, deadlineMs);
           child.stdin?.end(prompt);
         }
       );
@@ -240,6 +266,21 @@ export function claudeCodeTransport(opts: ClaudeCodeTransportOptions): Tier1Tran
           throw new Tier1TransportError("quota", `api_error_status 429 — ${detail}`);
         }
         throw new Tier1TransportError("auth", `api_error_status ${String(status)} — ${detail}`);
+      }
+
+      // Model pinning is verified, not trusted (ADR-0044 decision 4): the
+      // envelope's modelUsage names the model that actually ran (measured,
+      // PR B), and anything but exactly the pinned model is refused loudly.
+      const modelUsage = body.modelUsage;
+      const ranModels =
+        typeof modelUsage === "object" && modelUsage !== null ? Object.keys(modelUsage) : [];
+      if (ranModels.length !== 1 || ranModels[0] !== model) {
+        throw new Tier1TransportError(
+          "transport",
+          `model verification failed: pinned ${model}, envelope names ${
+            ranModels.length === 0 ? "no model" : ranModels.join(", ")
+          } (refused, ADR-0044 decision 4)`
+        );
       }
 
       return { response: envelope, usage: USAGE_EXTRACTORS["claude-code"](envelope) };
