@@ -4,7 +4,7 @@ import type { CheckDefinition } from "./checks.js";
 import { buildRequest } from "./prompt.js";
 import type { Tier1PromptConfig } from "./prompt.js";
 import { canonicalRequestHash } from "./recording.js";
-import type { Recording } from "./recording.js";
+import type { Recording, RecordingBackend } from "./recording.js";
 import { isSkip } from "./select.js";
 import type { Tier1Transport } from "./transport.js";
 
@@ -51,10 +51,12 @@ export async function captureOne(opts: {
   ctx: AdrLogContext;
   check: CheckDefinition;
   config: Tier1PromptConfig;
+  /** The transport the capture rides, named in the recording key (ADR-0044): the tuple is evidence, never an assumption. */
+  backend: RecordingBackend;
   transport: Tier1Transport;
   recordingPath: string;
 }): Promise<CaptureResult> {
-  const { ctx, check, config, transport, recordingPath } = opts;
+  const { ctx, check, config, backend, transport, recordingPath } = opts;
 
   const selection = check.selectInput(ctx);
   if (isSkip(selection)) {
@@ -83,7 +85,7 @@ export async function captureOne(opts: {
 
   const recording: Recording = {
     schemaVersion: 1,
-    key: { backend: "api", model: config.model, effort: config.effort, checkId: check.id, promptHash },
+    key: { backend, model: config.model, effort: config.effort, checkId: check.id, promptHash },
     // recordedAt is informational, not hashed — a live tool stamps wall-clock.
     recordedAt: new Date().toISOString(),
     requestDigest: promptHash,

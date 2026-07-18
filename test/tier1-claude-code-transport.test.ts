@@ -60,6 +60,10 @@ describe("claude-code transport: the taxonomy against the real spawn path (ADR-0
     const usage = result.usage as Record<string, unknown>;
     expect(usage.input_tokens).toBe(2);
     expect(usage.output_tokens).toBe(65);
+    // Raw modelUsage bytes ride the mapped response (the verified echo the
+    // recording's model key rests on).
+    const modelUsage = (result.response as Record<string, unknown>).modelUsage as Record<string, unknown>;
+    expect(Object.keys(modelUsage)).toEqual(["claude-sonnet-5"]);
   });
 
   it("auth: the measured 401 envelope surfaces as a distinct auth-class error", async () => {
