@@ -1,0 +1,38 @@
+{
+  "label": "transport-failure",
+  "argv": [
+    "claude",
+    "-p",
+    "Reply with exactly: pong",
+    "--output-format",
+    "json",
+    "--model",
+    "claude-sonnet-5",
+    "--effort",
+    "high",
+    "--no-session-persistence",
+    "--strict-mcp-config"
+  ],
+  "exitCode": "killed",
+  "killed": true,
+  "durationMs": 120019,
+  "stderr": "",
+  "envPassedThrough": [
+    "PATH",
+    "SYSTEMROOT",
+    "SYSTEMDRIVE",
+    "WINDIR",
+    "COMSPEC",
+    "TEMP",
+    "TMP",
+    "USERPROFILE",
+    "HOMEDRIVE",
+    "HOMEPATH",
+    "HOME",
+    "APPDATA",
+    "LOCALAPPDATA",
+    "PROGRAMDATA",
+    "USERNAME"
+  ],
+  "cwd": "an empty scratch directory outside any repository"
+}
