@@ -1,0 +1,106 @@
+{
+  "schemaVersion": 1,
+  "key": {
+    "backend": "claude-code",
+    "model": "claude-sonnet-5",
+    "effort": "high",
+    "checkId": "S4",
+    "promptHash": "a42b672f8620443403993745bf88394c0802bf0d03b32f7dd880bf8a7251bf42"
+  },
+  "recordedAt": "2026-07-18T18:06:37.865Z",
+  "requestDigest": "a42b672f8620443403993745bf88394c0802bf0d03b32f7dd880bf8a7251bf42",
+  "response": {
+    "content": [
+      {
+        "type": "tool_use",
+        "id": "toolu_claude_code_structured_output",
+        "name": "report_findings",
+        "input": {
+          "findings": [
+            {
+              "claim": "Read across the log, ADR-0018, ADR-0020, ADR-0021, ADR-0031, and ADR-0039 (five Accepted records) each circle the same underlying, never-finally-closed question: can duckadrift structurally guarantee that a primitive (link parsing, path containment, external-reference classification, number-scoping, the check pipeline, status recognition) is implemented exactly once, so a fix never fails to reach a sibling consumer? Each record explicitly declares the problem 'closed at the primitive' or 'complete,' and each subsequent record in the set instead finds the identical duplication-drift pattern recurring in a new area, undercutting the prior closure claim rather than building past it. The checker assesses this as a five-record recurring-revision chain on one unresolved architectural discrimination, not five independent, separately-resolved bugs.",
+              "citations": [
+                {
+                  "document": "0018-the-adversarial-consolidation-round.md",
+                  "quote": "The five founding false positives are closed at the primitive, not the instance."
+                },
+                {
+                  "document": "0020-the-resolution-module.md",
+                  "quote": "ADR-0018 consolidated three duplicated primitives after five false positives traced to\neach being kept in more than one copy."
+                },
+                {
+                  "document": "0020-the-resolution-module.md",
+                  "quote": "every markdown-parsing\nand reference-resolution path in the tool is one implementation."
+                },
+                {
+                  "document": "0021-the-full-surface-adversarial-pass.md",
+                  "quote": "The founding false positives\n(ADR-0018) and the scanner's leaks (ADR-0020) shared one shape — a primitive applied\ncorrectly in one place and not another — and that shape is not found by waiting for a\nreviewer to report an instance of it."
+                },
+                {
+                  "document": "0021-the-full-surface-adversarial-pass.md",
+                  "quote": "The multi-round treadmill of the recent tags — patch an instance, ship, find the same bug in the next\ninstance — ends here, not through more diligence but by removing the duplication diligence\nwas compensating for."
+                },
+                {
+                  "document": "0031-prompt-architecture.md",
+                  "quote": "A second pipeline\nis the parallel-primitive failure this repository has already shipped once and\nnow treats as a standing audit concern."
+                },
+                {
+                  "document": "0039-one-status-recognizer.md",
+                  "quote": "Two recognizers disagreeing about the same fact, with a third about to be\npatched in, is the exact drift this tool exists to catch — found inside the tool, again."
+                },
+                {
+                  "document": "0039-one-status-recognizer.md",
+                  "quote": "Status is resolved by one shared primitive."
+                }
+              ],
+              "consequence": "If this reading holds, maintainers should not treat the 'closed at the primitive' / 'complete' / 'resolved by one shared primitive' language in ADR-0018, ADR-0020, ADR-0021, or ADR-0039 as evidence that duplicate-primitive drift is actually retired as a risk class, since ADR-0031 itself now frames it as a standing audit concern rather than a settled fact. A maintainer would likely want either a structural safeguard (a lint or architectural test that positively verifies single-sourcing of shared primitives across checks) or an explicit ADR acknowledging this as an accepted, ongoing residual risk rather than a repeatedly-declared-solved problem.",
+              "reportedConfidence": 0.5
+            }
+          ]
+        }
+      }
+    ],
+    "usage": {
+      "input_tokens": 3,
+      "cache_creation_input_tokens": 19203,
+      "cache_read_input_tokens": 155882,
+      "output_tokens": 19204,
+      "server_tool_use": {
+        "web_search_requests": 0,
+        "web_fetch_requests": 0
+      },
+      "service_tier": "standard",
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 19203,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "inference_geo": "",
+      "iterations": [
+        {
+          "input_tokens": 2,
+          "output_tokens": 8,
+          "cache_read_input_tokens": 77941,
+          "cache_creation_input_tokens": 19203,
+          "cache_creation": {
+            "ephemeral_5m_input_tokens": 0,
+            "ephemeral_1h_input_tokens": 19203
+          },
+          "type": "message"
+        }
+      ],
+      "speed": "standard"
+    },
+    "modelUsage": {
+      "claude-sonnet-5": {
+        "inputTokens": 3,
+        "outputTokens": 19204,
+        "cacheReadInputTokens": 155882,
+        "cacheCreationInputTokens": 19203,
+        "webSearchRequests": 0,
+        "costUSD": 0.40684485000000004,
+        "contextWindow": 200000,
+        "maxOutputTokens": 32000
+      }
+    }
+  }
+}

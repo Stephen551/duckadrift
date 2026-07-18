@@ -1,0 +1,233 @@
+[
+  {
+    "repo": "duckadrift",
+    "check": "S1",
+    "status": "replayed",
+    "accepted": 1,
+    "livePremises": 0,
+    "discarded": 0,
+    "errors": 0
+  },
+  {
+    "repo": "duckadrift",
+    "check": "S4",
+    "status": "replayed",
+    "accepted": 1,
+    "livePremises": 0,
+    "discarded": 0,
+    "errors": 0
+  },
+  {
+    "repo": "duckadrift",
+    "check": "S5",
+    "status": "replayed",
+    "accepted": 0,
+    "livePremises": 4,
+    "discarded": 1,
+    "errors": 0
+  },
+  {
+    "repo": "fonthead",
+    "check": "S1",
+    "status": "replayed",
+    "accepted": 1,
+    "livePremises": 0,
+    "discarded": 1,
+    "errors": 0
+  },
+  {
+    "repo": "fonthead",
+    "check": "S4",
+    "status": "replayed",
+    "accepted": 0,
+    "livePremises": 0,
+    "discarded": 1,
+    "errors": 0
+  },
+  {
+    "repo": "fonthead",
+    "check": "S5",
+    "status": "replayed",
+    "accepted": 1,
+    "livePremises": 51,
+    "discarded": 0,
+    "errors": 0
+  },
+  {
+    "repo": "cosmos-sdk",
+    "check": "S1",
+    "status": "replayed",
+    "accepted": 0,
+    "livePremises": 0,
+    "discarded": 0,
+    "errors": 0
+  },
+  {
+    "repo": "cosmos-sdk",
+    "check": "S4",
+    "status": "replayed",
+    "accepted": 0,
+    "livePremises": 0,
+    "discarded": 0,
+    "errors": 0
+  },
+  {
+    "repo": "cosmos-sdk",
+    "check": "S5",
+    "status": "replayed",
+    "accepted": 2,
+    "livePremises": 21,
+    "discarded": 0,
+    "errors": 0
+  },
+  {
+    "repo": "backstage",
+    "check": "S1",
+    "status": "no-recording"
+  },
+  {
+    "repo": "backstage",
+    "check": "S4",
+    "status": "no-recording"
+  },
+  {
+    "repo": "backstage",
+    "check": "S5",
+    "status": "no-recording"
+  },
+  {
+    "repo": "edgex-docs",
+    "check": "S1",
+    "status": "replayed",
+    "accepted": 0,
+    "livePremises": 0,
+    "discarded": 0,
+    "errors": 0
+  },
+  {
+    "repo": "edgex-docs",
+    "check": "S4",
+    "status": "replayed",
+    "accepted": 0,
+    "livePremises": 0,
+    "discarded": 0,
+    "errors": 0
+  },
+  {
+    "repo": "edgex-docs",
+    "check": "S5",
+    "status": "replayed",
+    "accepted": 0,
+    "livePremises": 0,
+    "discarded": 0,
+    "errors": 0
+  },
+  {
+    "repo": "terraform-provider-proxmox",
+    "check": "S1",
+    "status": "replayed",
+    "accepted": 0,
+    "livePremises": 0,
+    "discarded": 0,
+    "errors": 0
+  },
+  {
+    "repo": "terraform-provider-proxmox",
+    "check": "S4",
+    "status": "replayed",
+    "accepted": 1,
+    "livePremises": 0,
+    "discarded": 0,
+    "errors": 0
+  },
+  {
+    "repo": "terraform-provider-proxmox",
+    "check": "S5",
+    "status": "replayed",
+    "accepted": 0,
+    "livePremises": 30,
+    "discarded": 0,
+    "errors": 0
+  },
+  {
+    "repo": "cloud-platform",
+    "check": "S1",
+    "status": "replayed",
+    "accepted": 3,
+    "livePremises": 0,
+    "discarded": 0,
+    "errors": 0
+  },
+  {
+    "repo": "cloud-platform",
+    "check": "S4",
+    "status": "replayed",
+    "accepted": 0,
+    "livePremises": 0,
+    "discarded": 0,
+    "errors": 0
+  },
+  {
+    "repo": "cloud-platform",
+    "check": "S5",
+    "status": "replayed",
+    "accepted": 0,
+    "livePremises": 20,
+    "discarded": 0,
+    "errors": 0
+  },
+  {
+    "repo": "first-internal-log",
+    "check": "S1",
+    "status": "replayed",
+    "accepted": 1,
+    "livePremises": 0,
+    "discarded": 1,
+    "errors": 0
+  },
+  {
+    "repo": "first-internal-log",
+    "check": "S4",
+    "status": "replayed",
+    "accepted": 1,
+    "livePremises": 0,
+    "discarded": 0,
+    "errors": 0
+  },
+  {
+    "repo": "first-internal-log",
+    "check": "S5",
+    "status": "replayed",
+    "accepted": 2,
+    "livePremises": 10,
+    "discarded": 2,
+    "errors": 0
+  },
+  {
+    "repo": "second-internal-log",
+    "check": "S1",
+    "status": "replayed",
+    "accepted": 0,
+    "livePremises": 0,
+    "discarded": 0,
+    "errors": 0
+  },
+  {
+    "repo": "second-internal-log",
+    "check": "S4",
+    "status": "replayed",
+    "accepted": 0,
+    "livePremises": 0,
+    "discarded": 0,
+    "errors": 0
+  },
+  {
+    "repo": "second-internal-log",
+    "check": "S5",
+    "status": "replayed",
+    "accepted": 1,
+    "livePremises": 5,
+    "discarded": 5,
+    "errors": 0
+  }
+]

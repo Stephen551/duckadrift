@@ -1,0 +1,90 @@
+{
+  "schemaVersion": 1,
+  "key": {
+    "backend": "claude-code",
+    "model": "claude-sonnet-5",
+    "effort": "high",
+    "checkId": "S4",
+    "promptHash": "080b80bc42c492836000997f6a6987235e02bc8e23c4e9d27bab0aa5e7415fdc"
+  },
+  "recordedAt": "2026-07-18T18:13:45.335Z",
+  "requestDigest": "080b80bc42c492836000997f6a6987235e02bc8e23c4e9d27bab0aa5e7415fdc",
+  "response": {
+    "content": [
+      {
+        "type": "tool_use",
+        "id": "toolu_claude_code_structured_output",
+        "name": "report_findings",
+        "input": {
+          "findings": [
+            {
+              "claim": "Four Accepted ADRs (0037, 0038, 0040, 0044) all circle the same unresolved primitive — whether to add contextual, per-pair GPOS kerning to fix an 'extreme flashy hand''s uneven connector spacing in connect mode — and each one defers or parks it rather than closing it. ADR 0037 first names it and defers it as its own milestone; ADR 0038 reaffirms it is still deferred; ADR 0040 is the milestone attempt itself and explicitly parks it after five failed approaches; ADR 0044 (a later, unrelated shipped feature) still carries the flashy hand as exempt with the ADR 0040 park explicitly 'honored'. No later record in the log revisits or resolves this specific discrimination — the extreme flashy hand's contextual per-pair kerning remains an open, four-times-touched, never-closed question.",
+              "citations": [
+                {
+                  "document": "0037-baseline-hardening-for-imperfect-hands.md",
+                  "quote": "the genuine path to A+ on an extreme flashy hand (the same glyph needs tight spacing in \"minimum\" and loose in \"connecting\", which a per-glyph advance cannot give) — deferred as its own milestone."
+                },
+                {
+                  "document": "0038-connector-height-snap-exit-entry-mismatch-gate.md",
+                  "quote": "The EXTREME flashy hand (tiny bowls, 3·x-height sweeps)\nstill caps around B+: its problem is per-pair spacing, not exit height, and\nremains the deferred contextual-GPOS-kern milestone."
+                },
+                {
+                  "document": "0040-contextual-connect-kern-parked-needs-assembled-feedback.md",
+                  "quote": "PARK the milestone. Five build-time refinement approaches were each built and measured\nagainst the corpus; all five fail for ONE root reason"
+                },
+                {
+                  "document": "0044-bridged-placement-ships-overhang-cap-zone-split-fusion-gate.md",
+                  "quote": "Flashy and `cc-2` remain exempt by the long-sweep median (ADR 0040 park honored)."
+                }
+              ],
+              "consequence": "An engineer scanning the log for 'is the flashy-hand kerning problem solved' would find four separate accepted records touching it across three months of work, none of which closes it — the actual state (still parked, capped at B+, out of scope) is easy to lose track of amid the surrounding connect-mode ADRs that DO resolve their own sub-problems, risking either duplicate re-investigation or false assumption that it was folded into a later fix (e.g. the ADR 0049-0052 connector-reconstruction milestone, which never mentions the flashy hand).",
+              "reportedConfidence": 0.78
+            }
+          ]
+        }
+      }
+    ],
+    "usage": {
+      "input_tokens": 3,
+      "cache_creation_input_tokens": 93463,
+      "cache_read_input_tokens": 88429,
+      "output_tokens": 11428,
+      "server_tool_use": {
+        "web_search_requests": 0,
+        "web_fetch_requests": 0
+      },
+      "service_tier": "standard",
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 93463,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "inference_geo": "",
+      "iterations": [
+        {
+          "input_tokens": 2,
+          "output_tokens": 8,
+          "cache_read_input_tokens": 85227,
+          "cache_creation_input_tokens": 11438,
+          "cache_creation": {
+            "ephemeral_5m_input_tokens": 0,
+            "ephemeral_1h_input_tokens": 11438
+          },
+          "type": "message"
+        }
+      ],
+      "speed": "standard"
+    },
+    "modelUsage": {
+      "claude-sonnet-5": {
+        "inputTokens": 3,
+        "outputTokens": 11428,
+        "cacheReadInputTokens": 88429,
+        "cacheCreationInputTokens": 93463,
+        "webSearchRequests": 0,
+        "costUSD": 0.54844395,
+        "contextWindow": 200000,
+        "maxOutputTokens": 32000
+      }
+    }
+  }
+}

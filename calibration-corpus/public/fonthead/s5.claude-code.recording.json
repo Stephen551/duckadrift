@@ -1,0 +1,639 @@
+{
+  "schemaVersion": 1,
+  "key": {
+    "backend": "claude-code",
+    "model": "claude-sonnet-5",
+    "effort": "high",
+    "checkId": "S5",
+    "promptHash": "740c10a32b4779a8e6cc9f5d9eac723517c295923194dc42e43a4995e4c0626e"
+  },
+  "recordedAt": "2026-07-18T18:27:38.963Z",
+  "requestDigest": "740c10a32b4779a8e6cc9f5d9eac723517c295923194dc42e43a4995e4c0626e",
+  "response": {
+    "content": [
+      {
+        "type": "tool_use",
+        "id": "toolu_claude_code_structured_output",
+        "name": "report_findings",
+        "input": {
+          "findings": [
+            {
+              "claim": "ADR 0002 treats the npm package @astrojs/cloudflare (version 12) as the live SSR adapter underpinning the platform.",
+              "citations": [
+                {
+                  "document": "0002-astro5-ssr-cloudflare-workers.md",
+                  "quote": "@astrojs/cloudflare 12 adapter"
+                }
+              ],
+              "consequence": "If the adapter has since changed major version or been swapped, the platform premise of ADR 0002 has decayed.",
+              "reportedConfidence": 0.93
+            },
+            {
+              "claim": "ADR 0002 treats global.css as the live file into which design tokens are ported.",
+              "citations": [
+                {
+                  "document": "0002-astro5-ssr-cloudflare-workers.md",
+                  "quote": "ported into global.css"
+                }
+              ],
+              "consequence": "If global.css no longer exists or no longer holds tokens, the styling premise has decayed.",
+              "reportedConfidence": 0.9
+            },
+            {
+              "claim": "ADR 0003 treats the kysely package as a live, currently-present dependency of Better Auth.",
+              "citations": [
+                {
+                  "document": "0003-better-auth-per-request-d1-kysely-pin.md",
+                  "quote": "Better Auth depends on kysely, and a newer kysely broke the Worker bundle."
+                }
+              ],
+              "consequence": "If kysely is no longer a dependency, this premise has decayed.",
+              "reportedConfidence": 0.93
+            },
+            {
+              "claim": "ADR 0003 treats src/lib/auth.ts as the live file implementing the per-request auth factory.",
+              "citations": [
+                {
+                  "document": "0003-better-auth-per-request-d1-kysely-pin.md",
+                  "quote": "src/lib/auth.ts"
+                }
+              ],
+              "consequence": "If this file no longer exists or no longer implements createAuth, the premise has decayed.",
+              "reportedConfidence": 0.93
+            },
+            {
+              "claim": "ADR 0003 treats package.json overrides as the live mechanism pinning kysely to 0.28.17.",
+              "citations": [
+                {
+                  "document": "0003-better-auth-per-request-d1-kysely-pin.md",
+                  "quote": "package.json overrides"
+                }
+              ],
+              "consequence": "If package.json no longer contains this override, the pin premise has decayed.",
+              "reportedConfidence": 0.88
+            },
+            {
+              "claim": "ADR 0003 treats Better Auth as a live, currently-installed named software dependency at version 1.5+.",
+              "citations": [
+                {
+                  "document": "0003-better-auth-per-request-d1-kysely-pin.md",
+                  "quote": "Use Better Auth 1.5+"
+                }
+              ],
+              "consequence": "If Better Auth has been replaced or upgraded past what this record assumes, the premise has decayed.",
+              "reportedConfidence": 0.45
+            },
+            {
+              "claim": "ADR 0004 treats public/assets as the live path where the vendored font engine is served.",
+              "citations": [
+                {
+                  "document": "0004-vendored-client-side-font-engine.md",
+                  "quote": "public/assets"
+                }
+              ],
+              "consequence": "If the engine is no longer served from this path, the vendoring premise has decayed.",
+              "reportedConfidence": 0.93
+            },
+            {
+              "claim": "ADR 0004 treats opentype.js as a live, currently-vendored dependency used for OTF/CFF-to-TTF work.",
+              "citations": [
+                {
+                  "document": "0004-vendored-client-side-font-engine.md",
+                  "quote": "opentype.js OTF"
+                }
+              ],
+              "consequence": "If opentype.js is no longer part of the vendored engine, the premise has decayed.",
+              "reportedConfidence": 0.88
+            },
+            {
+              "claim": "ADR 0004 treats wawoff2 as a live, currently-vendored WASM compressor dependency.",
+              "citations": [
+                {
+                  "document": "0004-vendored-client-side-font-engine.md",
+                  "quote": "wawoff2 WASM compressor"
+                }
+              ],
+              "consequence": "If wawoff2 is no longer vendored, the premise has decayed.",
+              "reportedConfidence": 0.9
+            },
+            {
+              "claim": "ADR 0005 treats opentype.js as a live dependency whose checksum-writing behavior is a currently-relevant root cause.",
+              "citations": [
+                {
+                  "document": "0005-font-validity-checksums-fonttools.md",
+                  "quote": "opentype.js writing a table checksum one-off"
+                }
+              ],
+              "consequence": "If opentype.js is no longer used in the build path, the root-cause premise has decayed.",
+              "reportedConfidence": 0.9
+            },
+            {
+              "claim": "ADR 0005 treats src/lib/sfnt.ts as the live file implementing checksum repair.",
+              "citations": [
+                {
+                  "document": "0005-font-validity-checksums-fonttools.md",
+                  "quote": "src/lib/sfnt.ts fixSfntChecksums"
+                }
+              ],
+              "consequence": "If this file no longer exists or lacks fixSfntChecksums, the premise has decayed.",
+              "reportedConfidence": 0.93
+            },
+            {
+              "claim": "ADR 0005 treats fontTools as the live, currently-used Python validator.",
+              "citations": [
+                {
+                  "document": "0005-font-validity-checksums-fonttools.md",
+                  "quote": "Validate authoritatively with fontTools"
+                }
+              ],
+              "consequence": "If fontTools is no longer used for validation, the premise has decayed.",
+              "reportedConfidence": 0.92
+            },
+            {
+              "claim": "ADR 0005 treats fontkit as a live dependency explicitly distrusted for validation.",
+              "citations": [
+                {
+                  "document": "0005-font-validity-checksums-fonttools.md",
+                  "quote": "never rely on fontkit/opentype.js to validate"
+                }
+              ],
+              "consequence": "If fontkit is no longer present in the stack, the premise has decayed.",
+              "reportedConfidence": 0.9
+            },
+            {
+              "claim": "ADR 0006 treats app.ts as the live file implementing the vanilla masthead cycler.",
+              "citations": [
+                {
+                  "document": "0006-no-react-on-content-pages.md",
+                  "quote": "vanilla cycler in app.ts"
+                }
+              ],
+              "consequence": "If app.ts no longer exists or no longer holds this cycler, the premise has decayed.",
+              "reportedConfidence": 0.92
+            },
+            {
+              "claim": "ADR 0007 treats public/_headers as the live file controlling immutable caching of the vendored engine.",
+              "citations": [
+                {
+                  "document": "0007-engine-cache-bust-content-hash.md",
+                  "quote": "public/_headers"
+                }
+              ],
+              "consequence": "If public/_headers no longer exists, the caching premise has decayed.",
+              "reportedConfidence": 0.92
+            },
+            {
+              "claim": "ADR 0007 treats astro.config.mjs as the live file injecting the __ENGINE_V__ cache-bust token.",
+              "citations": [
+                {
+                  "document": "0007-engine-cache-bust-content-hash.md",
+                  "quote": "astro.config.mjs injects __ENGINE_V__"
+                }
+              ],
+              "consequence": "If astro.config.mjs no longer performs this injection, the premise has decayed.",
+              "reportedConfidence": 0.92
+            },
+            {
+              "claim": "ADR 0007 treats make.astro as the live file carrying the page script tags that consume the cache-bust token.",
+              "citations": [
+                {
+                  "document": "0007-engine-cache-bust-content-hash.md",
+                  "quote": "make.astro"
+                }
+              ],
+              "consequence": "If make.astro no longer exists or no longer references the token, the premise has decayed.",
+              "reportedConfidence": 0.9
+            },
+            {
+              "claim": "ADR 0007 treats maker.ts as the live file holding ENGINE_VERSION.",
+              "citations": [
+                {
+                  "document": "0007-engine-cache-bust-content-hash.md",
+                  "quote": "maker.ts ENGINE_VERSION"
+                }
+              ],
+              "consequence": "If maker.ts no longer defines ENGINE_VERSION, the premise has decayed.",
+              "reportedConfidence": 0.9
+            },
+            {
+              "claim": "ADR 0007 treats font-engine-worker.js as the live worker file reading the ?v= token off its own URL.",
+              "citations": [
+                {
+                  "document": "0007-engine-cache-bust-content-hash.md",
+                  "quote": "font-engine-worker.js read the ?v off its own URL"
+                }
+              ],
+              "consequence": "If font-engine-worker.js no longer performs this, the premise has decayed.",
+              "reportedConfidence": 0.9
+            },
+            {
+              "claim": "ADR 0010 treats font-engine-gpos.js as the live file implementing the GPOS PairPos writer.",
+              "citations": [
+                {
+                  "document": "0010-kerning-via-gpos-pairpos.md",
+                  "quote": "font-engine-gpos.js writer"
+                }
+              ],
+              "consequence": "If font-engine-gpos.js no longer exists, the kerning premise has decayed.",
+              "reportedConfidence": 0.92
+            },
+            {
+              "claim": "ADR 0012 treats color-orchestrator.js as the live file running the colour pipeline on the main thread.",
+              "citations": [
+                {
+                  "document": "0012-colour-fonts-otf-woff2-only.md",
+                  "quote": "color-orchestrator.js"
+                }
+              ],
+              "consequence": "If color-orchestrator.js no longer exists, the colour build premise has decayed.",
+              "reportedConfidence": 0.92
+            },
+            {
+              "claim": "ADR 0012 treats wawoff2 as a live dependency running on the main thread for colour builds.",
+              "citations": [
+                {
+                  "document": "0012-colour-fonts-otf-woff2-only.md",
+                  "quote": "main-thread wawoff2"
+                }
+              ],
+              "consequence": "If wawoff2 is no longer used, the premise has decayed.",
+              "reportedConfidence": 0.9
+            },
+            {
+              "claim": "ADR 0015 treats src/lib/ratelimit.ts as the live file implementing the KV rate limiter.",
+              "citations": [
+                {
+                  "document": "0015-kv-rate-limiter-and-signature-upload-gate.md",
+                  "quote": "src/lib/ratelimit.ts"
+                }
+              ],
+              "consequence": "If src/lib/ratelimit.ts no longer exists, the rate-limiting premise has decayed.",
+              "reportedConfidence": 0.93
+            },
+            {
+              "claim": "ADR 0016 treats src/middleware.ts as the live file setting security headers and CSP.",
+              "citations": [
+                {
+                  "document": "0016-csp-relaxations-output-escaping-xss.md",
+                  "quote": "src/middleware.ts"
+                }
+              ],
+              "consequence": "If src/middleware.ts no longer exists or no longer sets CSP, the premise has decayed.",
+              "reportedConfidence": 0.93
+            },
+            {
+              "claim": "ADR 0017 treats src/lib/email.ts as the live helper sending transactional email via Resend.",
+              "citations": [
+                {
+                  "document": "0017-transactional-email-via-resend-https.md",
+                  "quote": "src/lib/email.ts helper"
+                }
+              ],
+              "consequence": "If src/lib/email.ts no longer exists, the email premise has decayed.",
+              "reportedConfidence": 0.93
+            },
+            {
+              "claim": "ADR 0018 treats src/lib/banned-words.ts as the live code-managed banlist file.",
+              "citations": [
+                {
+                  "document": "0018-custom-d1-moderation-soft-ban.md",
+                  "quote": "src/lib/banned-words.ts"
+                }
+              ],
+              "consequence": "If src/lib/banned-words.ts no longer exists, the moderation premise has decayed.",
+              "reportedConfidence": 0.93
+            },
+            {
+              "claim": "ADR 0020 treats .dev.vars as the live local config file holding the localhost BETTER_AUTH_URL override.",
+              "citations": [
+                {
+                  "document": "0020-canonical-domain-auth-config.md",
+                  "quote": ".dev.vars"
+                }
+              ],
+              "consequence": "If .dev.vars no longer exists or no longer holds this override, the premise has decayed.",
+              "reportedConfidence": 0.8
+            },
+            {
+              "claim": "ADR 0023 treats Maker.tsx as the live file rendering the OG/social card client-side.",
+              "citations": [
+                {
+                  "document": "0023-social-cards-client-canvas-at-publish.md",
+                  "quote": "Maker.tsx renderOgCard"
+                }
+              ],
+              "consequence": "If Maker.tsx no longer contains renderOgCard, the premise has decayed.",
+              "reportedConfidence": 0.92
+            },
+            {
+              "claim": "ADR 0024 treats a file named _headers as the live mechanism for immutable static asset caching.",
+              "citations": [
+                {
+                  "document": "0024-edge-cache-public-binaries.md",
+                  "quote": "_headers file"
+                }
+              ],
+              "consequence": "If the _headers file no longer exists, the caching premise has decayed.",
+              "reportedConfidence": 0.75
+            },
+            {
+              "claim": "ADR 0026 treats wrangler.cron.jsonc as the live config file defining the standalone cron worker.",
+              "citations": [
+                {
+                  "document": "0026-daily-feature-separate-cron-worker.md",
+                  "quote": "wrangler.cron.jsonc"
+                }
+              ],
+              "consequence": "If wrangler.cron.jsonc no longer exists, the cron-worker premise has decayed.",
+              "reportedConfidence": 0.92
+            },
+            {
+              "claim": "ADR 0027 treats vitest as the live unit/engine-math test runner.",
+              "citations": [
+                {
+                  "document": "0027-test-harness-vitest-playwright-fonttools.md",
+                  "quote": "Adopt vitest (jsdom)"
+                }
+              ],
+              "consequence": "If vitest is no longer a dependency, the test-harness premise has decayed.",
+              "reportedConfidence": 0.9
+            },
+            {
+              "claim": "ADR 0027 treats @playwright/test as the live e2e test dependency.",
+              "citations": [
+                {
+                  "document": "0027-test-harness-vitest-playwright-fonttools.md",
+                  "quote": "@playwright/test for e2e"
+                }
+              ],
+              "consequence": "If @playwright/test is no longer a dependency, the premise has decayed.",
+              "reportedConfidence": 0.9
+            },
+            {
+              "claim": "ADR 0027 treats .github/workflows/ci.yml as the live CI workflow file wiring the test harness.",
+              "citations": [
+                {
+                  "document": "0027-test-harness-vitest-playwright-fonttools.md",
+                  "quote": ".github/workflows/ci.yml"
+                }
+              ],
+              "consequence": "If this workflow file no longer exists, the CI-wiring premise has decayed.",
+              "reportedConfidence": 0.9
+            },
+            {
+              "claim": "ADR 0027 treats fontTools as the live independent validator run in CI.",
+              "citations": [
+                {
+                  "document": "0027-test-harness-vitest-playwright-fonttools.md",
+                  "quote": "run one built font through fontTools"
+                }
+              ],
+              "consequence": "If fontTools is no longer run in CI, the premise has decayed.",
+              "reportedConfidence": 0.9
+            },
+            {
+              "claim": "ADR 0027 treats e2e/fixtures/corpus as the live directory holding the typographic corpus faces.",
+              "citations": [
+                {
+                  "document": "0027-test-harness-vitest-playwright-fonttools.md",
+                  "quote": "e2e/fixtures/corpus"
+                }
+              ],
+              "consequence": "If this directory no longer exists, the corpus-lint premise has decayed.",
+              "reportedConfidence": 0.88
+            },
+            {
+              "claim": "ADR 0028 treats .github/workflows/ci.yml as the live deploy job file.",
+              "citations": [
+                {
+                  "document": "0028-master-auto-deploy-no-seed-migration-order.md",
+                  "quote": ".github/workflows/ci.yml"
+                }
+              ],
+              "consequence": "If this file no longer defines the deploy job, the premise has decayed.",
+              "reportedConfidence": 0.9
+            },
+            {
+              "claim": "ADR 0028 treats astro and wrangler as the live CLI packages composing the deploy command.",
+              "citations": [
+                {
+                  "document": "0028-master-auto-deploy-no-seed-migration-order.md",
+                  "quote": "astro build && wrangler deploy"
+                }
+              ],
+              "consequence": "If either astro or wrangler is no longer used in the deploy path, the premise has decayed.",
+              "reportedConfidence": 0.85
+            },
+            {
+              "claim": "ADR 0029 treats SEED.md as the live file documenting the honesty trail for launch-wall stand-ins.",
+              "citations": [
+                {
+                  "document": "0029-launch-wall-ofl-standins-no-fake-makers.md",
+                  "quote": "SEED.md"
+                }
+              ],
+              "consequence": "If SEED.md no longer exists, the documentation premise has decayed.",
+              "reportedConfidence": 0.88
+            },
+            {
+              "claim": "ADR 0035 treats src/lib/maker.ts as the live implementation location for the connect feature.",
+              "citations": [
+                {
+                  "document": "0035-connect-no-engine-files-pure-core-tests.md",
+                  "quote": "src/lib/maker.ts"
+                }
+              ],
+              "consequence": "If src/lib/maker.ts no longer holds this implementation, the premise has decayed.",
+              "reportedConfidence": 0.93
+            },
+            {
+              "claim": "ADR 0035 treats Maker.tsx as a live implementation file for the connect feature.",
+              "citations": [
+                {
+                  "document": "0035-connect-no-engine-files-pure-core-tests.md",
+                  "quote": "Maker.tsx"
+                }
+              ],
+              "consequence": "If Maker.tsx no longer exists, the premise has decayed.",
+              "reportedConfidence": 0.88
+            },
+            {
+              "claim": "ADR 0035 treats make.astro as a live implementation file for the connect feature.",
+              "citations": [
+                {
+                  "document": "0035-connect-no-engine-files-pure-core-tests.md",
+                  "quote": "make.astro"
+                }
+              ],
+              "consequence": "If make.astro no longer exists, the premise has decayed.",
+              "reportedConfidence": 0.88
+            },
+            {
+              "claim": "ADR 0036 treats font-engine-gsub.js as the live hand-written GSUB table file.",
+              "citations": [
+                {
+                  "document": "0036-natural-variation-gsub-calt-palette.md",
+                  "quote": "font-engine-gsub.js"
+                }
+              ],
+              "consequence": "If font-engine-gsub.js no longer exists, the natural-variation premise has decayed.",
+              "reportedConfidence": 0.92
+            },
+            {
+              "claim": "ADR 0037 treats src/lib/maker.ts as the live file holding all four baseline-hardening passes.",
+              "citations": [
+                {
+                  "document": "0037-baseline-hardening-for-imperfect-hands.md",
+                  "quote": "src/lib/maker.ts"
+                }
+              ],
+              "consequence": "If src/lib/maker.ts no longer holds these passes, the premise has decayed.",
+              "reportedConfidence": 0.9
+            },
+            {
+              "claim": "ADR 0038 treats src/lib/maker.ts as the live file implementing the connector-height snap pre-pass.",
+              "citations": [
+                {
+                  "document": "0038-connector-height-snap-exit-entry-mismatch-gate.md",
+                  "quote": "src/lib/maker.ts"
+                }
+              ],
+              "consequence": "If src/lib/maker.ts no longer implements this pass, the premise has decayed.",
+              "reportedConfidence": 0.9
+            },
+            {
+              "claim": "ADR 0039 treats src/lib/maker.ts (specifically around line 2013) as the live location shipping the connect GPOS kern feature flags.",
+              "citations": [
+                {
+                  "document": "0039-connect-ships-gpos-kern-supersedes-0032.md",
+                  "quote": "`src/lib/maker.ts:2013`"
+                }
+              ],
+              "consequence": "If this file/location no longer contains the described feature flags, the premise has decayed.",
+              "reportedConfidence": 0.88
+            },
+            {
+              "claim": "ADR 0041 treats docs/superpowers/specs/2026-07-01-connection-point-spec.md as the live spec file scoping the connection-point milestone.",
+              "citations": [
+                {
+                  "document": "0041-connect-rhythm-in-placement-not-kern-densebody-parked.md",
+                  "quote": "`docs/superpowers/specs/2026-07-01-connection-point-spec.md`"
+                }
+              ],
+              "consequence": "If this spec file no longer exists, the milestone-scoping premise has decayed.",
+              "reportedConfidence": 0.88
+            },
+            {
+              "claim": "ADR 0047 treats connected-cursive-nano-v2.png as a live corpus fixture file.",
+              "citations": [
+                {
+                  "document": "0047-variation-build-mode-boundary-not-registration.md",
+                  "quote": "`connected-cursive-nano-v2.png`"
+                }
+              ],
+              "consequence": "If this fixture file no longer exists, the regression-protection premise has decayed.",
+              "reportedConfidence": 0.88
+            },
+            {
+              "claim": "ADR 0047 treats e2e/variation.spec.ts as the live e2e test file gating the palette build.",
+              "citations": [
+                {
+                  "document": "0047-variation-build-mode-boundary-not-registration.md",
+                  "quote": "`e2e/variation.spec.ts`"
+                }
+              ],
+              "consequence": "If this file no longer exists, the palette-e2e premise has decayed.",
+              "reportedConfidence": 0.9
+            },
+            {
+              "claim": "ADR 0047 treats test/maker-connect.test.ts as the live unit test file protecting the entry-reach gate.",
+              "citations": [
+                {
+                  "document": "0047-variation-build-mode-boundary-not-registration.md",
+                  "quote": "`test/maker-connect.test.ts`"
+                }
+              ],
+              "consequence": "If this file no longer exists, the unit-test premise has decayed.",
+              "reportedConfidence": 0.9
+            },
+            {
+              "claim": "ADR 0051 treats fontkit as the live package used to shape probe texts through GSUB/GPOS in node.",
+              "citations": [
+                {
+                  "document": "0051-assembled-pair-seam-sensor-corpus-rollout.md",
+                  "quote": "fontkit shapes probe texts"
+                }
+              ],
+              "consequence": "If fontkit is no longer used for this purpose, the sensor premise has decayed.",
+              "reportedConfidence": 0.87
+            },
+            {
+              "claim": "ADR 0052 treats test/seam-feedback.test.ts as the live test file locking calibrated seam verdicts.",
+              "citations": [
+                {
+                  "document": "0052-assembled-seam-feedback-pass-losers-park-themselves.md",
+                  "quote": "test/seam-feedback.test.ts"
+                }
+              ],
+              "consequence": "If this file no longer exists, the calibration-lock premise has decayed.",
+              "reportedConfidence": 0.88
+            },
+            {
+              "claim": "ADR 0052 treats test/fixtures/seam-sensor as the live directory of sensor JSON fixtures used to lock verdicts.",
+              "citations": [
+                {
+                  "document": "0052-assembled-seam-feedback-pass-losers-park-themselves.md",
+                  "quote": "test/fixtures/seam-sensor"
+                }
+              ],
+              "consequence": "If this directory no longer exists, the fixture-lock premise has decayed.",
+              "reportedConfidence": 0.85
+            }
+          ]
+        }
+      }
+    ],
+    "usage": {
+      "input_tokens": 7,
+      "cache_creation_input_tokens": 112521,
+      "cache_read_input_tokens": 259299,
+      "output_tokens": 94421,
+      "server_tool_use": {
+        "web_search_requests": 0,
+        "web_fetch_requests": 0
+      },
+      "service_tier": "standard",
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 112521,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "inference_geo": "",
+      "iterations": [
+        {
+          "input_tokens": 2,
+          "output_tokens": 8,
+          "cache_read_input_tokens": 85408,
+          "cache_creation_input_tokens": 30373,
+          "cache_creation": {
+            "ephemeral_5m_input_tokens": 0,
+            "ephemeral_1h_input_tokens": 30373
+          },
+          "type": "message"
+        }
+      ],
+      "speed": "standard"
+    },
+    "modelUsage": {
+      "claude-sonnet-5": {
+        "inputTokens": 7,
+        "outputTokens": 94421,
+        "cacheReadInputTokens": 259299,
+        "cacheCreationInputTokens": 112521,
+        "webSearchRequests": 0,
+        "costUSD": 1.91607945,
+        "contextWindow": 200000,
+        "maxOutputTokens": 32000
+      }
+    }
+  }
+}

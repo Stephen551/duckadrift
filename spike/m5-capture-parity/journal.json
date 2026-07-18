@@ -1,0 +1,953 @@
+{
+  "runs": [
+    {
+      "startedAt": "2026-07-18T17:58:22.823Z",
+      "units": [
+        {
+          "repo": "duckadrift",
+          "check": "S1",
+          "status": "captured",
+          "durationMs": 114694,
+          "usage": {
+            "input_tokens": 3,
+            "cache_creation_input_tokens": 85948,
+            "cache_read_input_tokens": 81009,
+            "output_tokens": 11223,
+            "server_tool_use": {
+              "web_search_requests": 0,
+              "web_fetch_requests": 0
+            },
+            "service_tier": "standard",
+            "cache_creation": {
+              "ephemeral_1h_input_tokens": 85948,
+              "ephemeral_5m_input_tokens": 0
+            },
+            "inference_geo": "",
+            "iterations": [
+              {
+                "input_tokens": 2,
+                "output_tokens": 8,
+                "cache_read_input_tokens": 77874,
+                "cache_creation_input_tokens": 11209,
+                "cache_creation": {
+                  "ephemeral_5m_input_tokens": 0,
+                  "ephemeral_1h_input_tokens": 11209
+                },
+                "type": "message"
+              }
+            ],
+            "speed": "standard"
+          }
+        },
+        {
+          "repo": "duckadrift",
+          "check": "S4",
+          "status": "errored",
+          "message": "claude-code transport [transport]: deadline of 120s expired; killed the process tree (the CLI does not self-terminate under transport denial, measured in PR B)"
+        }
+      ],
+      "outcome": "errored"
+    },
+    {
+      "startedAt": "2026-07-18T18:03:08.169Z",
+      "units": [
+        {
+          "repo": "duckadrift",
+          "check": "S1",
+          "status": "skipped-cached",
+          "durationMs": 4
+        },
+        {
+          "repo": "duckadrift",
+          "check": "S4",
+          "status": "captured",
+          "durationMs": 209592,
+          "usage": {
+            "input_tokens": 3,
+            "cache_creation_input_tokens": 19203,
+            "cache_read_input_tokens": 155882,
+            "output_tokens": 19204,
+            "server_tool_use": {
+              "web_search_requests": 0,
+              "web_fetch_requests": 0
+            },
+            "service_tier": "standard",
+            "cache_creation": {
+              "ephemeral_1h_input_tokens": 19203,
+              "ephemeral_5m_input_tokens": 0
+            },
+            "inference_geo": "",
+            "iterations": [
+              {
+                "input_tokens": 2,
+                "output_tokens": 8,
+                "cache_read_input_tokens": 77941,
+                "cache_creation_input_tokens": 19203,
+                "cache_creation": {
+                  "ephemeral_5m_input_tokens": 0,
+                  "ephemeral_1h_input_tokens": 19203
+                },
+                "type": "message"
+              }
+            ],
+            "speed": "standard"
+          }
+        },
+        {
+          "repo": "duckadrift",
+          "check": "S5",
+          "status": "captured",
+          "durationMs": 149186,
+          "usage": {
+            "input_tokens": 3,
+            "cache_creation_input_tokens": 90205,
+            "cache_read_input_tokens": 81259,
+            "output_tokens": 15572,
+            "server_tool_use": {
+              "web_search_requests": 0,
+              "web_fetch_requests": 0
+            },
+            "service_tier": "standard",
+            "cache_creation": {
+              "ephemeral_1h_input_tokens": 90205,
+              "ephemeral_5m_input_tokens": 0
+            },
+            "inference_geo": "",
+            "iterations": [
+              {
+                "input_tokens": 2,
+                "output_tokens": 8,
+                "cache_read_input_tokens": 77999,
+                "cache_creation_input_tokens": 15466,
+                "cache_creation": {
+                  "ephemeral_5m_input_tokens": 0,
+                  "ephemeral_1h_input_tokens": 15466
+                },
+                "type": "message"
+              }
+            ],
+            "speed": "standard"
+          }
+        },
+        {
+          "repo": "fonthead",
+          "check": "S1",
+          "status": "captured",
+          "durationMs": 151834,
+          "usage": {
+            "input_tokens": 3,
+            "cache_creation_input_tokens": 95916,
+            "cache_read_input_tokens": 88295,
+            "output_tokens": 14445,
+            "server_tool_use": {
+              "web_search_requests": 0,
+              "web_fetch_requests": 0
+            },
+            "service_tier": "standard",
+            "cache_creation": {
+              "ephemeral_1h_input_tokens": 95916,
+              "ephemeral_5m_input_tokens": 0
+            },
+            "inference_geo": "",
+            "iterations": [
+              {
+                "input_tokens": 2,
+                "output_tokens": 507,
+                "cache_read_input_tokens": 85160,
+                "cache_creation_input_tokens": 13891,
+                "cache_creation": {
+                  "ephemeral_5m_input_tokens": 0,
+                  "ephemeral_1h_input_tokens": 13891
+                },
+                "type": "message"
+              }
+            ],
+            "speed": "standard"
+          }
+        },
+        {
+          "repo": "fonthead",
+          "check": "S4",
+          "status": "captured",
+          "durationMs": 126329,
+          "usage": {
+            "input_tokens": 3,
+            "cache_creation_input_tokens": 93463,
+            "cache_read_input_tokens": 88429,
+            "output_tokens": 11428,
+            "server_tool_use": {
+              "web_search_requests": 0,
+              "web_fetch_requests": 0
+            },
+            "service_tier": "standard",
+            "cache_creation": {
+              "ephemeral_1h_input_tokens": 93463,
+              "ephemeral_5m_input_tokens": 0
+            },
+            "inference_geo": "",
+            "iterations": [
+              {
+                "input_tokens": 2,
+                "output_tokens": 8,
+                "cache_read_input_tokens": 85227,
+                "cache_creation_input_tokens": 11438,
+                "cache_creation": {
+                  "ephemeral_5m_input_tokens": 0,
+                  "ephemeral_1h_input_tokens": 11438
+                },
+                "type": "message"
+              }
+            ],
+            "speed": "standard"
+          }
+        },
+        {
+          "repo": "fonthead",
+          "check": "S5",
+          "status": "captured",
+          "durationMs": 833628,
+          "usage": {
+            "input_tokens": 7,
+            "cache_creation_input_tokens": 112521,
+            "cache_read_input_tokens": 259299,
+            "output_tokens": 94421,
+            "server_tool_use": {
+              "web_search_requests": 0,
+              "web_fetch_requests": 0
+            },
+            "service_tier": "standard",
+            "cache_creation": {
+              "ephemeral_1h_input_tokens": 112521,
+              "ephemeral_5m_input_tokens": 0
+            },
+            "inference_geo": "",
+            "iterations": [
+              {
+                "input_tokens": 2,
+                "output_tokens": 8,
+                "cache_read_input_tokens": 85408,
+                "cache_creation_input_tokens": 30373,
+                "cache_creation": {
+                  "ephemeral_5m_input_tokens": 0,
+                  "ephemeral_1h_input_tokens": 30373
+                },
+                "type": "message"
+              }
+            ],
+            "speed": "standard"
+          }
+        }
+      ],
+      "outcome": "completed"
+    },
+    {
+      "startedAt": "2026-07-18T18:28:54.192Z",
+      "units": [
+        {
+          "repo": "duckadrift",
+          "check": "S1",
+          "status": "skipped-cached",
+          "durationMs": 4
+        },
+        {
+          "repo": "duckadrift",
+          "check": "S4",
+          "status": "skipped-cached",
+          "durationMs": 3
+        },
+        {
+          "repo": "duckadrift",
+          "check": "S5",
+          "status": "skipped-cached",
+          "durationMs": 3
+        },
+        {
+          "repo": "fonthead",
+          "check": "S1",
+          "status": "skipped-cached",
+          "durationMs": 5
+        },
+        {
+          "repo": "fonthead",
+          "check": "S4",
+          "status": "skipped-cached",
+          "durationMs": 4
+        },
+        {
+          "repo": "fonthead",
+          "check": "S5",
+          "status": "skipped-cached",
+          "durationMs": 4
+        },
+        {
+          "repo": "cosmos-sdk",
+          "check": "S1",
+          "status": "captured",
+          "durationMs": 86232,
+          "usage": {
+            "input_tokens": 3,
+            "cache_creation_input_tokens": 116829,
+            "cache_read_input_tokens": 115334,
+            "output_tokens": 7976,
+            "server_tool_use": {
+              "web_search_requests": 0,
+              "web_fetch_requests": 0
+            },
+            "service_tier": "standard",
+            "cache_creation": {
+              "ephemeral_1h_input_tokens": 116829,
+              "ephemeral_5m_input_tokens": 0
+            },
+            "inference_geo": "",
+            "iterations": [
+              {
+                "input_tokens": 2,
+                "output_tokens": 224,
+                "cache_read_input_tokens": 112199,
+                "cache_creation_input_tokens": 7765,
+                "cache_creation": {
+                  "ephemeral_5m_input_tokens": 0,
+                  "ephemeral_1h_input_tokens": 7765
+                },
+                "type": "message"
+              }
+            ],
+            "speed": "standard"
+          }
+        },
+        {
+          "repo": "cosmos-sdk",
+          "check": "S4",
+          "status": "captured",
+          "durationMs": 85460,
+          "usage": {
+            "input_tokens": 3,
+            "cache_creation_input_tokens": 116091,
+            "cache_read_input_tokens": 115468,
+            "output_tokens": 7718,
+            "server_tool_use": {
+              "web_search_requests": 0,
+              "web_fetch_requests": 0
+            },
+            "service_tier": "standard",
+            "cache_creation": {
+              "ephemeral_1h_input_tokens": 116091,
+              "ephemeral_5m_input_tokens": 0
+            },
+            "inference_geo": "",
+            "iterations": [
+              {
+                "input_tokens": 2,
+                "output_tokens": 704,
+                "cache_read_input_tokens": 112266,
+                "cache_creation_input_tokens": 7027,
+                "cache_creation": {
+                  "ephemeral_5m_input_tokens": 0,
+                  "ephemeral_1h_input_tokens": 7027
+                },
+                "type": "message"
+              }
+            ],
+            "speed": "standard"
+          }
+        },
+        {
+          "repo": "cosmos-sdk",
+          "check": "S5",
+          "status": "captured",
+          "durationMs": 272338,
+          "usage": {
+            "input_tokens": 5,
+            "cache_creation_input_tokens": 138858,
+            "cache_read_input_tokens": 253367,
+            "output_tokens": 29542,
+            "server_tool_use": {
+              "web_search_requests": 0,
+              "web_fetch_requests": 0
+            },
+            "service_tier": "standard",
+            "cache_creation": {
+              "ephemeral_1h_input_tokens": 138858,
+              "ephemeral_5m_input_tokens": 0
+            },
+            "inference_geo": "",
+            "iterations": [
+              {
+                "input_tokens": 2,
+                "output_tokens": 8,
+                "cache_read_input_tokens": 137783,
+                "cache_creation_input_tokens": 4335,
+                "cache_creation": {
+                  "ephemeral_5m_input_tokens": 0,
+                  "ephemeral_1h_input_tokens": 4335
+                },
+                "type": "message"
+              }
+            ],
+            "speed": "standard"
+          }
+        },
+        {
+          "repo": "backstage",
+          "check": "S1",
+          "status": "skipped-no-input",
+          "durationMs": 0
+        },
+        {
+          "repo": "backstage",
+          "check": "S4",
+          "status": "skipped-no-input",
+          "durationMs": 1
+        },
+        {
+          "repo": "backstage",
+          "check": "S5",
+          "status": "skipped-no-input",
+          "durationMs": 1
+        },
+        {
+          "repo": "edgex-docs",
+          "check": "S1",
+          "status": "captured",
+          "durationMs": 14533,
+          "usage": {
+            "input_tokens": 3,
+            "cache_creation_input_tokens": 24112,
+            "cache_read_input_tokens": 29453,
+            "output_tokens": 1067,
+            "server_tool_use": {
+              "web_search_requests": 0,
+              "web_fetch_requests": 0
+            },
+            "service_tier": "standard",
+            "cache_creation": {
+              "ephemeral_1h_input_tokens": 24112,
+              "ephemeral_5m_input_tokens": 0
+            },
+            "inference_geo": "",
+            "iterations": [
+              {
+                "input_tokens": 2,
+                "output_tokens": 151,
+                "cache_read_input_tokens": 26318,
+                "cache_creation_input_tokens": 929,
+                "cache_creation": {
+                  "ephemeral_5m_input_tokens": 0,
+                  "ephemeral_1h_input_tokens": 929
+                },
+                "type": "message"
+              }
+            ],
+            "speed": "standard"
+          }
+        },
+        {
+          "repo": "edgex-docs",
+          "check": "S4",
+          "status": "captured",
+          "durationMs": 10088,
+          "usage": {
+            "input_tokens": 3,
+            "cache_creation_input_tokens": 23436,
+            "cache_read_input_tokens": 29587,
+            "output_tokens": 588,
+            "server_tool_use": {
+              "web_search_requests": 0,
+              "web_fetch_requests": 0
+            },
+            "service_tier": "standard",
+            "cache_creation": {
+              "ephemeral_1h_input_tokens": 23436,
+              "ephemeral_5m_input_tokens": 0
+            },
+            "inference_geo": "",
+            "iterations": [
+              {
+                "input_tokens": 2,
+                "output_tokens": 348,
+                "cache_read_input_tokens": 26385,
+                "cache_creation_input_tokens": 253,
+                "cache_creation": {
+                  "ephemeral_5m_input_tokens": 0,
+                  "ephemeral_1h_input_tokens": 253
+                },
+                "type": "message"
+              }
+            ],
+            "speed": "standard"
+          }
+        },
+        {
+          "repo": "edgex-docs",
+          "check": "S5",
+          "status": "captured",
+          "durationMs": 15407,
+          "usage": {
+            "input_tokens": 3,
+            "cache_creation_input_tokens": 23904,
+            "cache_read_input_tokens": 29703,
+            "output_tokens": 910,
+            "server_tool_use": {
+              "web_search_requests": 0,
+              "web_fetch_requests": 0
+            },
+            "service_tier": "standard",
+            "cache_creation": {
+              "ephemeral_1h_input_tokens": 23904,
+              "ephemeral_5m_input_tokens": 0
+            },
+            "inference_geo": "",
+            "iterations": [
+              {
+                "input_tokens": 2,
+                "output_tokens": 202,
+                "cache_read_input_tokens": 26443,
+                "cache_creation_input_tokens": 721,
+                "cache_creation": {
+                  "ephemeral_5m_input_tokens": 0,
+                  "ephemeral_1h_input_tokens": 721
+                },
+                "type": "message"
+              }
+            ],
+            "speed": "standard"
+          }
+        },
+        {
+          "repo": "terraform-provider-proxmox",
+          "check": "S1",
+          "status": "captured",
+          "durationMs": 66143,
+          "usage": {
+            "input_tokens": 3,
+            "cache_creation_input_tokens": 66879,
+            "cache_read_input_tokens": 67454,
+            "output_tokens": 5973,
+            "server_tool_use": {
+              "web_search_requests": 0,
+              "web_fetch_requests": 0
+            },
+            "service_tier": "standard",
+            "cache_creation": {
+              "ephemeral_1h_input_tokens": 66879,
+              "ephemeral_5m_input_tokens": 0
+            },
+            "inference_geo": "",
+            "iterations": [
+              {
+                "input_tokens": 2,
+                "output_tokens": 291,
+                "cache_read_input_tokens": 64319,
+                "cache_creation_input_tokens": 5695,
+                "cache_creation": {
+                  "ephemeral_5m_input_tokens": 0,
+                  "ephemeral_1h_input_tokens": 5695
+                },
+                "type": "message"
+              }
+            ],
+            "speed": "standard"
+          }
+        },
+        {
+          "repo": "terraform-provider-proxmox",
+          "check": "S4",
+          "status": "captured",
+          "durationMs": 176764,
+          "usage": {
+            "input_tokens": 3,
+            "cache_creation_input_tokens": 78710,
+            "cache_read_input_tokens": 67588,
+            "output_tokens": 17551,
+            "server_tool_use": {
+              "web_search_requests": 0,
+              "web_fetch_requests": 0
+            },
+            "service_tier": "standard",
+            "cache_creation": {
+              "ephemeral_1h_input_tokens": 78710,
+              "ephemeral_5m_input_tokens": 0
+            },
+            "inference_geo": "",
+            "iterations": [
+              {
+                "input_tokens": 2,
+                "output_tokens": 8,
+                "cache_read_input_tokens": 64386,
+                "cache_creation_input_tokens": 17526,
+                "cache_creation": {
+                  "ephemeral_5m_input_tokens": 0,
+                  "ephemeral_1h_input_tokens": 17526
+                },
+                "type": "message"
+              }
+            ],
+            "speed": "standard"
+          }
+        },
+        {
+          "repo": "terraform-provider-proxmox",
+          "check": "S5",
+          "status": "captured",
+          "durationMs": 232349,
+          "usage": {
+            "input_tokens": 3,
+            "cache_creation_input_tokens": 89909,
+            "cache_read_input_tokens": 67704,
+            "output_tokens": 28688,
+            "server_tool_use": {
+              "web_search_requests": 0,
+              "web_fetch_requests": 0
+            },
+            "service_tier": "standard",
+            "cache_creation": {
+              "ephemeral_1h_input_tokens": 89909,
+              "ephemeral_5m_input_tokens": 0
+            },
+            "inference_geo": "",
+            "iterations": [
+              {
+                "input_tokens": 2,
+                "output_tokens": 94,
+                "cache_read_input_tokens": 64444,
+                "cache_creation_input_tokens": 28725,
+                "cache_creation": {
+                  "ephemeral_5m_input_tokens": 0,
+                  "ephemeral_1h_input_tokens": 28725
+                },
+                "type": "message"
+              }
+            ],
+            "speed": "standard"
+          }
+        },
+        {
+          "repo": "cloud-platform",
+          "check": "S1",
+          "status": "captured",
+          "durationMs": 71482,
+          "usage": {
+            "input_tokens": 3,
+            "cache_creation_input_tokens": 61945,
+            "cache_read_input_tokens": 61252,
+            "output_tokens": 7138,
+            "server_tool_use": {
+              "web_search_requests": 0,
+              "web_fetch_requests": 0
+            },
+            "service_tier": "standard",
+            "cache_creation": {
+              "ephemeral_1h_input_tokens": 61945,
+              "ephemeral_5m_input_tokens": 0
+            },
+            "inference_geo": "",
+            "iterations": [
+              {
+                "input_tokens": 2,
+                "output_tokens": 99,
+                "cache_read_input_tokens": 58117,
+                "cache_creation_input_tokens": 6963,
+                "cache_creation": {
+                  "ephemeral_5m_input_tokens": 0,
+                  "ephemeral_1h_input_tokens": 6963
+                },
+                "type": "message"
+              }
+            ],
+            "speed": "standard"
+          }
+        },
+        {
+          "repo": "cloud-platform",
+          "check": "S4",
+          "status": "captured",
+          "durationMs": 139532,
+          "usage": {
+            "input_tokens": 3,
+            "cache_creation_input_tokens": 66935,
+            "cache_read_input_tokens": 61386,
+            "output_tokens": 12616,
+            "server_tool_use": {
+              "web_search_requests": 0,
+              "web_fetch_requests": 0
+            },
+            "service_tier": "standard",
+            "cache_creation": {
+              "ephemeral_1h_input_tokens": 66935,
+              "ephemeral_5m_input_tokens": 0
+            },
+            "inference_geo": "",
+            "iterations": [
+              {
+                "input_tokens": 2,
+                "output_tokens": 675,
+                "cache_read_input_tokens": 58184,
+                "cache_creation_input_tokens": 11953,
+                "cache_creation": {
+                  "ephemeral_5m_input_tokens": 0,
+                  "ephemeral_1h_input_tokens": 11953
+                },
+                "type": "message"
+              }
+            ],
+            "speed": "standard"
+          }
+        },
+        {
+          "repo": "cloud-platform",
+          "check": "S5",
+          "status": "captured",
+          "durationMs": 206746,
+          "usage": {
+            "input_tokens": 3,
+            "cache_creation_input_tokens": 77080,
+            "cache_read_input_tokens": 61502,
+            "output_tokens": 22195,
+            "server_tool_use": {
+              "web_search_requests": 0,
+              "web_fetch_requests": 0
+            },
+            "service_tier": "standard",
+            "cache_creation": {
+              "ephemeral_1h_input_tokens": 77080,
+              "ephemeral_5m_input_tokens": 0
+            },
+            "inference_geo": "",
+            "iterations": [
+              {
+                "input_tokens": 2,
+                "output_tokens": 8,
+                "cache_read_input_tokens": 58242,
+                "cache_creation_input_tokens": 22098,
+                "cache_creation": {
+                  "ephemeral_5m_input_tokens": 0,
+                  "ephemeral_1h_input_tokens": 22098
+                },
+                "type": "message"
+              }
+            ],
+            "speed": "standard"
+          }
+        },
+        {
+          "repo": "first-internal-log",
+          "check": "S1",
+          "status": "captured",
+          "durationMs": 265346,
+          "usage": {
+            "input_tokens": 5,
+            "cache_creation_input_tokens": 177063,
+            "cache_read_input_tokens": 34211,
+            "output_tokens": 19341,
+            "server_tool_use": {
+              "web_search_requests": 0,
+              "web_fetch_requests": 0
+            },
+            "service_tier": "standard",
+            "cache_creation": {
+              "ephemeral_1h_input_tokens": 177063,
+              "ephemeral_5m_input_tokens": 0
+            },
+            "inference_geo": "",
+            "iterations": [
+              {
+                "input_tokens": 2,
+                "output_tokens": 205,
+                "cache_read_input_tokens": 27941,
+                "cache_creation_input_tokens": 2533,
+                "cache_creation": {
+                  "ephemeral_5m_input_tokens": 0,
+                  "ephemeral_1h_input_tokens": 2533
+                },
+                "type": "message"
+              }
+            ],
+            "speed": "standard"
+          }
+        },
+        {
+          "repo": "first-internal-log",
+          "check": "S4",
+          "status": "captured",
+          "durationMs": 248081,
+          "usage": {
+            "input_tokens": 5,
+            "cache_creation_input_tokens": 176223,
+            "cache_read_input_tokens": 35241,
+            "output_tokens": 17387,
+            "server_tool_use": {
+              "web_search_requests": 0,
+              "web_fetch_requests": 0
+            },
+            "service_tier": "standard",
+            "cache_creation": {
+              "ephemeral_1h_input_tokens": 176223,
+              "ephemeral_5m_input_tokens": 0
+            },
+            "inference_geo": "",
+            "iterations": [
+              {
+                "input_tokens": 2,
+                "output_tokens": 7,
+                "cache_read_input_tokens": 28837,
+                "cache_creation_input_tokens": 864,
+                "cache_creation": {
+                  "ephemeral_5m_input_tokens": 0,
+                  "ephemeral_1h_input_tokens": 864
+                },
+                "type": "message"
+              }
+            ],
+            "speed": "standard"
+          }
+        },
+        {
+          "repo": "first-internal-log",
+          "check": "S5",
+          "status": "captured",
+          "durationMs": 542897,
+          "usage": {
+            "input_tokens": 5,
+            "cache_creation_input_tokens": 185034,
+            "cache_read_input_tokens": 36962,
+            "output_tokens": 40895,
+            "server_tool_use": {
+              "web_search_requests": 0,
+              "web_fetch_requests": 0
+            },
+            "service_tier": "standard",
+            "cache_creation": {
+              "ephemeral_1h_input_tokens": 185034,
+              "ephemeral_5m_input_tokens": 0
+            },
+            "inference_geo": "",
+            "iterations": [
+              {
+                "input_tokens": 2,
+                "output_tokens": 475,
+                "cache_read_input_tokens": 30442,
+                "cache_creation_input_tokens": 8128,
+                "cache_creation": {
+                  "ephemeral_5m_input_tokens": 0,
+                  "ephemeral_1h_input_tokens": 8128
+                },
+                "type": "message"
+              }
+            ],
+            "speed": "standard"
+          }
+        },
+        {
+          "repo": "second-internal-log",
+          "check": "S1",
+          "status": "captured",
+          "durationMs": 38953,
+          "usage": {
+            "input_tokens": 3,
+            "cache_creation_input_tokens": 31413,
+            "cache_read_input_tokens": 34650,
+            "output_tokens": 3242,
+            "server_tool_use": {
+              "web_search_requests": 0,
+              "web_fetch_requests": 0
+            },
+            "service_tier": "standard",
+            "cache_creation": {
+              "ephemeral_1h_input_tokens": 31413,
+              "ephemeral_5m_input_tokens": 0
+            },
+            "inference_geo": "",
+            "iterations": [
+              {
+                "input_tokens": 2,
+                "output_tokens": 222,
+                "cache_read_input_tokens": 31515,
+                "cache_creation_input_tokens": 3033,
+                "cache_creation": {
+                  "ephemeral_5m_input_tokens": 0,
+                  "ephemeral_1h_input_tokens": 3033
+                },
+                "type": "message"
+              }
+            ],
+            "speed": "standard"
+          }
+        },
+        {
+          "repo": "second-internal-log",
+          "check": "S4",
+          "status": "captured",
+          "durationMs": 46434,
+          "usage": {
+            "input_tokens": 3,
+            "cache_creation_input_tokens": 31873,
+            "cache_read_input_tokens": 34784,
+            "output_tokens": 4015,
+            "server_tool_use": {
+              "web_search_requests": 0,
+              "web_fetch_requests": 0
+            },
+            "service_tier": "standard",
+            "cache_creation": {
+              "ephemeral_1h_input_tokens": 31873,
+              "ephemeral_5m_input_tokens": 0
+            },
+            "inference_geo": "",
+            "iterations": [
+              {
+                "input_tokens": 2,
+                "output_tokens": 536,
+                "cache_read_input_tokens": 31582,
+                "cache_creation_input_tokens": 3493,
+                "cache_creation": {
+                  "ephemeral_5m_input_tokens": 0,
+                  "ephemeral_1h_input_tokens": 3493
+                },
+                "type": "message"
+              }
+            ],
+            "speed": "standard"
+          }
+        },
+        {
+          "repo": "second-internal-log",
+          "check": "S5",
+          "status": "captured",
+          "durationMs": 69815,
+          "usage": {
+            "input_tokens": 3,
+            "cache_creation_input_tokens": 35691,
+            "cache_read_input_tokens": 34900,
+            "output_tokens": 7440,
+            "server_tool_use": {
+              "web_search_requests": 0,
+              "web_fetch_requests": 0
+            },
+            "service_tier": "standard",
+            "cache_creation": {
+              "ephemeral_1h_input_tokens": 35691,
+              "ephemeral_5m_input_tokens": 0
+            },
+            "inference_geo": "",
+            "iterations": [
+              {
+                "input_tokens": 2,
+                "output_tokens": 63,
+                "cache_read_input_tokens": 31640,
+                "cache_creation_input_tokens": 7311,
+                "cache_creation": {
+                  "ephemeral_5m_input_tokens": 0,
+                  "ephemeral_1h_input_tokens": 7311
+                },
+                "type": "message"
+              }
+            ],
+            "speed": "standard"
+          }
+        }
+      ],
+      "outcome": "completed",
+      "finishedAt": "2026-07-18T19:12:03.873Z"
+    }
+  ]
+}

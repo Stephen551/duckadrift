@@ -1,0 +1,82 @@
+{
+  "schemaVersion": 1,
+  "key": {
+    "backend": "claude-code",
+    "model": "claude-sonnet-5",
+    "effort": "high",
+    "checkId": "S1",
+    "promptHash": "c2a1f8fc838f30a4626952ebe26eae9a477d69203b1e3909355e0ac05665f90a"
+  },
+  "recordedAt": "2026-07-18T18:00:17.611Z",
+  "requestDigest": "c2a1f8fc838f30a4626952ebe26eae9a477d69203b1e3909355e0ac05665f90a",
+  "response": {
+    "content": [
+      {
+        "type": "tool_use",
+        "id": "toolu_claude_code_structured_output",
+        "name": "report_findings",
+        "input": {
+          "findings": [
+            {
+              "claim": "ADR-0004 and ADR-0006 are both Accepted (ADR-0004 is explicitly not marked superseded) yet they impose incompatible requirements on the 'loose' ADR dialect's required sections: ADR-0004 requires that loose-dialect ADRs be checked against zero required sections, while ADR-0006 requires REQUIRED_SECTIONS.loose to be `[\"context\", \"decision\"]` — the same two-section requirement as the nygard dialect. A single codebase cannot simultaneously enforce 'no sections required' and 'context and decision sections required' for the same dialect classification.",
+              "citations": [
+                {
+                  "document": "0004-dialect-detection-widened.md",
+                  "quote": "Loose asserts zero required sections — a genuinely freer template shouldn't be measured against Nygard's structure at all."
+                },
+                {
+                  "document": "0006-loose-dialect-correction.md",
+                  "quote": "`REQUIRED_SECTIONS.loose` reverts to `[\"context\", \"decision\"]` — the same requirement as nygard."
+                }
+              ],
+              "consequence": "If both records are treated as currently governing (as their Accepted status implies), the D1 check's behavior for loose-dialect ADRs is ambiguous: an implementer or auditor consulting only ADR-0004 would configure zero required sections, while one consulting only ADR-0006 would configure two. A maintainer should either mark ADR-0004 as Superseded (at least with respect to its loose-dialect clause) or add an explicit amendment note to ADR-0004 pointing to ADR-0006, so the ADR log's status metadata matches what the text of ADR-0006 already asserts in prose.",
+              "reportedConfidence": 0.72
+            }
+          ]
+        }
+      }
+    ],
+    "usage": {
+      "input_tokens": 3,
+      "cache_creation_input_tokens": 85948,
+      "cache_read_input_tokens": 81009,
+      "output_tokens": 11223,
+      "server_tool_use": {
+        "web_search_requests": 0,
+        "web_fetch_requests": 0
+      },
+      "service_tier": "standard",
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 85948,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "inference_geo": "",
+      "iterations": [
+        {
+          "input_tokens": 2,
+          "output_tokens": 8,
+          "cache_read_input_tokens": 77874,
+          "cache_creation_input_tokens": 11209,
+          "cache_creation": {
+            "ephemeral_5m_input_tokens": 0,
+            "ephemeral_1h_input_tokens": 11209
+          },
+          "type": "message"
+        }
+      ],
+      "speed": "standard"
+    },
+    "modelUsage": {
+      "claude-sonnet-5": {
+        "inputTokens": 3,
+        "outputTokens": 11223,
+        "cacheReadInputTokens": 81009,
+        "cacheCreationInputTokens": 85948,
+        "webSearchRequests": 0,
+        "costUSD": 0.5149617,
+        "contextWindow": 200000,
+        "maxOutputTokens": 32000
+      }
+    }
+  }
+}

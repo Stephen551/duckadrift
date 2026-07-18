@@ -1,0 +1,30 @@
+{
+  "input_tokens": 3,
+  "cache_creation_input_tokens": 116829,
+  "cache_read_input_tokens": 115334,
+  "output_tokens": 7976,
+  "server_tool_use": {
+    "web_search_requests": 0,
+    "web_fetch_requests": 0
+  },
+  "service_tier": "standard",
+  "cache_creation": {
+    "ephemeral_1h_input_tokens": 116829,
+    "ephemeral_5m_input_tokens": 0
+  },
+  "inference_geo": "",
+  "iterations": [
+    {
+      "input_tokens": 2,
+      "output_tokens": 224,
+      "cache_read_input_tokens": 112199,
+      "cache_creation_input_tokens": 7765,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 7765
+      },
+      "type": "message"
+    }
+  ],
+  "speed": "standard"
+}
