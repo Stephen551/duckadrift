@@ -84,7 +84,7 @@ function renderWith(
   return renderMarkdownReport([], [], tier1);
 }
 
-describe("two entries, one artifact — each tuple finds exactly its own (M5.4)", () => {
+describe("two entries, one artifact: each tuple finds exactly its own (M5.4)", () => {
   const tmp = mkdtempSync(join(tmpdir(), "duckadrift-gate-"));
   const CLAUDE_CODE_KEY = { backend: "claude-code", model: "claude-sonnet-5", effort: "high" };
 
