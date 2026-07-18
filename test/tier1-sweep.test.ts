@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -197,6 +197,11 @@ describe("parity world: a resumed sweep's final report is byte-identical to an u
     expect(resumeStub.sends()).toBe(1); // parity holds UNDER resume, not by re-sending
     expect(resumed.paused).toBeUndefined();
     expect(resumedMd).toBe(referenceMd);
+
+    // A completed sweep deletes its checkpoint (ADR-0045). The report CLI
+    // owns this call on the non-paused path; the mechanism is asserted here.
+    second.checkpoint.finalize();
+    expect(existsSync(path)).toBe(false);
   });
 });
 
