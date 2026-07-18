@@ -18,7 +18,7 @@ const DECLARABLE_NUMBERING_GAPS_MODES = new Set<NumberingGapsMode>(["advisory", 
  */
 export interface Tier1Config {
   enabled: boolean; // default false
-  backend: "api" | "claude-code"; // default "api" — the ADR-0044 closed set
+  backend: "api" | "claude-code"; // default "api"; the ADR-0044 closed set
   model: string; // default "claude-sonnet-5"
   effort: string; // default "high"
   /**

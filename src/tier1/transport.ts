@@ -89,9 +89,9 @@ export class Tier1TransportError extends Error {
 
 // The hermetic spawn allowlist, measured in the PR B spike: PATH plus the
 // Windows system variables node needs, plus the profile directories the CLI
-// needs to find its stored login. Nothing ANTHROPIC_* passes through — the
+// needs to find its stored login. Nothing ANTHROPIC_* passes through: the
 // metered API key is excluded BY CONSTRUCTION so auth resolves to the
-// subscription login (ADR-0044 decision 3) — and CLAUDE_CODE_OAUTH_TOKEN is
+// subscription login (ADR-0044 decision 3), and CLAUDE_CODE_OAUTH_TOKEN is
 // added back explicitly, read at send time (the ADR-0029 quarantine extended).
 const CLAUDE_CODE_ENV_ALLOWLIST = [
   "PATH",
@@ -111,7 +111,7 @@ const CLAUDE_CODE_ENV_ALLOWLIST = [
   "USERNAME",
 ] as const;
 
-// model and effort ride the command line, and both are config-authorable —
+// model and effort ride the command line, and both are config-authorable:
 // on a fork PR, attacker-authorable. A strict charset keeps the argv free of
 // anything a shell could interpret; a value outside it is refused loudly,
 // never quoted into a command.
@@ -132,15 +132,15 @@ function requestField(request: object, path: string[], label: string): string {
     else cursor = (cursor as Record<string, unknown>)[key];
   }
   if (typeof cursor !== "string" || cursor === "") {
-    throw new Tier1TransportError("transport", `request carries no ${label} — cannot realize the call`);
+    throw new Tier1TransportError("transport", `request carries no ${label}; cannot realize the call`);
   }
   return cursor;
 }
 
 /**
  * The live claude-code backend (ADR-0044): spawns the claude CLI per the PR B
- * canonical invocation — json output, pinned model, effort passthrough,
- * --no-session-persistence, --strict-mcp-config — under a hermetic env
+ * canonical invocation (json output, pinned model, effort passthrough,
+ * --no-session-persistence, --strict-mcp-config) under a hermetic env
  * allowlist. One deliberate deviation from the spike's shape, stated in the
  * M5.1 ledger: the prompt travels via STDIN, not a positional arg, because
  * document content is untrusted repo bytes and no quoting discipline makes
@@ -165,7 +165,7 @@ export function claudeCodeTransport(opts: ClaudeCodeTransportOptions): Tier1Tran
         if (!SAFE_ARG_RE.test(value)) {
           throw new Tier1TransportError(
             "transport",
-            `${label} ${JSON.stringify(value)} is outside the command-line-safe charset — refused, never quoted into a shell`
+            `${label} ${JSON.stringify(value)} is outside the command-line-safe charset; refused, never quoted into a shell`
           );
         }
       }
@@ -265,9 +265,9 @@ export function claudeCodeTransport(opts: ClaudeCodeTransportOptions): Tier1Tran
         if (status === 429) {
           // The documented 429 family (quota-documented.md): shape upgraded
           // from documented-not-observed the day M5.3 sees one live.
-          throw new Tier1TransportError("quota", `api_error_status 429 — ${detail}`);
+          throw new Tier1TransportError("quota", `api_error_status 429: ${detail}`);
         }
-        throw new Tier1TransportError("auth", `api_error_status ${String(status)} — ${detail}`);
+        throw new Tier1TransportError("auth", `api_error_status ${String(status)}: ${detail}`);
       }
 
       // Model pinning is verified, not trusted (ADR-0044 decision 4): the
