@@ -17,6 +17,7 @@ const TIER1_DEFAULTS = {
   backend: "api",
   model: "claude-sonnet-5",
   effort: "high",
+  deadline_seconds: 120,
 };
 
 function writeRepo(config?: string): string {
@@ -43,15 +44,21 @@ describe("tier1 config: defaults (PDR §2.7 — absence is the common case)", ()
 
   it("a full valid block is parsed exactly", () => {
     const dir = writeRepo(
-      ["tier1:", "  enabled: true", "  backend: api", "  model: claude-opus-5", "  effort: medium"].join(
-        "\n"
-      )
+      [
+        "tier1:",
+        "  enabled: true",
+        "  backend: api",
+        "  model: claude-opus-5",
+        "  effort: medium",
+        "  deadline_seconds: 45",
+      ].join("\n")
     );
     expect(loadConfig(dir).tier1).toEqual({
       enabled: true,
       backend: "api",
       model: "claude-opus-5",
       effort: "medium",
+      deadline_seconds: 45,
     });
   });
 
@@ -66,18 +73,25 @@ describe("tier1 config: defaults (PDR §2.7 — absence is the common case)", ()
 describe("tier1 config: a config the user wrote and we cannot honor is a SetupError", () => {
   afterAll(() => rmSync(TMP, { recursive: true, force: true }));
 
-  it('backend: claude-code → SetupError with the exact M5 message', () => {
+  it("backend: claude-code is accepted (ADR-0044; the M5 rejection is retired)", () => {
     const dir = writeRepo("tier1:\n  backend: claude-code\n");
+    expect(loadConfig(dir).tier1.backend).toBe("claude-code");
+  });
+
+  it("a backend outside the closed set → SetupError naming the value and the supported set", () => {
+    const dir = writeRepo("tier1:\n  backend: openai\n");
     expect(() => loadConfig(dir)).toThrowError(
-      'invalid .duckadrift.yml: tier1.backend "claude-code" ships at M5 — this build supports backend: api'
+      'invalid .duckadrift.yml: tier1.backend "openai" is not supported — this build supports backend: api or claude-code (ADR-0044)'
     );
     expect(() => loadConfig(dir)).toThrowError(SetupError);
   });
 
-  it("any other non-api backend → SetupError naming the value and the supported one", () => {
-    const dir = writeRepo("tier1:\n  backend: openai\n");
-    expect(() => loadConfig(dir)).toThrowError(
-      'invalid .duckadrift.yml: tier1.backend "openai" is not supported — this build supports backend: api'
+  it("a non-positive or non-numeric deadline_seconds → SetupError", () => {
+    expect(() => loadConfig(writeRepo("tier1:\n  deadline_seconds: 0\n"))).toThrowError(
+      "invalid .duckadrift.yml: tier1.deadline_seconds must be a positive number of seconds"
+    );
+    expect(() => loadConfig(writeRepo('tier1:\n  deadline_seconds: "soon"\n'))).toThrowError(
+      "invalid .duckadrift.yml: tier1.deadline_seconds must be a positive number of seconds"
     );
   });
 
@@ -124,7 +138,7 @@ describe("tier1 config: unknown keys are named on stderr, never silently ignored
     const config = loadConfig(dir);
     expect(config.tier1).toEqual(TIER1_DEFAULTS);
     expect(errSpy).toHaveBeenCalledWith(
-      'duckadrift: unknown key "tier1.enable" in .duckadrift.yml — ignored. Supported: enabled, backend, model, effort.'
+      'duckadrift: unknown key "tier1.enable" in .duckadrift.yml — ignored. Supported: enabled, backend, model, effort, deadline_seconds.'
     );
   });
 
@@ -134,10 +148,10 @@ describe("tier1 config: unknown keys are named on stderr, never silently ignored
     expect(loadConfig(dir).tier1.enabled).toBe(true);
     const notices = errSpy.mock.calls.map((c) => String(c[0]));
     expect(notices).toContain(
-      'duckadrift: unknown key "tier1.foo" in .duckadrift.yml — ignored. Supported: enabled, backend, model, effort.'
+      'duckadrift: unknown key "tier1.foo" in .duckadrift.yml — ignored. Supported: enabled, backend, model, effort, deadline_seconds.'
     );
     expect(notices).toContain(
-      'duckadrift: unknown key "tier1.bar" in .duckadrift.yml — ignored. Supported: enabled, backend, model, effort.'
+      'duckadrift: unknown key "tier1.bar" in .duckadrift.yml — ignored. Supported: enabled, backend, model, effort, deadline_seconds.'
     );
   });
 
@@ -146,7 +160,7 @@ describe("tier1 config: unknown keys are named on stderr, never silently ignored
     const dir = writeRepo("tier1:\n  foo: 1\n");
     loadConfig(dir, { quiet: true });
     expect(errSpy).not.toHaveBeenCalled();
-    const badDir = writeRepo("tier1:\n  backend: claude-code\n");
+    const badDir = writeRepo("tier1:\n  backend: openai\n");
     expect(() => loadConfig(badDir, { quiet: true })).toThrowError(SetupError);
   });
 });

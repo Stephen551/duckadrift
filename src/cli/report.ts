@@ -8,10 +8,9 @@ import { buildErrorReport, buildJsonReport, renderMarkdownReport, withTier1Run }
 import { consumeCalibration } from "../tier1/calibration/consume.js";
 import { routeFindings } from "../tier1/calibration/route.js";
 import { TIER1_CHECKS } from "../tier1/checks.js";
-import { tier1CredentialsPresent } from "../tier1/credentials.js";
 import { resolveTier1Status } from "../tier1/gate.js";
 import { runTier1Checks } from "../tier1/runner.js";
-import { liveTransport } from "../tier1/transport.js";
+import { backendCredentialsPresent, liveTransportFor } from "../tier1/transport.js";
 
 export interface ReportOptions {
   repoRoot: string;
@@ -43,13 +42,16 @@ export async function executeReport(opts: ReportOptions): Promise<number> {
     // Second config load is quiet: loadAdrLog's internal load already emitted
     // any per-run notices (config/load.ts documents this contract).
     const tier1Config = loadConfig(opts.repoRoot, { quiet: true }).tier1;
-    let tier1 = resolveTier1Status(tier1Config, tier1CredentialsPresent(), ctx);
+    // Credential presence is asked per configured backend through the
+    // transport module's one map (ADR-0044): this caller never learns which
+    // env var a backend needs.
+    let tier1 = resolveTier1Status(tier1Config, backendCredentialsPresent(tier1Config.backend), ctx);
     // The live semantic run (M3.3a — the wiring M3.2 deferred). Report-only:
     // `check` never runs Tier 1 and the verdict channel stays deterministic
     // (PDR §2.5). Transport construction happens AFTER the status gate, so a
     // disabled / no-credentials / no-signal run provably never builds one.
     if (tier1.enabled && tier1.status === "eligible" && TIER1_CHECKS.length > 0) {
-      const run = await runTier1Checks(ctx, TIER1_CHECKS, liveTransport());
+      const run = await runTier1Checks(ctx, TIER1_CHECKS, liveTransportFor(tier1Config));
       // Calibration consumption + routing (ADR-0042): the artifact is read
       // (repo-local overrides shipped), each severity's channel state derived
       // from its own measurements, and each finding routed. On the shipped

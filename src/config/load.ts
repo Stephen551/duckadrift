@@ -18,15 +18,28 @@ const DECLARABLE_NUMBERING_GAPS_MODES = new Set<NumberingGapsMode>(["advisory", 
  */
 export interface Tier1Config {
   enabled: boolean; // default false
-  backend: "api"; // default "api" — the only backend until M5
+  backend: "api" | "claude-code"; // default "api" — the ADR-0044 closed set
   model: string; // default "claude-sonnet-5"
   effort: string; // default "high"
+  /**
+   * The transport's owned deadline in seconds (ADR-0044 decision 2), consumed
+   * by the claude-code transport. A config value with a sane default, never a
+   * constant in check code; the default's rationale is the M5.1 ledger's
+   * measured evidence.
+   */
+  deadline_seconds: number; // default 120
 }
 
-const TIER1_KEYS = ["enabled", "backend", "model", "effort"] as const;
+const TIER1_KEYS = ["enabled", "backend", "model", "effort", "deadline_seconds"] as const;
 
 function tier1Defaults(): Tier1Config {
-  return { enabled: false, backend: "api", model: "claude-sonnet-5", effort: "high" };
+  return {
+    enabled: false,
+    backend: "api",
+    model: "claude-sonnet-5",
+    effort: "high",
+    deadline_seconds: 120,
+  };
 }
 
 export interface DuckadriftConfig {
@@ -62,7 +75,7 @@ function parseTier1(raw: unknown, quiet: boolean): Tier1Config {
   for (const key of Object.keys(block)) {
     if (!(TIER1_KEYS as readonly string[]).includes(key) && !quiet) {
       console.error(
-        `duckadrift: unknown key "tier1.${key}" in .duckadrift.yml — ignored. Supported: enabled, backend, model, effort.`
+        `duckadrift: unknown key "tier1.${key}" in .duckadrift.yml — ignored. Supported: enabled, backend, model, effort, deadline_seconds.`
       );
     }
   }
@@ -74,15 +87,13 @@ function parseTier1(raw: unknown, quiet: boolean): Tier1Config {
     config.enabled = block.enabled;
   }
 
-  if (block.backend !== undefined && block.backend !== "api") {
-    if (block.backend === "claude-code") {
+  if (block.backend !== undefined) {
+    if (block.backend !== "api" && block.backend !== "claude-code") {
       throw new SetupError(
-        'invalid .duckadrift.yml: tier1.backend "claude-code" ships at M5 — this build supports backend: api'
+        `invalid .duckadrift.yml: tier1.backend ${JSON.stringify(block.backend)} is not supported — this build supports backend: api or claude-code (ADR-0044)`
       );
     }
-    throw new SetupError(
-      `invalid .duckadrift.yml: tier1.backend ${JSON.stringify(block.backend)} is not supported — this build supports backend: api`
-    );
+    config.backend = block.backend;
   }
 
   for (const key of ["model", "effort"] as const) {
@@ -92,6 +103,16 @@ function parseTier1(raw: unknown, quiet: boolean): Tier1Config {
       throw new SetupError(`invalid .duckadrift.yml: tier1.${key} must be a non-empty string`);
     }
     config[key] = value;
+  }
+
+  if (block.deadline_seconds !== undefined) {
+    const value = block.deadline_seconds;
+    if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
+      throw new SetupError(
+        "invalid .duckadrift.yml: tier1.deadline_seconds must be a positive number of seconds"
+      );
+    }
+    config.deadline_seconds = value;
   }
 
   return config;

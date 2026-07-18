@@ -1,5 +1,7 @@
 import { execFile, spawn } from "node:child_process";
 import Anthropic from "@anthropic-ai/sdk";
+import type { Tier1Config } from "../config/load.js";
+import { claudeCodeCredentialsPresent, tier1CredentialsPresent } from "./credentials.js";
 import { loadRecording, replayOrFail } from "./recording.js";
 import type { RecordingBackend } from "./recording.js";
 
@@ -286,6 +288,46 @@ export function claudeCodeTransport(opts: ClaudeCodeTransportOptions): Tier1Tran
       return { response: envelope, usage: USAGE_EXTRACTORS["claude-code"](envelope) };
     },
   };
+}
+
+// The backend-keyed credential map (ADR-0044 decision 1): the primitives in
+// credentials.ts know only env-var presence; WHICH backend needs WHICH
+// credential is decided here and nowhere else.
+const CREDENTIALS_PRESENT: Record<RecordingBackend, (env: NodeJS.ProcessEnv) => boolean> = {
+  api: tier1CredentialsPresent,
+  "claude-code": claudeCodeCredentialsPresent,
+};
+
+/** True when the configured backend's credential is present. The one credential question callers may ask. */
+export function backendCredentialsPresent(
+  backend: RecordingBackend,
+  env: NodeJS.ProcessEnv = process.env
+): boolean {
+  return CREDENTIALS_PRESENT[backend](env);
+}
+
+// The credential's NAME per backend, for loud skip copy (PDR 2.8: partial
+// blindness is permitted, unannounced blindness is not). Names only; a value
+// never leaves process.env.
+const CREDENTIAL_NAMES: Record<RecordingBackend, string> = {
+  api: "ANTHROPIC_API_KEY",
+  "claude-code": "CLAUDE_CODE_OAUTH_TOKEN",
+};
+
+/** The env-var name the configured backend's credential lives in, so a skip line can say exactly what is missing. */
+export function backendCredentialName(backend: RecordingBackend): string {
+  return CREDENTIAL_NAMES[backend];
+}
+
+/**
+ * The live transport for the configured backend (ADR-0044 decision 1): the
+ * ONE place the backend picks an implementation. Callers hold a
+ * Tier1Transport and never learn which.
+ */
+export function liveTransportFor(config: Tier1Config, env: NodeJS.ProcessEnv = process.env): Tier1Transport {
+  return config.backend === "claude-code"
+    ? claudeCodeTransport({ deadlineSeconds: config.deadline_seconds, env })
+    : liveTransport(env);
 }
 
 /**

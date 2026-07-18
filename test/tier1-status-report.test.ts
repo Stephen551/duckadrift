@@ -8,6 +8,7 @@ import { buildErrorReport, buildJsonReport, renderMarkdownReport } from "../src/
 import type { Tier1Status } from "../src/report/write.js";
 import { tier1CredentialsPresent } from "../src/tier1/credentials.js";
 import { resolveTier1Status } from "../src/tier1/gate.js";
+import { backendCredentialsPresent } from "../src/tier1/transport.js";
 import { loadFixtureContext } from "./helpers/run-checks.js";
 
 // The Tier 1 status vocabulary and its report block (ADR-0029 Part 5):
@@ -17,7 +18,7 @@ import { loadFixtureContext } from "./helpers/run-checks.js";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const TIER1_FIXTURES = join(__dirname, "fixtures", "tier1");
 
-const ENABLED: Tier1Config = { enabled: true, backend: "api", model: "claude-sonnet-5", effort: "high" };
+const ENABLED: Tier1Config = { enabled: true, backend: "api", model: "claude-sonnet-5", effort: "high", deadline_seconds: 120 };
 const DISABLED: Tier1Config = { ...ENABLED, enabled: false };
 
 // A secret-shaped value used ONLY to prove it never reaches any report surface.
@@ -46,6 +47,7 @@ describe("Tier 1 status resolution (deterministic order)", () => {
     expect(status).toEqual({
       enabled: true,
       status: "no-credentials",
+      credentialName: "ANTHROPIC_API_KEY",
       signals: [
         {
           kind: "governed-path",
@@ -81,6 +83,47 @@ describe("Tier 1 status resolution (deterministic order)", () => {
       status: "eligible",
       signals: [],
     });
+  });
+});
+
+describe("claude-code backend: the same loud skip states, spawn-free (ADR-0044, M5.1)", () => {
+  const CLAUDE_CODE: Tier1Config = { ...ENABLED, backend: "claude-code" };
+
+  it("not enabled → { enabled: false }, backend notwithstanding", () => {
+    expect(resolveTier1Status({ ...CLAUDE_CODE, enabled: false }, true, s2Context())).toEqual({
+      enabled: false,
+    });
+  });
+
+  it("no credentials → the skip names CLAUDE_CODE_OAUTH_TOKEN, the backend's own credential", () => {
+    const status = resolveTier1Status(CLAUDE_CODE, false, s2Context());
+    expect(status.enabled).toBe(true);
+    if (status.enabled) {
+      expect(status.status).toBe("no-credentials");
+      expect(status.credentialName).toBe("CLAUDE_CODE_OAUTH_TOKEN");
+    }
+    const md = renderMarkdownReport([], [], status);
+    expect(md).toContain(
+      "Tier 1 is enabled, but CLAUDE_CODE_OAUTH_TOKEN is not present in the environment — semantic checks skipped; Tier 0 coverage only. Fork-triggered PRs never receive secrets; the absence is expected there."
+    );
+  });
+
+  it("no-signal diff → no-signal, identical to the api backend (resolution is backend-blind past credentials)", () => {
+    expect(resolveTier1Status(CLAUDE_CODE, true, noSignalContext())).toEqual({
+      enabled: true,
+      status: "no-signal",
+      signals: [],
+    });
+  });
+
+  it("credential presence is per backend: the api key never satisfies claude-code, nor the token the api", () => {
+    expect(backendCredentialsPresent("claude-code", { ANTHROPIC_API_KEY: "sk-ant-test-never-real" })).toBe(false);
+    expect(
+      backendCredentialsPresent("claude-code", { CLAUDE_CODE_OAUTH_TOKEN: "sk-ant-oat01-test-never-real" })
+    ).toBe(true);
+    expect(backendCredentialsPresent("api", { CLAUDE_CODE_OAUTH_TOKEN: "sk-ant-oat01-test-never-real" })).toBe(false);
+    expect(backendCredentialsPresent("api", { ANTHROPIC_API_KEY: "sk-ant-test-never-real" })).toBe(true);
+    expect(backendCredentialsPresent("claude-code", { CLAUDE_CODE_OAUTH_TOKEN: "   " })).toBe(false);
   });
 });
 

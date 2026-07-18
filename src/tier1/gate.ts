@@ -3,6 +3,7 @@ import { isAccepted } from "../adr/status.js";
 import type { AdrLogContext } from "../adr/types.js";
 import type { Tier1Config } from "../config/load.js";
 import type { Tier1Status } from "../report/write.js";
+import { backendCredentialName } from "./transport.js";
 
 // The deterministic relevance gate (ADR-0003, ADR-0029). PR-mode only:
 // schedule mode's whole purpose (S5, decay sweeps) is drift no diff surfaces,
@@ -128,7 +129,16 @@ export function resolveTier1Status(
 ): Tier1Status {
   if (!config.enabled) return { enabled: false };
   const signals = ctx.prContext ? relevanceGate(ctx).signals : [];
-  if (!credentialsPresent) return { enabled: true, status: "no-credentials", signals };
+  if (!credentialsPresent) {
+    // The skip line names WHICH credential is missing; the name comes from
+    // the transport module's backend map (ADR-0044), never a conditional here.
+    return {
+      enabled: true,
+      status: "no-credentials",
+      credentialName: backendCredentialName(config.backend),
+      signals,
+    };
+  }
   if (ctx.prContext && signals.length === 0) return { enabled: true, status: "no-signal", signals };
   return { enabled: true, status: "eligible", signals };
 }
