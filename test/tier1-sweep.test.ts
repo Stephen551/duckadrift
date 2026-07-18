@@ -31,10 +31,18 @@ function checkpointPath(): string {
 const UNIT_IDS = ["S1", "S4", "S5"] as const;
 
 function docFor(id: string): { label: string; path: string; content: string } {
+  // S5's finding flows through confirmDeadPremise (ADR-0036), which derives
+  // referents from citation quotes: its document names a path token that is
+  // provably absent under the scratch repoRoot, so the premise is dead and
+  // the finding survives deterministically.
+  const content =
+    id === "S5"
+      ? "The S5 decision retires `src/gone-forever.ts` from the tree."
+      : `The ${id} decision content for the sweep worlds.`;
   return {
     label: `000${id.slice(1)}-${id.toLowerCase()}.md`,
     path: `docs/adr/000${id.slice(1)}-${id.toLowerCase()}.md`,
-    content: `The ${id} decision content for the sweep worlds.`,
+    content,
   };
 }
 
@@ -72,7 +80,6 @@ function responseFor(id: Tier1CheckId): unknown {
               citations: [{ document: doc.label, quote: doc.content }],
               consequence: "The sweep worlds assert on this deterministic finding.",
               reportedConfidence: 0.9,
-              ...(id === "S5" ? { premise: { kind: "file", path: "src/gone-forever.ts" } } : {}),
             },
           ],
         },
@@ -82,7 +89,9 @@ function responseFor(id: Tier1CheckId): unknown {
   };
 }
 
-const CTX = { repoRoot: process.cwd(), adrs: [], adrDir: "docs/adr" } as unknown as AdrLogContext;
+// repoRoot is the scratch dir: confirmDeadPremise walks it (trivially empty),
+// and the S5 path token is provably absent there.
+const CTX = { repoRoot: TMP, adrs: [], adrDir: "docs/adr" } as unknown as AdrLogContext;
 
 /** A seam stub: canned per-check responses, quota after `quotaAfter` sends, every send counted. */
 function sweepTransport(opts: { quotaAfter?: number } = {}): { transport: Tier1Transport; sends: () => number } {
