@@ -1,0 +1,12 @@
+{
+  "model": "claude-sonnet-5",
+  "max_tokens": 1024,
+  "system": "You are the duckadrift S1 contradiction checker. Reply with a JSON findings array citing evidence for every finding.",
+  "messages": [
+    {
+      "role": "user",
+      "content": "Stub S1 prompt for the transport-contract proof: the claude-code backend replays with zero credentials."
+    }
+  ],
+  "tools": []
+}
