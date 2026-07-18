@@ -109,6 +109,27 @@ The principle behind the split: the tool does not assert as fact what it is only
 - **`schedule`**: a full-log sweep for the drift that never shows up in any single diff, only over time. Opens or updates a single tracking issue titled "duckadrift: decay sweep" and auto-closes it once a sweep comes back clean. This is the mode that keeps the watch from going dormant.
 - **`workflow_dispatch`**: an on-demand run.
 
+## Tier 1: the semantic checks, and the Solo and Team presets
+
+Tier 0 is string-provable fact. Tier 1 reads the log the way a reviewer would: contradictions between decisions (S1), code drifting from a decision's substance (S2), decisions made in code but never recorded (S3), the same decision circling without closure (S4), and premises that quietly died (S5). Tier 1 findings never fail CI; they land in the report's annex, and only a calibrated confidence crossed with a declared consequence may ever open an interrupting channel. The shipped calibration carries an entry per backend tuple, thresholds exactly where the labeled corpus puts them; today every threshold is null by data, so every channel is closed and says so with its numbers.
+
+One engine, two transports. Solo and Team are setup presets, never code paths:
+
+- **Solo**: the `claude-code` backend rides your Claude subscription through the Claude Code CLI. Needs the CLI installed and `CLAUDE_CODE_OAUTH_TOKEN` in the environment (`claude setup-token`). Disclosure, stated because it is true: the CLI dials its own telemetry endpoint (a Datadog intake) alongside the API host on every call; if that matters in your environment, use the api backend.
+- **Team**: the `api` backend calls the Messages API directly with `ANTHROPIC_API_KEY`, the usual choice for CI secrets shared by a team.
+
+```yaml
+# .duckadrift.yml
+tier1:
+  enabled: true
+  backend: claude-code # or: api
+  model: claude-sonnet-5 # the calibrated default
+  effort: high # the calibrated default
+  deadline_seconds: 120 # the transport's hard ceiling per call
+```
+
+Model and effort key the calibration: change them and the run is loudly uncalibrated until a matching entry exists. Missing credentials never fail a run silently; the report names exactly which variable is absent and why fork PRs are expected to lack it. Sweeps are checkpointed: quota exhaustion pauses visibly with "N of M checks completed" and the next scheduled run resumes without re-spending a completed unit.
+
 ## The CLI underneath
 
 The Action wraps a plain CLI you can run anywhere:
@@ -129,8 +150,8 @@ Stated plainly, because a drift-detection tool that oversells itself has failed 
 - **A link path with spaces must be angle-bracketed.** Reference checking parses links with a spec-compliant CommonMark parser, and CommonMark does not allow unescaped spaces in a bare link destination — `[x](my design (v2).md)` is read as a link to `my design` with a title, not a file with spaces. Write `[x](<my design (v2).md>)` and the full path resolves. A bare path with spaces is not checked (never mis-flagged, never falsely resolved).
 - **ADR filenames need a title, not just a number.** Detection keys on the `NNNN-title.md` convention — the adr-tools default. A log whose records are numbered without a title slug (`ADR-7.md` rather than `0007-use-postgres.md`) is not recognized, and those files go unchecked rather than mis-checked. Broadening detection to the number-only form is on the backlog; for now the tool stays silent on it rather than guessing.
 - **A link into a git submodule resolves only when the submodule is checked out.** Reference checking reads the working tree at HEAD, so a link into a submodule path resolves when the submodule is initialized and is reported unresolved otherwise — which matches the default CI checkout, where submodules are not fetched. If your workflow checks submodules out, initialize them before the check runs. Never falsely resolved.
-- **No semantic checks in this release.** Contradiction between two decisions, code drifting from a decision's substance, decisions made in code but never recorded: detecting those requires judgment, not string matching. That is Tier 1, planned for a later release. It will never fail CI the way Tier 0 does, because a probabilistic finding blocking a merge would violate the sentence at the top of this README.
-- **Solo and Team setup presets are not live.** They configure the Tier 1 semantic backend and activate when Tier 1 ships. There is nothing to set up today.
+- **Tier 1 never fails CI, by design.** A probabilistic finding blocking a merge would violate the sentence at the top of this README. Semantic findings live in the annex; the interrupt channel opens only when a calibration floor genuinely clears, and none has yet.
+- **Tier 1 spends tokens.** The relevance gate keeps PR-mode calls to diffs that trip a real signal, and sweeps are checkpointed so nothing is ever paid twice, but a sweep over a large log is a real model bill on the api backend and real subscription usage on claude-code. The report carries the measured usage.
 
 ## More
 
