@@ -1,0 +1,287 @@
+{
+  "schemaVersion": 1,
+  "key": {
+    "backend": "claude-code",
+    "model": "claude-sonnet-5",
+    "effort": "high",
+    "checkId": "S5",
+    "promptHash": "3cebfcfae680608b9345c4d25255fa5c0e2d2111bc24af1579068025429de831"
+  },
+  "recordedAt": "2026-07-18T18:51:52.132Z",
+  "requestDigest": "3cebfcfae680608b9345c4d25255fa5c0e2d2111bc24af1579068025429de831",
+  "response": {
+    "content": [
+      {
+        "type": "tool_use",
+        "id": "toolu_claude_code_structured_output",
+        "name": "report_findings",
+        "input": {
+          "findings": [
+            {
+              "claim": "ADR 013 (Use RSpec for cluster tests) treats the Ruby testing framework/gem 'rspec' as a live, currently-adopted dependency, stating existing smoke tests have already been ported to it.",
+              "citations": [
+                {
+                  "document": "013-Use-RSpec-for-cluster-tests.md",
+                  "quote": "We have translated our existing bash-based smoke tests into Rspec"
+                }
+              ],
+              "consequence": "If rspec is no longer a present/maintained dependency of the cluster test suite, this ADR's premise has decayed and the record should be flagged for review.",
+              "reportedConfidence": 0.75
+            },
+            {
+              "claim": "ADR 022 (EKS) treats 'Kuberos' (the Cloud Platform's forked auth credential issuer) as a currently-used, live software dependency.",
+              "citations": [
+                {
+                  "document": "022-EKS.md",
+                  "quote": "We've long used Kuberos for issuing kubecfg credentials to users."
+                }
+              ],
+              "consequence": "Confirming whether Kuberos (the cloud-platform-kuberos fork) still exists and is deployed would validate or invalidate this ADR's live premise.",
+              "reportedConfidence": 0.8
+            },
+            {
+              "claim": "ADR 022 (EKS) treats Calico network policy enforcement as an installed, currently-present dependency.",
+              "citations": [
+                {
+                  "document": "022-EKS.md",
+                  "quote": "AWS Calico (network policy enforcement) installed"
+                }
+              ],
+              "consequence": "If Calico is no longer installed on the cluster, the network policy enforcement premise of this ADR has decayed.",
+              "reportedConfidence": 0.85
+            },
+            {
+              "claim": "ADR 022 (EKS) treats Calico Typha as a component to be installed and currently relied upon for caching Felix requests.",
+              "citations": [
+                {
+                  "document": "022-EKS.md",
+                  "quote": "Install Typha for performance benefits."
+                }
+              ],
+              "consequence": "Confirming Typha's continued presence validates or invalidates this specific sub-decision.",
+              "reportedConfidence": 0.7
+            },
+            {
+              "claim": "ADR 022 (EKS) treats 'fluent-bit' as a currently-used daemonset dependency for log shipping to ElasticSearch.",
+              "citations": [
+                {
+                  "document": "022-EKS.md",
+                  "quote": "fluent-bit - currently used for log shipping to ElasticSearch."
+                }
+              ],
+              "consequence": "If fluent-bit is no longer part of the logging pipeline, this premise (used to justify Fargate daemonset replacement planning) has decayed.",
+              "reportedConfidence": 0.8
+            },
+            {
+              "claim": "ADR 022 (EKS) treats 'prometheus-node-exporter' as a currently-used dependency for exporting node metrics to Prometheus.",
+              "citations": [
+                {
+                  "document": "022-EKS.md",
+                  "quote": "prometheus-node-exporter - currently used to export node metrics to prometheus."
+                }
+              ],
+              "consequence": "If prometheus-node-exporter is no longer deployed, this premise underlying the Fargate daemonset discussion has decayed.",
+              "reportedConfidence": 0.8
+            },
+            {
+              "claim": "ADR 022 (EKS) treats AWS CNI version 1.9.0 (amazon-vpc-cni-k8s) as the currently relied-upon networking dependency enabling IP-prefix pod density.",
+              "citations": [
+                {
+                  "document": "022-EKS.md",
+                  "quote": "Support is added in [AWS CNI 1.9.0]"
+                }
+              ],
+              "consequence": "If the cluster no longer runs this CNI dependency/version lineage, the pod-density reasoning in this ADR has decayed.",
+              "reportedConfidence": 0.6
+            },
+            {
+              "claim": "ADR 023 (Logging) treats Fluentbit as the currently-live mechanism by which all pod stdout logs are shipped.",
+              "citations": [
+                {
+                  "document": "023-Logging.md",
+                  "quote": "All pods' stdout get [shipped using Fluentbit]"
+                }
+              ],
+              "consequence": "If Fluentbit is no longer the log-shipping dependency in use, this ADR's stated current-state context has decayed.",
+              "reportedConfidence": 0.8
+            },
+            {
+              "claim": "ADR 023 (Logging) treats the Fluentd + AWS OpenSearch pairing as the currently-present logging combination, citing its lack of JSON-structure flexibility as a live concern.",
+              "citations": [
+                {
+                  "document": "023-Logging.md",
+                  "quote": "Fluentd + AWS OpenSearch combination has no flexibility to parse/define the JSON structure of logs"
+                }
+              ],
+              "consequence": "If Fluentd is no longer part of the log pipeline, this specific stated concern/premise has decayed.",
+              "reportedConfidence": 0.65
+            },
+            {
+              "claim": "ADR 025 (Domain names) treats 'external-dns' as the live, currently-operating component that sets DNS records with variable weights during migrations.",
+              "citations": [
+                {
+                  "document": "025-Domain-names.md",
+                  "quote": "created by external-dns, with variable weights"
+                }
+              ],
+              "consequence": "If external-dns is no longer deployed to manage these DNS entries, the reasoning in this ADR about weighted migration traffic has decayed.",
+              "reportedConfidence": 0.7
+            },
+            {
+              "claim": "ADR 011 (Introduce Open Policy Agent) treats Open Policy Agent as a dependency the team decided to introduce and currently relies on for policy enforcement.",
+              "citations": [
+                {
+                  "document": "011-Introduce-Open-Policy-Agent.md",
+                  "quote": "Eventually we decided to introduce the [Open Policy Agent][open-policy-agent]:"
+                }
+              ],
+              "consequence": "If OPA is no longer installed/used for admission control, this ADR's foundational premise has decayed.",
+              "reportedConfidence": 0.8
+            },
+            {
+              "claim": "ADR 047 (Use Karpenter for Scaling) treats Karpenter as an installed and tested dependency, and the chosen live scaling solution.",
+              "citations": [
+                {
+                  "document": "047-use-karpenter-for-scaling.md",
+                  "quote": "We installed and tested **Karpenter**."
+                }
+              ],
+              "consequence": "Confirming Karpenter's continued installation validates or invalidates this ADR's central premise.",
+              "reportedConfidence": 0.85
+            },
+            {
+              "claim": "ADR 045 (Use a Private EKS Endpoint) names the 'Modernisation Platform Bastion module' as the specific Terraform module the team intends to rely on for bastion access.",
+              "citations": [
+                {
+                  "document": "045-use-a-private-eks-endpoint.md",
+                  "quote": "likely using the [Modernisation Platform Bastion module]"
+                }
+              ],
+              "consequence": "If this named module no longer exists or is not what is used, the bastion-access consequence of this ADR has decayed.",
+              "reportedConfidence": 0.55
+            },
+            {
+              "claim": "ADR 033 (Manager cluster) treats Concourse as a currently-running dependency that deploys infrastructure including EKS from the Manager cluster.",
+              "citations": [
+                {
+                  "document": "033-Manager-cluster.md",
+                  "quote": "Concourse deploys infrastructure, including EKS."
+                }
+              ],
+              "consequence": "If Concourse is no longer deployed on the Manager cluster, the 'recovering the main cluster' rationale in this ADR has decayed.",
+              "reportedConfidence": 0.75
+            },
+            {
+              "claim": "ADR 040 (Use GitHub Actions) treats a self-managed Concourse instance as the currently-present dependency running Cloud Platform's deployment pipelines.",
+              "citations": [
+                {
+                  "document": "040-use-github-actions.md",
+                  "quote": "Cloud Platform uses a self managed Concourse instance hosted in a management EKS cluster."
+                }
+              ],
+              "consequence": "If Concourse has already been decommissioned per this ADR's own consequences, the stated 'currently uses' context premise may have already decayed as expected, which is worth confirming against the record's own timeline.",
+              "reportedConfidence": 0.8
+            },
+            {
+              "claim": "ADR 010 (Migrate live-0 to live-1) treats 'nginx-ingress-acme' as the default ingress component newly put in place on live-1.",
+              "citations": [
+                {
+                  "document": "010-live-0-to-live-1-Cluster.md",
+                  "quote": "made nginx-ingress-acme default"
+                }
+              ],
+              "consequence": "If nginx-ingress-acme is no longer the default ingress controller, this consequence item of the ADR has decayed.",
+              "reportedConfidence": 0.65
+            },
+            {
+              "claim": "ADR 010 (Migrate live-0 to live-1) treats a 'kuberos' image as a newly-added, currently-present dependency of the migration.",
+              "citations": [
+                {
+                  "document": "010-live-0-to-live-1-Cluster.md",
+                  "quote": "Add new kuberos image."
+                }
+              ],
+              "consequence": "If no kuberos image/component remains in use, this consequence item has decayed.",
+              "reportedConfidence": 0.55
+            },
+            {
+              "claim": "ADR 010 (Migrate live-0 to live-1) treats 'kops' as the currently-used tool for performing the Kubernetes version bump on live-1.",
+              "citations": [
+                {
+                  "document": "010-live-0-to-live-1-Cluster.md",
+                  "quote": "Live-1 Kubernetes version bump to 1.11.8 using kops"
+                }
+              ],
+              "consequence": "If kops is no longer part of the cluster management toolchain, this premise reflects a historical, no-longer-live dependency.",
+              "reportedConfidence": 0.55
+            },
+            {
+              "claim": "ADR 022 (EKS) treats kOps as the prior, and implicitly still-existing-until-replaced, cluster management dependency being superseded by EKS.",
+              "citations": [
+                {
+                  "document": "022-EKS.md",
+                  "quote": "This replaces usage of kOps."
+                }
+              ],
+              "consequence": "Confirming whether kOps tooling/config still exists in the repository would validate or invalidate this transitional premise.",
+              "reportedConfidence": 0.55
+            },
+            {
+              "claim": "ADR 001 (Use AWS hosted Elasticsearch) treats 'Sensu' as a currently-modified, live alerting dependency pointed at the new ES cluster.",
+              "citations": [
+                {
+                  "document": "001-Use-AWS-hosted-elasticsearch.md",
+                  "quote": "We have modified Sensu alerting to use new ES cluster"
+                }
+              ],
+              "consequence": "If Sensu is no longer the alerting dependency in use, this consequence item of the ADR has decayed.",
+              "reportedConfidence": 0.6
+            }
+          ]
+        }
+      }
+    ],
+    "usage": {
+      "input_tokens": 3,
+      "cache_creation_input_tokens": 77080,
+      "cache_read_input_tokens": 61502,
+      "output_tokens": 22195,
+      "server_tool_use": {
+        "web_search_requests": 0,
+        "web_fetch_requests": 0
+      },
+      "service_tier": "standard",
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 77080,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "inference_geo": "",
+      "iterations": [
+        {
+          "input_tokens": 2,
+          "output_tokens": 8,
+          "cache_read_input_tokens": 58242,
+          "cache_creation_input_tokens": 22098,
+          "cache_creation": {
+            "ephemeral_5m_input_tokens": 0,
+            "ephemeral_1h_input_tokens": 22098
+          },
+          "type": "message"
+        }
+      ],
+      "speed": "standard"
+    },
+    "modelUsage": {
+      "claude-sonnet-5": {
+        "inputTokens": 3,
+        "outputTokens": 22195,
+        "cacheReadInputTokens": 61502,
+        "cacheCreationInputTokens": 77080,
+        "webSearchRequests": 0,
+        "costUSD": 0.6404346,
+        "contextWindow": 200000,
+        "maxOutputTokens": 32000
+      }
+    }
+  }
+}

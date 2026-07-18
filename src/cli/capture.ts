@@ -6,7 +6,7 @@ import { loadConfig } from "../config/load.js";
 import { SetupError } from "../errors.js";
 import { TIER1_CHECKS } from "../tier1/checks.js";
 import { captureOne } from "../tier1/capture.js";
-import { liveTransport } from "../tier1/transport.js";
+import { liveTransportFor } from "../tier1/transport.js";
 
 // The capture CLI path (ADR-0037). Deliberately separate from check/report —
 // it makes live paid calls and must never sit on a verdict path (PDR §2.5).
@@ -55,14 +55,17 @@ export async function executeCapture(argv: string[]): Promise<number> {
       values["pr-context"],
       values["adr-dir"]
     );
-    const { model, effort } = loadConfig(repoRoot, { quiet: true }).tier1;
+    const tier1 = loadConfig(repoRoot, { quiet: true }).tier1;
 
     mkdirSync(dirname(recordingPath), { recursive: true });
+    // The transport and the recording key both come from the configured
+    // backend through the transport module's one factory (ADR-0044).
     const result = await captureOne({
       ctx,
       check,
-      config: { model, effort },
-      transport: liveTransport(),
+      config: { model: tier1.model, effort: tier1.effort },
+      backend: tier1.backend,
+      transport: liveTransportFor(tier1),
       recordingPath,
     });
 

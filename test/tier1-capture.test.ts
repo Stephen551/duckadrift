@@ -54,7 +54,7 @@ describe("captureOne — checkpoint and durability (ADR-0037)", () => {
     const rec = join(TMP, "s4.recording.json");
     const { transport, calls } = countingTransport(RESPONSE);
 
-    const result = await captureOne({ ctx: loadAdrLog(FIXTURE), check: CHECK, config: CONFIG, transport, recordingPath: rec });
+    const result = await captureOne({ ctx: loadAdrLog(FIXTURE), check: CHECK, config: CONFIG, backend: "api", transport, recordingPath: rec });
 
     expect(result.status).toBe("captured");
     expect(calls()).toBe(1);
@@ -72,7 +72,7 @@ describe("captureOne — checkpoint and durability (ADR-0037)", () => {
     const rec = join(TMP, "s4.recording.json");
 
     const first = countingTransport(RESPONSE);
-    await captureOne({ ctx: loadAdrLog(FIXTURE), check: CHECK, config: CONFIG, transport: first.transport, recordingPath: rec });
+    await captureOne({ ctx: loadAdrLog(FIXTURE), check: CHECK, config: CONFIG, backend: "api", transport: first.transport, recordingPath: rec });
     expect(first.calls()).toBe(1);
 
     // Resume: a transport that THROWS if touched proves the checkpoint skips it.
@@ -81,19 +81,19 @@ describe("captureOne — checkpoint and durability (ADR-0037)", () => {
         throw new Error("transport must not be called for an already-captured recording");
       },
     };
-    const result = await captureOne({ ctx: loadAdrLog(FIXTURE), check: CHECK, config: CONFIG, transport: forbidden, recordingPath: rec });
+    const result = await captureOne({ ctx: loadAdrLog(FIXTURE), check: CHECK, config: CONFIG, backend: "api", transport: forbidden, recordingPath: rec });
     expect(result.status).toBe("skipped-cached");
   });
 
   it("a recording whose hash no longer matches is re-captured (not silently trusted)", async () => {
     mkdirSync(TMP, { recursive: true });
     const rec = join(TMP, "s4.recording.json");
-    await captureOne({ ctx: loadAdrLog(FIXTURE), check: CHECK, config: CONFIG, transport: countingTransport(RESPONSE).transport, recordingPath: rec });
+    await captureOne({ ctx: loadAdrLog(FIXTURE), check: CHECK, config: CONFIG, backend: "api", transport: countingTransport(RESPONSE).transport, recordingPath: rec });
 
     // A changed instruction changes the hash — the old recording is stale.
     const changed = { ...CHECK, instructions: `${CHECK.instructions} (edited)` };
     const { transport, calls } = countingTransport(RESPONSE);
-    const result = await captureOne({ ctx: loadAdrLog(FIXTURE), check: changed, config: CONFIG, transport, recordingPath: rec });
+    const result = await captureOne({ ctx: loadAdrLog(FIXTURE), check: changed, config: CONFIG, backend: "api", transport, recordingPath: rec });
     expect(result.status).toBe("captured");
     expect(calls()).toBe(1); // it re-paid because the request genuinely changed
   });
@@ -103,7 +103,7 @@ describe("captureOne — checkpoint and durability (ADR-0037)", () => {
     const rec = join(TMP, "s4.recording.json");
     const noInput: CheckDefinition = { ...CHECK, selectInput: () => ({ skip: "no-input" }) };
     const { transport, calls } = countingTransport(RESPONSE);
-    const result = await captureOne({ ctx: loadAdrLog(FIXTURE), check: noInput, config: CONFIG, transport, recordingPath: rec });
+    const result = await captureOne({ ctx: loadAdrLog(FIXTURE), check: noInput, config: CONFIG, backend: "api", transport, recordingPath: rec });
     expect(result.status).toBe("skipped-no-input");
     expect(calls()).toBe(0);
     expect(existsSync(rec)).toBe(false);

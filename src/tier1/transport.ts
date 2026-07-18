@@ -411,6 +411,11 @@ export function claudeCodeTransport(opts: ClaudeCodeTransportOptions): Tier1Tran
           },
         ],
         usage: body.usage ?? null,
+        // The VERIFIED model echo, retained as raw bytes (PR D verifier
+        // directive): a recording's model-key claim rests on byte evidence in
+        // the artifact, not on transitive gate passage. The api response
+        // carries its own `model` echo; this is the headless equivalent.
+        modelUsage: body.modelUsage,
       };
       return { response, usage: USAGE_EXTRACTORS["claude-code"](response) };
     },

@@ -1,0 +1,97 @@
+{
+  "schemaVersion": 1,
+  "key": {
+    "backend": "claude-code",
+    "model": "claude-sonnet-5",
+    "effort": "high",
+    "checkId": "S1",
+    "promptHash": "b5627cbbb908e63ab2fc6212dc5eff75995952da2e50b239790fe006d1adb130"
+  },
+  "recordedAt": "2026-07-18T18:11:39.005Z",
+  "requestDigest": "b5627cbbb908e63ab2fc6212dc5eff75995952da2e50b239790fe006d1adb130",
+  "response": {
+    "content": [
+      {
+        "type": "tool_use",
+        "id": "toolu_claude_code_structured_output",
+        "name": "report_findings",
+        "input": {
+          "findings": [
+            {
+              "claim": "ADR 0032 (Accepted) requires connect-mode font builds to ship without a GPOS kerning table (features.kerning set to false), while ADR 0039 (Accepted) requires connect-mode font builds to ship a GPOS PairPos kern table via kerning:true. Neither document's Status field marks it Superseded, Rejected, or Deprecated, so both are live decisions a single codebase cannot simultaneously satisfy: the connect build path's kerning flag cannot be both false and true.",
+              "citations": [
+                {
+                  "document": "0032-connect-sibling-of-trim-mutually-exclusive.md",
+                  "quote": "Connected fonts always build non-italic, ship without a GPOS kerning table, and bypass optical sidebearing optimization"
+                },
+                {
+                  "document": "0039-connect-ships-gpos-kern-supersedes-0032.md",
+                  "quote": "Connect mode ships a GPOS PairPos kern table via `kerning:true` and `connectKern:{}`."
+                }
+              ],
+              "consequence": "A maintainer or new contributor reading ADR 0032 alone would believe connect-mode builds must never emit a GPOS kern table, and could 'fix' the codebase by reverting kerning:true to false, silently breaking the connect-kern feature ADR 0039 (and the later ADR 0040-0052 chain built on it) depends on. The fix is to update ADR 0032's Status to Superseded (or add an explicit superseded-by note) rather than leave both as independently Accepted.",
+              "reportedConfidence": 0.65
+            },
+            {
+              "claim": "ADR 0033 (Accepted) categorically forbids synthesizing connector strokes between letters, requiring the engine to abut only real traced ink, while ADR 0049 (Accepted) permits connector reconstruction/synthesis from measured parameters of the hand. Both carry Status: Accepted with no Superseded/Deprecated marking on ADR 0033, so the log records two live, mutually exclusive rules about whether the codebase may synthesize connector geometry.",
+              "citations": [
+                {
+                  "document": "0033-connect-no-synthesis-real-ink-join-classes.md",
+                  "quote": "never synthesizing vector connector bars between letters."
+                },
+                {
+                  "document": "0049-measured-parameter-connector-reconstruction.md",
+                  "quote": "Connector reconstruction from measured parameters of the same hand is permitted."
+                }
+              ],
+              "consequence": "A reader relying on ADR 0033's still-Accepted status would treat any connector-synthesis code (the stroke reconstruction shipped per ADR 0049-0052) as a violation of standing doctrine and could attempt to revert it, undoing the connector-reconstruction milestone. ADR 0033's Status should be updated to reflect that it was amended by ADR 0049 so the two documents do not both read as unconditional, current policy.",
+              "reportedConfidence": 0.6
+            }
+          ]
+        }
+      }
+    ],
+    "usage": {
+      "input_tokens": 3,
+      "cache_creation_input_tokens": 95916,
+      "cache_read_input_tokens": 88295,
+      "output_tokens": 14445,
+      "server_tool_use": {
+        "web_search_requests": 0,
+        "web_fetch_requests": 0
+      },
+      "service_tier": "standard",
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 95916,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "inference_geo": "",
+      "iterations": [
+        {
+          "input_tokens": 2,
+          "output_tokens": 507,
+          "cache_read_input_tokens": 85160,
+          "cache_creation_input_tokens": 13891,
+          "cache_creation": {
+            "ephemeral_5m_input_tokens": 0,
+            "ephemeral_1h_input_tokens": 13891
+          },
+          "type": "message"
+        }
+      ],
+      "speed": "standard"
+    },
+    "modelUsage": {
+      "claude-sonnet-5": {
+        "inputTokens": 3,
+        "outputTokens": 14445,
+        "cacheReadInputTokens": 88295,
+        "cacheCreationInputTokens": 95916,
+        "webSearchRequests": 0,
+        "costUSD": 0.6028574999999999,
+        "contextWindow": 200000,
+        "maxOutputTokens": 32000
+      }
+    }
+  }
+}

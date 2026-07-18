@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 1,
+  "key": {
+    "backend": "claude-code",
+    "model": "claude-sonnet-5",
+    "effort": "high",
+    "checkId": "S1",
+    "promptHash": "55fab57505dea079657448e361eb731d6679b67d151159b2bb49f356e9310c17"
+  },
+  "recordedAt": "2026-07-18T18:30:20.851Z",
+  "requestDigest": "55fab57505dea079657448e361eb731d6679b67d151159b2bb49f356e9310c17",
+  "response": {
+    "content": [
+      {
+        "type": "tool_use",
+        "id": "toolu_claude_code_structured_output",
+        "name": "report_findings",
+        "input": {
+          "findings": []
+        }
+      }
+    ],
+    "usage": {
+      "input_tokens": 3,
+      "cache_creation_input_tokens": 116829,
+      "cache_read_input_tokens": 115334,
+      "output_tokens": 7976,
+      "server_tool_use": {
+        "web_search_requests": 0,
+        "web_fetch_requests": 0
+      },
+      "service_tier": "standard",
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 116829,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "inference_geo": "",
+      "iterations": [
+        {
+          "input_tokens": 2,
+          "output_tokens": 224,
+          "cache_read_input_tokens": 112199,
+          "cache_creation_input_tokens": 7765,
+          "cache_creation": {
+            "ephemeral_5m_input_tokens": 0,
+            "ephemeral_1h_input_tokens": 7765
+          },
+          "type": "message"
+        }
+      ],
+      "speed": "standard"
+    },
+    "modelUsage": {
+      "claude-sonnet-5": {
+        "inputTokens": 3,
+        "outputTokens": 7976,
+        "cacheReadInputTokens": 115334,
+        "cacheCreationInputTokens": 116829,
+        "webSearchRequests": 0,
+        "costUSD": 0.59235795,
+        "contextWindow": 200000,
+        "maxOutputTokens": 32000
+      }
+    }
+  }
+}

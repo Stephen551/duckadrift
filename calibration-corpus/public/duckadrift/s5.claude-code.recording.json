@@ -1,0 +1,122 @@
+{
+  "schemaVersion": 1,
+  "key": {
+    "backend": "claude-code",
+    "model": "claude-sonnet-5",
+    "effort": "high",
+    "checkId": "S5",
+    "promptHash": "285344349294937f2d42efc1aece743831b826a2ace6ca7f2adbdc12f8d6b778"
+  },
+  "recordedAt": "2026-07-18T18:09:07.051Z",
+  "requestDigest": "285344349294937f2d42efc1aece743831b826a2ace6ca7f2adbdc12f8d6b778",
+  "response": {
+    "content": [
+      {
+        "type": "tool_use",
+        "id": "toolu_claude_code_structured_output",
+        "name": "report_findings",
+        "input": {
+          "findings": [
+            {
+              "claim": "ADR-0006's Decision section treats `src/config/load.ts` as a live, currently-present source file whose current content (accepting only `nygard`/`madr` as declarable dialects) the decision's reasoning depends on.",
+              "citations": [
+                {
+                  "document": "0006-loose-dialect-correction.md",
+                  "quote": "loose can never be a *declared* dialect (`src/config/load.ts` only accepts `nygard`/`madr` as declarable)"
+                }
+              ],
+              "consequence": "If this file no longer exists at this path, or no longer contains this dialect-restriction logic, the correction ADR-0006 records may no longer describe the codebase's actual behavior.",
+              "reportedConfidence": 0.92
+            },
+            {
+              "claim": "ADR-0018's Decision section treats `parse.ts` as a live, currently-present file that houses the consolidated CommonMark-correct link parser shared by D3 and D7.",
+              "citations": [
+                {
+                  "document": "0018-the-adversarial-consolidation-round.md",
+                  "quote": "link parser (`parse.ts`), adopted by D3 and D7"
+                }
+              ],
+              "consequence": "If `parse.ts` no longer exists at this path, the consolidation this ADR records as having closed the founding false-positive class may have decayed or moved.",
+              "reportedConfidence": 0.85
+            },
+            {
+              "claim": "ADR-0018's Decision section treats `paths.ts` as a live, currently-present file housing the repo-containment primitive (`existsWithinRepo` / `escapesRepoRoot`) shared by D3 and D7.",
+              "citations": [
+                {
+                  "document": "0018-the-adversarial-consolidation-round.md",
+                  "quote": "(`existsWithinRepo` / `escapesRepoRoot`, `paths.ts`), adopted by D3 and D7"
+                }
+              ],
+              "consequence": "If `paths.ts` no longer exists at this path, the shared containment primitive this ADR describes as consolidating D3 and D7 may have decayed or moved.",
+              "reportedConfidence": 0.85
+            },
+            {
+              "claim": "ADR-0020's Decision section treats the npm package `mdast-util-from-markdown` as a live, currently-adopted dependency providing the tool's spec-compliant CommonMark reference-extraction parser.",
+              "citations": [
+                {
+                  "document": "0020-the-resolution-module.md",
+                  "quote": "The parser is `mdast-util-from-markdown`."
+                }
+              ],
+              "consequence": "If this package is no longer a dependency of the project (e.g. removed from the manifest or replaced), the resolution-module architecture this ADR records may no longer match the codebase.",
+              "reportedConfidence": 0.88
+            },
+            {
+              "claim": "ADR-0030's Context section treats `src/checks/` as a live, currently-present directory that the parity guard mechanically monitors for changes requiring an accompanying Tier 0 fixture change.",
+              "citations": [
+                {
+                  "document": "0030-parity-guard-auditable-override.md",
+                  "quote": "ADR-0027's parity guard mechanically requires every change under `src/checks/` to ship"
+                }
+              ],
+              "consequence": "If this directory no longer exists at this path (e.g. checks were moved or renamed), the parity guard's scoping as described here may no longer match the codebase's actual layout.",
+              "reportedConfidence": 0.8
+            }
+          ]
+        }
+      }
+    ],
+    "usage": {
+      "input_tokens": 3,
+      "cache_creation_input_tokens": 90205,
+      "cache_read_input_tokens": 81259,
+      "output_tokens": 15572,
+      "server_tool_use": {
+        "web_search_requests": 0,
+        "web_fetch_requests": 0
+      },
+      "service_tier": "standard",
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 90205,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "inference_geo": "",
+      "iterations": [
+        {
+          "input_tokens": 2,
+          "output_tokens": 8,
+          "cache_read_input_tokens": 77999,
+          "cache_creation_input_tokens": 15466,
+          "cache_creation": {
+            "ephemeral_5m_input_tokens": 0,
+            "ephemeral_1h_input_tokens": 15466
+          },
+          "type": "message"
+        }
+      ],
+      "speed": "standard"
+    },
+    "modelUsage": {
+      "claude-sonnet-5": {
+        "inputTokens": 3,
+        "outputTokens": 15572,
+        "cacheReadInputTokens": 81259,
+        "cacheCreationInputTokens": 90205,
+        "webSearchRequests": 0,
+        "costUSD": 0.59623545,
+        "contextWindow": 200000,
+        "maxOutputTokens": 32000
+      }
+    }
+  }
+}
