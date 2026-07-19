@@ -28,6 +28,8 @@ One principle, ADR-0046's "the scanned repo is untrusted input", applied to two 
 
 `@anthropic-ai/claude-code` is not currently a duckadrift dependency, so in a stock install the trusted resolution finds nothing and the subscription backend refuses loudly on every run. This ADR fixes the RESOLUTION (never `PATH`, trusted location or loud refuse); it does not decide PROVISIONING, whether that is bundling claude-code into the tool's install or a Team-preset install step. Provisioning is a follow-up with its own record. The security property this ADR buys holds either way: no repo-influenced input reaches the model call.
 
+**Resolved by ADR-0051 (2026-07-19):** claude-code is provisioned as an OPTIONAL dependency (pinned to 2.1.138), installed by default and omittable with `--omit=optional`. That work also corrected the resolution's binary derivation: the package names its bin `bin/claude.exe` on every platform, so the POSIX `bin/claude` this ADR's code derived did not exist and would have thrown on Linux; the resolution now reads the package's own `bin.claude` declaration. The security property (trusted install only, never `PATH`, loud refuse) is unchanged.
+
 ## Consequences
 
 - The M5 `PATH`-based resolution is removed. The subscription backend now requires the claude binary in the tool's trusted location and refuses loudly otherwise, never a silent `PATH` substitution. That refusal is honest (the Pact); the backend does not quietly run the wrong binary.

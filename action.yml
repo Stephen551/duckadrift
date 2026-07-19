@@ -35,7 +35,11 @@ runs:
       shell: bash
       working-directory: ${{ github.action_path }}
       run: |
-        npm ci
+        # The Action runs the api backend, so it omits the optional
+        # @anthropic-ai/claude-code (a ~216 MB per-platform binary, ADR-0051): no
+        # adopter runner carries it. The subscription backend inside an action is
+        # unusual and then loud-refuses, which is correct.
+        npm ci --omit=optional
         npm run build
 
     - name: Derive PR context
