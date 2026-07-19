@@ -56,7 +56,7 @@ export async function executeReport(opts: ReportOptions): Promise<number> {
       // beginning (ADR-0047: no checkpoint is written or read, so the scanned
       // repo can never plant sweep state the tool trusts). PR-mode runs are
       // gated and small. One engine: neither mode reads sweep state.
-      const run = await runTier1Checks(ctx, TIER1_CHECKS, liveTransportFor(tier1Config));
+      const run = await runTier1Checks(ctx, TIER1_CHECKS, liveTransportFor(tier1Config, opts.repoRoot));
       // Calibration consumption + routing (ADR-0042): the artifact is read
       // (repo-local overrides shipped), each severity's channel state derived
       // from its own measurements, and each finding routed. On the shipped
