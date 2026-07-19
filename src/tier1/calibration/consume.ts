@@ -41,12 +41,14 @@ export type CalibrationConsumption =
     }
   | {
       calibrated: true;
-      /** Which artifact answered (PDR §2.6.6): the scanned repo's own file overrides the shipped one. */
-      source: "repo-local" | "shipped";
+      /** Which artifact answered (ADR-0049): the shipped baseline, or a repo-local override that TIGHTENED it. Opening is a shipped-artifact property; a repo may only constrain. */
+      source: "shipped" | "repo-local-override";
       sourcePath: string;
       corpusHash: string;
       sampleSize: number;
       perSeverity: Record<InterruptSeverity, ChannelState>;
+      /** A repo-local override that tried to OPEN a closed channel or LOWER a threshold: refused loudly (ADR-0049), the shipped value stood. Named per severity, never silently dropped. */
+      overrideRefusals?: Array<{ severity: InterruptSeverity; reason: string }>;
     };
 
 const INTERRUPT_SEVERITIES: InterruptSeverity[] = ["critical", "elevated", "routine"];
@@ -55,6 +57,65 @@ const INTERRUPT_SEVERITIES: InterruptSeverity[] = ["critical", "elevated", "rout
 export function shippedCalibrationPath(): string {
   // dist/tier1/calibration/consume.js → ../../../calibration.json
   return resolve(dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "calibration.json");
+}
+
+// Strict validation at read (ADR-0049): every field's TYPE and RANGE, not just
+// the top-level schema. A calibration artifact is untrusted input (ADR-0046);
+// a string where a number belongs would coerce through the numeric gate, and a
+// missing severity would crash it. Anything malformed makes the whole file
+// unreadable, loudly: never a coerced value, never a thrown error.
+
+function isNumberInRange(v: unknown, lo: number, hi: number): boolean {
+  return typeof v === "number" && Number.isFinite(v) && v >= lo && v <= hi;
+}
+
+function isNonNegativeInteger(v: unknown): boolean {
+  return typeof v === "number" && Number.isInteger(v) && v >= 0;
+}
+
+function isProbabilityOrNull(v: unknown): boolean {
+  return v === null || isNumberInRange(v, 0, 1);
+}
+
+function isValidCurvePoint(value: unknown): boolean {
+  if (typeof value !== "object" || value === null) return false;
+  const p = value as Record<string, unknown>;
+  if (!isNonNegativeInteger(p.n)) return false;
+  if (!isNonNegativeInteger(p.truePositives) || (p.truePositives as number) > (p.n as number)) return false;
+  return isNumberInRange(p.confidence, 0, 1) && isNumberInRange(p.precision, 0, 1) && isNumberInRange(p.wilsonLower, 0, 1);
+}
+
+function isValidSeverityCalibration(value: unknown): boolean {
+  if (typeof value !== "object" || value === null) return false;
+  const s = value as Record<string, unknown>;
+  return (
+    isNumberInRange(s.floor, 0, 1) &&
+    isProbabilityOrNull(s.threshold) &&
+    isNonNegativeInteger(s.sampleSize) &&
+    isProbabilityOrNull(s.pointPrecision) &&
+    isProbabilityOrNull(s.lowerBound) &&
+    Array.isArray(s.curve) &&
+    s.curve.every(isValidCurvePoint)
+  );
+}
+
+function isValidEntry(value: unknown): boolean {
+  if (typeof value !== "object" || value === null) return false;
+  const e = value as Record<string, unknown>;
+  const key = e.key as Record<string, unknown> | undefined;
+  if (
+    typeof key !== "object" ||
+    key === null ||
+    typeof key.backend !== "string" ||
+    typeof key.model !== "string" ||
+    typeof key.effort !== "string"
+  ) {
+    return false;
+  }
+  if (typeof e.corpusHash !== "string" || !isNonNegativeInteger(e.sampleSize)) return false;
+  const perSeverity = e.perSeverity as Record<string, unknown> | undefined;
+  if (typeof perSeverity !== "object" || perSeverity === null) return false;
+  return INTERRUPT_SEVERITIES.every((severity) => isValidSeverityCalibration(perSeverity[severity]));
 }
 
 function readCalibrationEntries(path: string): CalibrationEntry[] | null {
@@ -72,7 +133,10 @@ function readCalibrationEntries(path: string): CalibrationEntry[] | null {
   ) {
     return null;
   }
-  return (parsed as { entries: CalibrationEntry[] }).entries;
+  const entries = (parsed as { entries: unknown[] }).entries;
+  // One malformed entry makes the whole file unreadable (loud, never guessed).
+  if (!entries.every(isValidEntry)) return null;
+  return entries as CalibrationEntry[];
 }
 
 /** Numerical tolerance for stored-vs-recomputed bound agreement — float round-trip noise only, never a semantic gap. */
@@ -153,60 +217,125 @@ export function deriveChannelState(
 }
 
 /**
- * Loads the calibration for a run. Load order (PDR §2.6.6): a `calibration.json`
- * at the SCANNED repo's root overrides the shipped artifact. An unreadable
- * repo-local file is a named uncalibrated state, never a silent fall-through to
- * the shipped one — a repo that declared its own calibration and got the shipped
- * numbers instead would be consuming an artifact it did not choose.
+ * Combines the shipped baseline channel with a repo-local override, letting the
+ * override only TIGHTEN (ADR-0049): close an open channel or raise a threshold.
+ * An override that would OPEN a closed channel or LOWER a threshold is refused;
+ * the shipped value stands and the refusal is named. Opening is a property of
+ * the verifier-reviewed shipped artifact, which a repo cannot self-certify.
+ */
+function tightenChannel(
+  severity: InterruptSeverity,
+  shipped: ChannelState,
+  override: ChannelState
+): { channel: ChannelState; refusal?: string } {
+  if (shipped.state === "closed") {
+    // Shipped closed is already maximally strict for opening. An override that
+    // opens is refused; anything else leaves the shipped channel closed.
+    if (override.state === "open") {
+      return {
+        channel: shipped,
+        refusal: `the repo-local override opened the ${severity} channel the shipped artifact leaves closed; refused (a repo may tighten, never open, ADR-0049), the shipped closed channel stands`,
+      };
+    }
+    return { channel: shipped };
+  }
+  // Shipped OPEN: the override may close it, or raise its threshold, never lower.
+  if (override.state === "closed") {
+    return { channel: override };
+  }
+  if (override.threshold < shipped.threshold) {
+    return {
+      channel: shipped,
+      refusal: `the repo-local override lowered the ${severity} threshold below the shipped value; refused (a repo may raise, never lower, ADR-0049), the shipped threshold stands`,
+    };
+  }
+  return { channel: override.threshold > shipped.threshold ? override : shipped };
+}
+
+function matchesKey(
+  entry: CalibrationEntry,
+  key: { backend: string; model: string; effort: string }
+): boolean {
+  return entry.key.backend === key.backend && entry.key.model === key.model && entry.key.effort === key.effort;
+}
+
+/**
+ * Loads the calibration for a run (ADR-0049). The SHIPPED (verifier-reviewed)
+ * artifact is the authority for OPENING. A `calibration.json` at the scanned
+ * repo's root is a CONSTRAINT on top of it, not a replacement: it may only
+ * tighten a channel, never open one the shipped leaves closed. A malformed
+ * repo-local file is a named uncalibrated state, loudly, never a silent
+ * fall-through and never a coerced value.
  */
 export function consumeCalibration(
   repoRoot: string,
   key: { backend: string; model: string; effort: string },
   shippedPath: string = shippedCalibrationPath()
 ): CalibrationConsumption {
-  const localPath = join(repoRoot, "calibration.json");
-  let source: "repo-local" | "shipped";
-  let path: string;
-  if (existsSync(localPath)) {
-    source = "repo-local";
-    path = localPath;
-  } else if (existsSync(shippedPath)) {
-    source = "shipped";
-    path = shippedPath;
-  } else {
-    return { calibrated: false, reason: "no-artifact", detail: "no calibration.json found (repo-local or shipped)" };
+  // The shipped baseline: the only source of an OPEN channel.
+  if (!existsSync(shippedPath)) {
+    return { calibrated: false, reason: "no-artifact", detail: "no shipped calibration artifact found: this run is uncalibrated" };
   }
-
-  const entries = readCalibrationEntries(path);
-  if (entries === null) {
+  const shippedEntries = readCalibrationEntries(shippedPath);
+  if (shippedEntries === null) {
     return {
       calibrated: false,
       reason: "unreadable",
-      detail: `${source} calibration at ${path} is not a schemaVersion 1 calibration file — treated as uncalibrated, loudly, rather than guessed at`,
+      detail: `the shipped calibration at ${shippedPath} is not a valid schemaVersion 1 calibration file: treated as uncalibrated, loudly, rather than guessed at`,
     };
   }
-
-  const entry = entries.find(
-    (e) => e.key.backend === key.backend && e.key.model === key.model && e.key.effort === key.effort
-  );
-  if (entry === undefined) {
+  const shippedEntry = shippedEntries.find((e) => matchesKey(e, key));
+  if (shippedEntry === undefined) {
     return {
       calibrated: false,
       reason: "no-entry",
-      detail: `${source} calibration carries no entry for {backend: ${key.backend}, model: ${key.model}, effort: ${key.effort}} — this run is uncalibrated`,
+      detail: `the shipped calibration carries no entry for {backend: ${key.backend}, model: ${key.model}, effort: ${key.effort}}: this run is uncalibrated`,
     };
   }
 
-  const perSeverity = {} as Record<InterruptSeverity, ChannelState>;
+  const baseline = {} as Record<InterruptSeverity, ChannelState>;
   for (const severity of INTERRUPT_SEVERITIES) {
-    perSeverity[severity] = deriveChannelState(entry.perSeverity[severity], severity);
+    baseline[severity] = deriveChannelState(shippedEntry.perSeverity[severity], severity);
   }
+
+  // A repo-local override, if present, may only tighten the baseline.
+  let source: "shipped" | "repo-local-override" = "shipped";
+  let perSeverity = baseline;
+  const overrideRefusals: Array<{ severity: InterruptSeverity; reason: string }> = [];
+  const localPath = join(repoRoot, "calibration.json");
+  if (existsSync(localPath)) {
+    const localEntries = readCalibrationEntries(localPath);
+    if (localEntries === null) {
+      // The repo declared a calibration and it is malformed: loud, never guessed.
+      return {
+        calibrated: false,
+        reason: "unreadable",
+        detail: `the repo-local calibration at ${localPath} is not a valid schemaVersion 1 calibration file: treated as uncalibrated, loudly, rather than guessed at`,
+      };
+    }
+    const localEntry = localEntries.find((e) => matchesKey(e, key));
+    if (localEntry !== undefined) {
+      source = "repo-local-override";
+      const constrained = {} as Record<InterruptSeverity, ChannelState>;
+      for (const severity of INTERRUPT_SEVERITIES) {
+        const overrideChannel = deriveChannelState(localEntry.perSeverity[severity], severity);
+        const { channel, refusal } = tightenChannel(severity, baseline[severity], overrideChannel);
+        constrained[severity] = channel;
+        if (refusal !== undefined) overrideRefusals.push({ severity, reason: refusal });
+      }
+      perSeverity = constrained;
+    }
+    // A repo-local that carries no entry for this tuple constrains nothing; the
+    // shipped baseline stands.
+  }
+
   return {
     calibrated: true,
     source,
-    sourcePath: path,
-    corpusHash: entry.corpusHash,
-    sampleSize: entry.sampleSize,
+    sourcePath: shippedPath,
+    corpusHash: shippedEntry.corpusHash,
+    sampleSize: shippedEntry.sampleSize,
     perSeverity,
+    ...(overrideRefusals.length > 0 ? { overrideRefusals } : {}),
   };
 }

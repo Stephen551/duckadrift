@@ -152,7 +152,11 @@ describe("closed-stays-closed — the SHIPPED artifact opens nothing", () => {
 
 describe("earned-open-opens — a legitimately-cleared floor opens exactly its severity", () => {
   const tmp = mkdtempSync(join(tmpdir(), "duckadrift-gate-earned-"));
-  writeFileSync(join(tmp, "calibration.json"), serializeCalibration({ schemaVersion: 1, entries: [earnedEntry()] }), "utf-8");
+  // ADR-0049: opening is a property of the SHIPPED (verifier-reviewed) artifact,
+  // never a repo-local override. The earned entry is injected as the shipped
+  // baseline; the empty tmp carries no repo-local override to tighten it.
+  const EARNED_SHIPPED = join(tmp, "earned-shipped.json");
+  writeFileSync(EARNED_SHIPPED, serializeCalibration({ schemaVersion: 1, entries: [earnedEntry()] }), "utf-8");
 
   it("the earned entry's routine bound genuinely clears (computed, not typed)", () => {
     const e = earnedEntry();
@@ -163,8 +167,8 @@ describe("earned-open-opens — a legitimately-cleared floor opens exactly its s
 
   it("routine @0.95 interrupts; routine @0.5 stays annex; elevated/critical/cosmetic stay annex", () => {
     const { findings, adrsByFileName } = gateFindings();
-    const consumption = consumeCalibration(tmp, KEY, SHIPPED);
-    expect(consumption.calibrated && consumption.source).toBe("repo-local");
+    const consumption = consumeCalibration(tmp, KEY, EARNED_SHIPPED);
+    expect(consumption.calibrated && consumption.source).toBe("shipped");
     const routed = routeFindings(findings, adrsByFileName, consumption);
     expect(routed.map((r) => `${r.severity}:${r.disposition}`)).toEqual([
       "critical:annex",
@@ -178,7 +182,7 @@ describe("earned-open-opens — a legitimately-cleared floor opens exactly its s
 
   it("the interrupt payload carries claim, evidence, consequence, and calibrated-band disposition — no raw decimals in prose", () => {
     const { findings, adrsByFileName } = gateFindings();
-    const md = renderWith(findings, consumeCalibration(tmp, KEY, SHIPPED), adrsByFileName);
+    const md = renderWith(findings, consumeCalibration(tmp, KEY, EARNED_SHIPPED), adrsByFileName);
     expect(md).toContain("### Interrupts");
     const interruptBlock = md.slice(md.indexOf("### Interrupts"), md.indexOf("### Findings"));
     expect(interruptBlock).toContain("gate fixture: routine @0.95");
@@ -197,10 +201,10 @@ describe("earned-open-opens — a legitimately-cleared floor opens exactly its s
     expect(annexBlock).toContain("gate fixture: cosmetic @0.99");
   });
 
-  it("the report names the repo-local artifact (local-override)", () => {
+  it("the report names the shipped artifact that opened the channel", () => {
     const { findings, adrsByFileName } = gateFindings();
-    const md = renderWith(findings, consumeCalibration(tmp, KEY, SHIPPED), adrsByFileName);
-    expect(md).toContain("Artifact: repo-local");
+    const md = renderWith(findings, consumeCalibration(tmp, KEY, EARNED_SHIPPED), adrsByFileName);
+    expect(md).toContain("Artifact: shipped");
     expect(md).toContain("- routine: OPEN — threshold 0.9000");
   });
 });
@@ -211,8 +215,11 @@ describe("decreed-open-refused — the gate recomputes from the curve; no summar
     // The attack: assert routine's threshold but gut the stored bound.
     decreed.perSeverity.routine.lowerBound = 0.6;
     const tmp = mkdtempSync(join(tmpdir(), "duckadrift-gate-decreed-"));
-    writeFileSync(join(tmp, "calibration.json"), serializeCalibration({ schemaVersion: 1, entries: [decreed] }), "utf-8");
-    const consumption = consumeCalibration(tmp, KEY, SHIPPED);
+    // ADR-0049: the decree-refusal lives in the shipped baseline; inject the
+    // forged entry as the shipped artifact, not a repo-local override.
+    const forgedShipped = join(tmp, "forged-shipped.json");
+    writeFileSync(forgedShipped, serializeCalibration({ schemaVersion: 1, entries: [decreed] }), "utf-8");
+    const consumption = consumeCalibration(tmp, KEY, forgedShipped);
     expect(consumption.calibrated).toBe(true);
     if (!consumption.calibrated) return;
     const routine = consumption.perSeverity.routine;
@@ -244,8 +251,9 @@ describe("decreed-open-refused — the gate recomputes from the curve; no summar
     forged.perSeverity.routine.threshold = widest.confidence;
     forged.perSeverity.routine.lowerBound = 0.99;
     const tmp = mkdtempSync(join(tmpdir(), "duckadrift-gate-forgery-"));
-    writeFileSync(join(tmp, "calibration.json"), serializeCalibration({ schemaVersion: 1, entries: [forged] }), "utf-8");
-    const consumption = consumeCalibration(tmp, KEY, SHIPPED);
+    const forgedShipped = join(tmp, "forged-shipped.json");
+    writeFileSync(forgedShipped, serializeCalibration({ schemaVersion: 1, entries: [forged] }), "utf-8");
+    const consumption = consumeCalibration(tmp, KEY, forgedShipped);
     expect(consumption.calibrated).toBe(true);
     if (!consumption.calibrated) return;
     const routine = consumption.perSeverity.routine;
@@ -264,8 +272,9 @@ describe("decreed-open-refused — the gate recomputes from the curve; no summar
     forged.perSeverity.routine.threshold = 0.42424242; // no such confidence in the curve
     forged.perSeverity.routine.lowerBound = 0.99;
     const tmp = mkdtempSync(join(tmpdir(), "duckadrift-gate-nopoint-"));
-    writeFileSync(join(tmp, "calibration.json"), serializeCalibration({ schemaVersion: 1, entries: [forged] }), "utf-8");
-    const consumption = consumeCalibration(tmp, KEY, SHIPPED);
+    const forgedShipped = join(tmp, "forged-shipped.json");
+    writeFileSync(forgedShipped, serializeCalibration({ schemaVersion: 1, entries: [forged] }), "utf-8");
+    const consumption = consumeCalibration(tmp, KEY, forgedShipped);
     expect(consumption.calibrated).toBe(true);
     if (!consumption.calibrated) return;
     const routine = consumption.perSeverity.routine;

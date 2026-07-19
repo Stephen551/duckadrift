@@ -227,7 +227,13 @@ function renderCalibrationBlock(calibration: "UNCALIBRATED" | CalibrationConsump
       );
     }
   }
-  lines.push("- cosmetic: never interrupts (PDR §2.5, hard rule)", "");
+  lines.push("- cosmetic: never interrupts (PDR §2.5, hard rule)");
+  // A repo-local override that tried to open or lower a channel: refused loudly
+  // (ADR-0049), the shipped value stood. Never a silent drop.
+  for (const refusal of calibration.overrideRefusals ?? []) {
+    lines.push(`- ${refusal.severity}: repo-local override REFUSED: ${refusal.reason}`);
+  }
+  lines.push("");
   return lines;
 }
 
