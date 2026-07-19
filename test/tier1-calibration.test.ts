@@ -1,9 +1,10 @@
-import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { loadAdrLog } from "../src/adr/load.js";
+import { consumeCalibration } from "../src/tier1/calibration/consume.js";
 import type { ParsedAdr } from "../src/adr/types.js";
 import type { Tier1Finding } from "../src/tier1/citations.js";
 import { executeCalibrate } from "../src/cli/calibrate.js";
@@ -422,5 +423,106 @@ describe("the calibrate CLI runs network-free end to end", () => {
       join(workdir, "out.json"),
     ]);
     expect(code).toBe(1);
+  });
+});
+
+describe("consumeCalibration: a repo-local override may only tighten, never open (ADR-0049)", () => {
+  const CONSUME_KEY = { backend: "api", model: "claude-sonnet-5", effort: "high" };
+  const closed = (floor: number) => ({ floor, threshold: null, sampleSize: 0, pointPrecision: null, lowerBound: null, curve: [] as unknown[] });
+  // A genuine-looking OPEN routine channel at threshold t: a 73/73 cohort whose
+  // recomputed Wilson bound (>= 0.95) clears the floor, so deriveChannelState opens it.
+  const openRoutineAt = (t: number) => {
+    const lb = wilsonLowerBound(73, 73);
+    return { floor: 0.95, threshold: t, sampleSize: 73, pointPrecision: 1, lowerBound: lb, curve: [{ confidence: t, n: 73, truePositives: 73, precision: 1, wilsonLower: lb }] };
+  };
+  const entry = (routine: unknown) => ({ corpusHash: "synthetic", sampleSize: 73, key: CONSUME_KEY, perSeverity: { critical: closed(0.75), elevated: closed(0.9), routine } });
+  const writeCal = (dir: string, name: string, routine: unknown) =>
+    writeFileSync(join(dir, name), JSON.stringify({ schemaVersion: 1, entries: [entry(routine)] }), "utf-8");
+  const withDir = (fn: (dir: string) => void): void => {
+    const dir = mkdtempSync(join(tmpdir(), "duckadrift-cal-override-"));
+    try {
+      fn(dir);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  };
+
+  it("promoted attack 6: a repo-local entry that omits a severity is uncalibrated-loud, never a thrown crash (Fix 1)", () => {
+    withDir((dir) => {
+      writeFileSync(
+        join(dir, "calibration.json"),
+        JSON.stringify({ schemaVersion: 1, entries: [{ corpusHash: "attacker", sampleSize: 0, key: CONSUME_KEY, perSeverity: { critical: closed(0.75), elevated: closed(0.9) } }] }),
+        "utf-8"
+      );
+      let consumption: ReturnType<typeof consumeCalibration> | undefined;
+      expect(() => {
+        consumption = consumeCalibration(dir, CONSUME_KEY);
+      }).not.toThrow();
+      expect(consumption!.calibrated).toBe(false);
+    });
+  });
+
+  it("promoted attack 5 (coercion): a string threshold is rejected at read, not coerced: uncalibrated-loud (Fix 1)", () => {
+    withDir((dir) => {
+      const lb = wilsonLowerBound(73, 73);
+      writeFileSync(
+        join(dir, "calibration.json"),
+        JSON.stringify({
+          schemaVersion: 1,
+          entries: [{
+            corpusHash: "attacker", sampleSize: 73, key: CONSUME_KEY,
+            perSeverity: {
+              critical: closed(0.75), elevated: closed(0.9),
+              routine: { floor: 0.95, threshold: "0", sampleSize: 73, pointPrecision: 1, lowerBound: lb, curve: [{ confidence: "0", n: 73, truePositives: 73, precision: 1, wilsonLower: lb }] },
+            },
+          }],
+        }),
+        "utf-8"
+      );
+      expect(consumeCalibration(dir, CONSUME_KEY).calibrated).toBe(false);
+    });
+  });
+
+  it("ADDED: a WELL-FORMED numeric fabricated override that clears the floor still opens nothing: the stricter-only guard (Fix 2)", () => {
+    // The Stage 0 red used only the string-coercion vector, which Fix 1 alone
+    // closes. This case is numeric, self-consistent, and clears 0.95, so
+    // validation passes it; Fix 2 is what closes it: the shipped baseline leaves
+    // routine closed, so a repo-local override cannot open it. Without this
+    // assertion the stricter-only policy would be untested and could regress.
+    withDir((dir) => {
+      writeCal(dir, "calibration.json", openRoutineAt(0.9)); // valid, numeric, clears the floor
+      const consumption = consumeCalibration(dir, CONSUME_KEY); // default shipped: api routine CLOSED
+      expect(consumption.calibrated).toBe(true);
+      if (!consumption.calibrated) return;
+      expect(consumption.perSeverity.routine.state).toBe("closed"); // the override could NOT open it
+      expect(consumption.source).toBe("repo-local-override");
+      expect(consumption.overrideRefusals?.some((r) => r.severity === "routine")).toBe(true); // refused loudly
+    });
+  });
+
+  it("tightening IS allowed: an override that CLOSES an open shipped channel takes effect, with no refusal", () => {
+    withDir((dir) => {
+      writeCal(dir, "shipped.json", openRoutineAt(0.9)); // shipped baseline: routine OPEN
+      writeCal(dir, "calibration.json", closed(0.95)); // override: routine CLOSED (tightens)
+      const consumption = consumeCalibration(dir, CONSUME_KEY, join(dir, "shipped.json"));
+      expect(consumption.calibrated).toBe(true);
+      if (!consumption.calibrated) return;
+      expect(consumption.perSeverity.routine.state).toBe("closed");
+      expect(consumption.overrideRefusals ?? []).toHaveLength(0);
+    });
+  });
+
+  it("lowering is refused: an override that LOWERS a shipped threshold is refused, and the shipped value stands", () => {
+    withDir((dir) => {
+      writeCal(dir, "shipped.json", openRoutineAt(0.9)); // shipped baseline: routine OPEN at 0.9
+      writeCal(dir, "calibration.json", openRoutineAt(0.8)); // override: OPEN at 0.8 (would lower)
+      const consumption = consumeCalibration(dir, CONSUME_KEY, join(dir, "shipped.json"));
+      expect(consumption.calibrated).toBe(true);
+      if (!consumption.calibrated) return;
+      const routine = consumption.perSeverity.routine;
+      expect(routine.state).toBe("open");
+      if (routine.state === "open") expect(routine.threshold).toBe(0.9); // shipped stood
+      expect(consumption.overrideRefusals?.some((r) => r.severity === "routine")).toBe(true);
+    });
   });
 });
