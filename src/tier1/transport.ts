@@ -1,7 +1,8 @@
 import { execFile, spawn } from "node:child_process";
 import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
-import { delimiter, join } from "node:path";
+import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import Anthropic from "@anthropic-ai/sdk";
 import type { Tier1Config } from "../config/load.js";
 import { claudeCodeCredentialsPresent, tier1CredentialsPresent } from "./credentials.js";
@@ -123,8 +124,12 @@ const SAFE_ARG_RE = /^[A-Za-z0-9._:-]+$/;
 export interface ClaudeCodeTransportOptions {
   /** The owned deadline (ADR-0044 decision 2), seconds. Comes from config; never a constant in check code. */
   deadlineSeconds: number;
+  /** The scanned repo's root: the scratch dir is asserted OUTSIDE it (ADR-0048), so a repo-set temp env can never host the hermetic scratch. */
+  repoRoot: string;
   /** The environment the allowlist filters. Injectable for the deterministic fake-CLI harness. */
   env?: NodeJS.ProcessEnv;
+  /** The claude binary, injected. The ONE seam a test provides a binary through (ADR-0048); production resolves the trusted path from the tool's own install and never consults PATH. */
+  claudeBinaryPath?: string;
 }
 
 /** Defensive reads off the canonical request object; the transport realizes the request over the CLI and refuses shapes it cannot realize. */
@@ -176,29 +181,53 @@ function findingsSchemaOf(request: object): string {
 interface ResolvedClaudeSpawn {
   file: string;
   argsPrefix: string[];
-  /** True only on the Windows shim fallback, where args transit a shell. Real runs never take it: payload argv would be mangled. */
+  /** True only for the Windows .cmd/.bat harness shim, where args transit a shell. Real runs (native exe, POSIX shebang) never take it: payload argv would be mangled. */
   shell: boolean;
 }
 
+const toolRequire = createRequire(import.meta.url);
+
 /**
- * Resolves how to spawn the CLI. POSIX: execFile("claude") shell-free; PATH
- * lookup and shebang handle the rest, identically for the real install and
- * the fake harness. Windows: the npm shim is a .cmd wrapping a NATIVE
- * claude.exe (measured, PR D); the exe is derived from the shim's directory
- * and spawned directly, shell-free, so payload argv (the JSON schema)
- * arrives pristine. A shim directory with no derivable exe (the fake
- * harness) falls back to the shell path, where the fakes ignore argv.
+ * The trusted claude binary (ADR-0048): resolved from duckadrift's OWN install,
+ * the one location the scanned repo's bytes cannot write, NEVER from PATH. The
+ * scanned repo can prepend a directory to PATH, so a PATH lookup would resolve a
+ * planted fake; this resolution ignores PATH entirely. If the binary is not in
+ * the trusted install, the run refuses loudly: there is no PATH fall-through.
+ *
+ * NOTE (provisioning follow-up, ADR-0048): @anthropic-ai/claude-code is not yet a
+ * duckadrift dependency, so in a stock install this refuses and the subscription
+ * backend is inert until claude-code is provisioned into the tool's install.
  */
-function resolveClaudeSpawn(env: NodeJS.ProcessEnv): ResolvedClaudeSpawn {
-  if (process.platform !== "win32") return { file: "claude", argsPrefix: [], shell: false };
-  for (const dir of (env.PATH ?? "").split(delimiter)) {
-    if (dir === "") continue;
-    if (!existsSync(join(dir, "claude.cmd")) && !existsSync(join(dir, "claude"))) continue;
-    const exe = join(dir, "node_modules", "@anthropic-ai", "claude-code", "bin", "claude.exe");
-    if (existsSync(exe)) return { file: exe, argsPrefix: [], shell: false };
-    return { file: "claude", argsPrefix: [], shell: true };
+function resolveTrustedClaudeBinary(): string {
+  let packageJson: string;
+  try {
+    packageJson = toolRequire.resolve("@anthropic-ai/claude-code/package.json");
+  } catch {
+    throw new Tier1TransportError(
+      "transport",
+      "the claude-code CLI is not resolvable from duckadrift's own install; the subscription backend resolves its binary only from the tool's trusted node_modules, never from PATH (ADR-0048). Refused."
+    );
   }
-  return { file: "claude", argsPrefix: [], shell: true };
+  // The native launcher under the package, mirroring ADR-0044's Windows
+  // derivation (bin/claude.exe) and its POSIX analog (bin/claude).
+  const bin = join(dirname(packageJson), "bin", process.platform === "win32" ? "claude.exe" : "claude");
+  if (!existsSync(bin)) {
+    throw new Tier1TransportError(
+      "transport",
+      `the claude-code binary was not found at the trusted location ${JSON.stringify(bin)}; refused, never resolved through PATH (ADR-0048)`
+    );
+  }
+  return bin;
+}
+
+/**
+ * Maps a resolved absolute binary path to a spawn descriptor. A .cmd/.bat on
+ * Windows must transit a shell (the fake harness shim); a native exe or a POSIX
+ * shebang script spawns shell-free, so payload argv arrives pristine.
+ */
+function spawnDescriptorFor(binaryPath: string): ResolvedClaudeSpawn {
+  const shell = process.platform === "win32" && /\.(cmd|bat)$/i.test(binaryPath);
+  return { file: binaryPath, argsPrefix: [], shell };
 }
 
 /**
@@ -243,12 +272,31 @@ export function claudeCodeTransport(opts: ClaudeCodeTransportOptions): Tier1Tran
       }
       spawnEnv.CLAUDE_CODE_OAUTH_TOKEN = token;
 
+      // The trusted binary (ADR-0048): the injected test path, or resolved from
+      // the tool's own install; never PATH. Resolved before any resource so a
+      // refusal leaks nothing.
+      const resolved = spawnDescriptorFor(opts.claudeBinaryPath ?? resolveTrustedClaudeBinary());
+
       // Per-send scratch: the system prompt rides a FILE (argv-size and
       // quoting safe), and the scratch dir is the child's cwd, so the CLI's
       // CLAUDE.md auto-discovery finds nothing and the call's context is
       // exactly the request (hermeticity, ADR-0044 decision 3; the scanned
       // repo's own CLAUDE.md must never bleed into a check prompt).
-      const scratch = mkdtempSync(join(tmpdir(), "duckadrift-claude-code-"));
+      //
+      // The scratch is anchored OUTSIDE the scanned repo (ADR-0048): tmpdir()
+      // honors TMPDIR/TEMP/TMP, which the scanned repo can set, so a redirect
+      // that would place the scratch under repoRoot is refused loudly rather
+      // than proceeded with, isolation defeated.
+      const tmpBase = resolve(tmpdir());
+      const repoRootAbs = resolve(opts.repoRoot);
+      const relToRepo = relative(repoRootAbs, tmpBase);
+      if (relToRepo === "" || (!relToRepo.startsWith("..") && !isAbsolute(relToRepo))) {
+        throw new Tier1TransportError(
+          "transport",
+          `the resolved temp base ${JSON.stringify(tmpBase)} is inside the scanned repo ${JSON.stringify(repoRootAbs)}; refused, the scanned repo cannot host the hermetic scratch (ADR-0048)`
+        );
+      }
+      const scratch = mkdtempSync(join(tmpBase, "duckadrift-claude-code-"));
       const systemFile = join(scratch, "system-prompt.txt");
       writeFileSync(systemFile, systemText, "utf-8");
 
@@ -269,7 +317,6 @@ export function claudeCodeTransport(opts: ClaudeCodeTransportOptions): Tier1Tran
         "--json-schema",
         schemaJson,
       ];
-      const resolved = resolveClaudeSpawn(spawnEnv);
 
       const deadlineMs = opts.deadlineSeconds * 1000;
       let stdout: string;
@@ -284,10 +331,10 @@ export function claudeCodeTransport(opts: ClaudeCodeTransportOptions): Tier1Tran
             {
               env: spawnEnv,
               cwd: scratch,
-              // Real runs spawn shell-free with pristine argv (POSIX shebang,
-              // or the native claude.exe derived from the Windows shim); only
-              // the harness fallback transits a shell, and the fakes ignore
-              // argv (resolveClaudeSpawn above).
+              // Real runs spawn shell-free with pristine argv (the native
+              // binary from the trusted install, or a POSIX shebang script);
+              // only the Windows .cmd harness shim transits a shell, and the
+              // fakes ignore argv (spawnDescriptorFor above, ADR-0048).
               shell: resolved.shell,
               maxBuffer: 64 * 1024 * 1024,
             },
@@ -297,7 +344,7 @@ export function claudeCodeTransport(opts: ClaudeCodeTransportOptions): Tier1Tran
               clearTimeout(deadline);
               if (error !== null && out.length === 0 && error.code === "ENOENT") {
                 rejectPromise(
-                  new Tier1TransportError("transport", "spawn failure: the claude CLI is not on PATH")
+                  new Tier1TransportError("transport", "spawn failure: the resolved claude binary could not be spawned")
                 );
                 return;
               }
@@ -456,9 +503,13 @@ export function backendCredentialName(backend: RecordingBackend): string {
  * ONE place the backend picks an implementation. Callers hold a
  * Tier1Transport and never learn which.
  */
-export function liveTransportFor(config: Tier1Config, env: NodeJS.ProcessEnv = process.env): Tier1Transport {
+export function liveTransportFor(
+  config: Tier1Config,
+  repoRoot: string,
+  env: NodeJS.ProcessEnv = process.env
+): Tier1Transport {
   return config.backend === "claude-code"
-    ? claudeCodeTransport({ deadlineSeconds: config.deadline_seconds, env })
+    ? claudeCodeTransport({ deadlineSeconds: config.deadline_seconds, repoRoot, env })
     : liveTransport(env);
 }
 

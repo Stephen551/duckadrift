@@ -65,7 +65,7 @@ export async function executeCapture(argv: string[]): Promise<number> {
       check,
       config: { model: tier1.model, effort: tier1.effort },
       backend: tier1.backend,
-      transport: liveTransportFor(tier1),
+      transport: liveTransportFor(tier1, repoRoot),
       recordingPath,
     });
 
