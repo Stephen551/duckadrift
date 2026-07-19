@@ -50,3 +50,4 @@ Architecture decisions for duckadrift itself, recorded in duckadrift's own vocab
 | [0044](0044-transport-contract.md) | The transport contract: one seam, owned deadlines, hermetic spawns | Accepted | elevated |
 | [0045](0045-sweep-checkpoint-contract.md) | The sweep checkpoint contract: pause visibly, resume exactly, refuse loudly | Accepted | elevated |
 | [0046](0046-tier1-execution-threat-model.md) | The Tier 1 execution threat model: the scanned repo is untrusted input | Accepted | critical |
+| [0047](0047-checkpoint-is-never-trusted-input.md) | The sweep checkpoint is never trusted input: resume removed, restart in its place | Accepted | critical |
