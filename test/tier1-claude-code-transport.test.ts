@@ -1,9 +1,11 @@
-import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { delimiter, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterAll, describe, expect, it } from "vitest";
-import { Tier1TransportError, claudeCodeTransport } from "../src/tier1/transport.js";
+import { Tier1TransportError, claudeCodeTransport, killProcessTree } from "../src/tier1/transport.js";
+
+const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
 
 // The live claude-code transport, proven deterministically (ADR-0044): a fake
 // claude CLI per scenario replays PR B's committed captures verbatim against the
@@ -206,5 +208,76 @@ describe("the scratch dir is anchored outside the scanned repo (ADR-0048, promot
     } finally {
       rmSync(repoRoot, { recursive: true, force: true });
     }
+  });
+});
+
+describe("the deadline kill covers the whole process tree (ADR-0050)", () => {
+  it(
+    "POSIX: a grandchild the CLI spawns does not outlive the deadline; the whole process group is reaped",
+    { timeout: 20_000 },
+    async () => {
+      if (process.platform === "win32") return; // POSIX-only: detached process groups
+      const markerDir = mkdtempSync(join(tmpdir(), "duckadrift-grandchild-"));
+      const marker = join(markerDir, "grandchild.pid");
+      try {
+        // The prompt carries the marker path; the hang-with-child fake reads it
+        // from stdin and has its GRANDCHILD write its own pid there before both
+        // hang. The deadline must reap the group, grandchild included.
+        const req = request() as { messages: Array<{ content: string }> };
+        req.messages[0]!.content = marker;
+        const transport = claudeCodeTransport({ ...baseOpts("hang-with-child"), deadlineSeconds: 2 });
+        const err = await errorFrom(transport.send(req));
+        expect(err.message).toContain("deadline");
+
+        // The grandchild recorded its pid before the deadline fired. Read it.
+        let pid: number | undefined;
+        for (let i = 0; i < 50 && pid === undefined; i++) {
+          if (existsSync(marker)) {
+            const raw = readFileSync(marker, "utf-8").trim();
+            if (raw) pid = Number(raw);
+          }
+          if (pid === undefined) await sleep(100);
+        }
+        expect(pid).toBeGreaterThan(0);
+
+        // After the group kill the grandchild must be gone. process.kill(pid, 0)
+        // throws ESRCH when the process no longer exists. Under the old
+        // direct-child kill the grandchild would be orphaned and still alive.
+        let alive = true;
+        for (let i = 0; i < 30 && alive; i++) {
+          try {
+            process.kill(pid!, 0);
+            await sleep(100);
+          } catch {
+            alive = false;
+          }
+        }
+        if (alive) {
+          try {
+            process.kill(pid!, "SIGKILL"); // clean up a survivor so the test never leaks a process
+          } catch {
+            // already gone
+          }
+        }
+        expect(alive).toBe(false);
+      } finally {
+        rmSync(markerDir, { recursive: true, force: true });
+      }
+    }
+  );
+
+  it("Windows: a taskkill that cannot be confirmed surfaces a reason, never silently trusted (deterministic, platform injected)", async () => {
+    // Cross-platform coverage of the Windows await-and-surface path: the platform
+    // and the tree-killer are injected, so this runs on any runner. The live
+    // taskkill invocation itself is proven by code plus the same manual standard
+    // as the live claude path (ADR-0044); a Linux runner cannot exercise it.
+    const nonZero = await killProcessTree({ pid: 4242 }, { platform: "win32", runTaskkill: async () => "taskkill exited 1" });
+    expect(nonZero).toBe("taskkill exited 1");
+    const failedToRun = await killProcessTree({ pid: 4242 }, { platform: "win32", runTaskkill: async () => "taskkill failed to run: ENOENT" });
+    expect(failedToRun).toContain("failed to run");
+    const confirmed = await killProcessTree({ pid: 4242 }, { platform: "win32", runTaskkill: async () => undefined });
+    expect(confirmed).toBeUndefined();
+    const noPid = await killProcessTree({ pid: undefined }, { platform: "win32" });
+    expect(noPid).toContain("no child pid");
   });
 });

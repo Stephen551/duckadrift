@@ -1,4 +1,4 @@
-import { execFile, spawn } from "node:child_process";
+import { spawn } from "node:child_process";
 import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
@@ -230,6 +230,46 @@ function spawnDescriptorFor(binaryPath: string): ResolvedClaudeSpawn {
   return { file: binaryPath, argsPrefix: [], shell };
 }
 
+/** taskkill /T /F, awaited: undefined on a clean exit 0, else a reason (failed to run, or the non-zero exit). */
+function runTaskkill(pid: number): Promise<string | undefined> {
+  return new Promise((resolvePromise) => {
+    const tk = spawn("taskkill", ["/pid", String(pid), "/T", "/F"], { shell: true });
+    tk.on("error", (e) => resolvePromise(`taskkill failed to run: ${e.message}`));
+    tk.on("exit", (code) => resolvePromise(code === 0 ? undefined : `taskkill exited ${code ?? "unknown"}`));
+  });
+}
+
+/**
+ * Kills the whole process tree the child leads, on deadline expiry (ADR-0050,
+ * extending ADR-0044's deadline ownership). POSIX: the child is spawned detached
+ * as a process-group leader, so a negative-pid SIGKILL reaps the group, including
+ * any subprocess the CLI started; ESRCH means the group already exited, a
+ * confirmed kill (nothing survives). Windows: taskkill /T is the tree kill,
+ * AWAITED; a kill that cannot be confirmed (failed to run, or a non-zero exit) is
+ * returned as a reason, never silently trusted (the never-silent doctrine).
+ * Returns undefined on a confirmed kill, or the reason a kill could not be
+ * confirmed. The platform and the tree-killer are injectable so the Windows
+ * await-and-surface path is exercised deterministically on any runner.
+ */
+export function killProcessTree(
+  child: { pid?: number | undefined },
+  deps: { platform?: NodeJS.Platform; runTaskkill?: (pid: number) => Promise<string | undefined> } = {}
+): Promise<string | undefined> {
+  const platform = deps.platform ?? process.platform;
+  const pid = child.pid;
+  if (pid === undefined) return Promise.resolve("no child pid to kill");
+  if (platform === "win32") return (deps.runTaskkill ?? runTaskkill)(pid);
+  try {
+    // The child leads its own process group (spawned detached), so the negative
+    // pid reaps the group, not just the direct child.
+    process.kill(-pid, "SIGKILL");
+    return Promise.resolve(undefined);
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ESRCH") return Promise.resolve(undefined);
+    return Promise.resolve(`process-group kill failed: ${(err as Error).message}`);
+  }
+}
+
 /**
  * The live claude-code backend (ADR-0044): spawns the claude CLI per the PR B
  * canonical invocation (json output, pinned model, effort passthrough,
@@ -319,65 +359,80 @@ export function claudeCodeTransport(opts: ClaudeCodeTransportOptions): Tier1Tran
       ];
 
       const deadlineMs = opts.deadlineSeconds * 1000;
+      const MAX_STDOUT_BYTES = 64 * 1024 * 1024;
       let stdout: string;
       let exitCode: number | string;
       try {
         ({ stdout, exitCode } = await new Promise<{ stdout: string; exitCode: number | string }>(
         (resolvePromise, rejectPromise) => {
           let settled = false;
-          const child = execFile(
-            resolved.file,
-            [...resolved.argsPrefix, ...args],
-            {
-              env: spawnEnv,
-              cwd: scratch,
-              // Real runs spawn shell-free with pristine argv (the native
-              // binary from the trusted install, or a POSIX shebang script);
-              // only the Windows .cmd harness shim transits a shell, and the
-              // fakes ignore argv (spawnDescriptorFor above, ADR-0048).
-              shell: resolved.shell,
-              maxBuffer: 64 * 1024 * 1024,
-            },
-            (error, out) => {
-              if (settled) return; // the deadline already rejected; this is the kill's echo
-              settled = true;
-              clearTimeout(deadline);
-              if (error !== null && out.length === 0 && error.code === "ENOENT") {
-                rejectPromise(
-                  new Tier1TransportError("transport", "spawn failure: the resolved claude binary could not be spawned")
-                );
-                return;
-              }
-              resolvePromise({ stdout: String(out), exitCode: error === null ? 0 : (error.code ?? 1) });
-            }
-          );
-          // The owned deadline (ADR-0044 decision 2): the CLI is proven never
-          // to self-terminate under transport denial, so waiting on it is a
-          // dormancy violation. On expiry the whole process tree dies (the
-          // shell shim spawns the real CLI as a child; killing only the shim
-          // would leave the CLI running) and a terminal transport error
-          // surfaces naming the deadline.
+          let out = "";
+          let outBytes = 0;
+          // spawn, not execFile: execFile forwards only a fixed option whitelist
+          // to spawn and DROPS `detached`, so the child would never lead its own
+          // process group and the deadline could not reap the tree (ADR-0050).
+          // spawn honors detached, at the cost of collecting stdout by hand.
+          const child = spawn(resolved.file, [...resolved.argsPrefix, ...args], {
+            env: spawnEnv,
+            cwd: scratch,
+            // Real runs spawn shell-free with pristine argv (the native binary
+            // from the trusted install, or a POSIX shebang script); only the
+            // Windows .cmd harness shim transits a shell (spawnDescriptorFor,
+            // ADR-0048).
+            shell: resolved.shell,
+            // POSIX: the child leads its own process group so the deadline can
+            // reap the whole tree, not just the direct child (ADR-0050). Never
+            // unref'd, so the parent still awaits the result. Windows kills the
+            // tree with taskkill /T, so detached is off there.
+            detached: process.platform !== "win32",
+            stdio: ["pipe", "pipe", "pipe"],
+          });
+          // The owned deadline (ADR-0044 decision 2): the CLI is proven never to
+          // self-terminate under transport denial, so waiting on it is a dormancy
+          // violation. On expiry the whole process tree dies (ADR-0050) and a
+          // terminal transport error surfaces naming the deadline.
           const deadline = setTimeout(() => {
             if (settled) return;
             settled = true;
-            if (process.platform === "win32" && child.pid !== undefined) {
-              spawn("taskkill", ["/pid", String(child.pid), "/T", "/F"], { shell: true });
-            } else {
-              child.kill("SIGKILL");
-            }
-            rejectPromise(
-              new Tier1TransportError(
-                "transport",
-                `deadline of ${opts.deadlineSeconds}s expired; killed the process tree (the CLI does not self-terminate under transport denial, measured in PR B)`
-              )
-            );
+            // The whole process tree dies, not just the direct child (ADR-0050):
+            // a subprocess the CLI spawned must not outlive the deadline. A kill
+            // that cannot be confirmed is named, never silently trusted.
+            void killProcessTree(child).then((killError) => {
+              rejectPromise(
+                new Tier1TransportError(
+                  "transport",
+                  killError === undefined
+                    ? `deadline of ${opts.deadlineSeconds}s expired; killed the process tree (the CLI does not self-terminate under transport denial, measured in PR B)`
+                    : `deadline of ${opts.deadlineSeconds}s expired; the process-tree kill could not be confirmed: ${killError} (not silently trusted, ADR-0050)`
+                )
+              );
+            });
           }, deadlineMs);
-          // A child that dies before draining stdin (spawn failure, the
-          // deadline kill) EPIPEs the pending prompt write. The exec callback
-          // and the deadline path already own that outcome; the write error is
-          // their echo, not a new event, so the handler is a no-op BY DESIGN.
-          // Without it the echo is an unhandled stream error that can crash
-          // the host process mid-check (PR #54 verifier finding, 3/3 Linux).
+          child.stdout?.on("data", (chunk: Buffer) => {
+            outBytes += chunk.length;
+            if (outBytes <= MAX_STDOUT_BYTES) out += chunk.toString("utf-8");
+          });
+          // Spawn failure (the resolved binary could not be launched, e.g. ENOENT)
+          // arrives as an 'error' event, never a 'close'; a non-zero EXIT is a
+          // normal close with that code, handled below.
+          child.on("error", () => {
+            if (settled) return;
+            settled = true;
+            clearTimeout(deadline);
+            rejectPromise(
+              new Tier1TransportError("transport", "spawn failure: the resolved claude binary could not be spawned")
+            );
+          });
+          child.on("close", (code) => {
+            if (settled) return; // the deadline already rejected; this is the kill's echo
+            settled = true;
+            clearTimeout(deadline);
+            resolvePromise({ stdout: out, exitCode: code ?? 0 });
+          });
+          // A child that dies before draining stdin (spawn failure, the deadline
+          // kill) EPIPEs the pending prompt write. The close/error/deadline paths
+          // already own that outcome; the write error is their echo, so the
+          // handler is a no-op BY DESIGN (PR #54 verifier finding, 3/3 Linux).
           child.stdin?.on("error", () => {});
           child.stdin?.end(prompt);
         }
