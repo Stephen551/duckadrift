@@ -2,6 +2,54 @@
 
 All notable changes to duckadrift are documented here.
 
+## [0.3.0] — 2026-07-19
+
+duckadrift gains a second way to run its semantic tier, your Claude subscription
+instead of an API key, and hardens every input that tier reads.
+
+### Added
+
+- A second Tier 1 backend, `claude-code`, that runs the semantic checks through your
+  Claude subscription with the Claude Code CLI instead of a metered API key
+  (ADR-0044). The CLI is provisioned as an optional dependency, resolved only from
+  duckadrift's own install (ADR-0048, ADR-0051); an api-only install omits it with
+  `npm install --omit=optional`, and the subscription backend then refuses loudly
+  rather than run the wrong binary. One engine, two transports: Solo (the
+  subscription) and Team (the API key) are setup presets, never separate code paths.
+- A second calibration entry, for the `claude-code` tuple, fitted the same way as the
+  first from a labeled corpus. Every threshold is null by data, so no channel opens on
+  either backend, and the report states each channel's numbers on both.
+
+### Changed
+
+- Tier 0 and the Tier 1 relevance gate now read a decision's status the same way
+  everywhere, through one shared recognizer that understands the heading, bold-line,
+  and frontmatter dialects alike (ADR-0039). A log written in any of the three is read
+  consistently by every check.
+
+### Security
+
+The scanned repository is untrusted input: nothing it can write may steer the semantic
+tier's verdict or the model call (ADR-0046 through ADR-0050).
+
+- The sweep never trusts a checkpoint committed into the scanned repository. A
+  quota-exhausted sweep pauses visibly with "N of M checks completed", and the next
+  scheduled run restarts from the beginning, re-billing the completed units, rather
+  than resuming from a checkpoint file the repository could have planted (ADR-0047).
+- The claude binary is resolved only from duckadrift's own install, never from `PATH`,
+  so a repository cannot substitute a binary of its own; an absent binary refuses
+  loudly rather than fall back to a search path (ADR-0048, ADR-0051).
+- The per-send scratch directory is anchored outside the scanned repository, so a
+  repository cannot pull it under its own tree through the temp-dir environment and
+  bleed its files into the model's context (ADR-0048).
+- A repository's own `calibration.json` may only make a channel more conservative,
+  never open one the shipped calibration leaves closed, and the calibration reader
+  validates every field rather than crashing on a malformed one or coercing a string
+  through its numeric gate (ADR-0049).
+- The deadline that bounds every model call kills the whole process tree, so nothing
+  the CLI spawned outlives it, and a kill it cannot confirm is reported rather than
+  assumed (ADR-0050).
+
 ## [0.2.0] — 2026-07-11
 
 duckadrift now measures its own semantic precision and publishes the curve; no channel
