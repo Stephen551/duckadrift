@@ -128,7 +128,7 @@ tier1:
   deadline_seconds: 120 # the transport's hard ceiling per call
 ```
 
-Model and effort key the calibration: change them and the run is loudly uncalibrated until a matching entry exists. Missing credentials never fail a run silently; the report names exactly which variable is absent and why fork PRs are expected to lack it. Sweeps are checkpointed: quota exhaustion pauses visibly with "N of M checks completed" and the next scheduled run resumes without re-spending a completed unit.
+Model and effort key the calibration: change them and the run is loudly uncalibrated until a matching entry exists. Missing credentials never fail a run silently; the report names exactly which variable is absent and why fork PRs are expected to lack it. A quota-exhausted sweep pauses visibly with "N of M checks completed", and the next scheduled run restarts from the beginning rather than resuming, so completed units are billed again.
 
 ## The CLI underneath
 
@@ -151,7 +151,7 @@ Stated plainly, because a drift-detection tool that oversells itself has failed 
 - **ADR filenames need a title, not just a number.** Detection keys on the `NNNN-title.md` convention — the adr-tools default. A log whose records are numbered without a title slug (`ADR-7.md` rather than `0007-use-postgres.md`) is not recognized, and those files go unchecked rather than mis-checked. Broadening detection to the number-only form is on the backlog; for now the tool stays silent on it rather than guessing.
 - **A link into a git submodule resolves only when the submodule is checked out.** Reference checking reads the working tree at HEAD, so a link into a submodule path resolves when the submodule is initialized and is reported unresolved otherwise — which matches the default CI checkout, where submodules are not fetched. If your workflow checks submodules out, initialize them before the check runs. Never falsely resolved.
 - **Tier 1 never fails CI, by design.** A probabilistic finding blocking a merge would violate the sentence at the top of this README. Semantic findings live in the annex; the interrupt channel opens only when a calibration floor genuinely clears, and none has yet.
-- **Tier 1 spends tokens.** The relevance gate keeps PR-mode calls to diffs that trip a real signal, and sweeps are checkpointed so nothing is ever paid twice, but a sweep over a large log is a real model bill on the api backend and real subscription usage on claude-code. The report carries the measured usage.
+- **Tier 1 spends tokens.** The relevance gate keeps PR-mode calls to diffs that trip a real signal, but a sweep over a large log is a real model bill on the api backend and real subscription usage on claude-code, and a quota-exhausted sweep re-bills its completed units when the next run restarts. The report carries the measured usage.
 
 ## More
 
