@@ -53,3 +53,4 @@ Architecture decisions for duckadrift itself, recorded in duckadrift's own vocab
 | [0047](0047-checkpoint-is-never-trusted-input.md) | The sweep checkpoint is never trusted input: resume removed, restart in its place | Accepted | critical |
 | [0048](0048-binary-and-scratch-are-trusted-not-repo-influenced.md) | The transport resolves its binary and scratch from tool-trusted locations, never repo-influenced inputs | Accepted | critical |
 | [0049](0049-repo-calibration-may-only-tighten.md) | A repo-local calibration may only tighten; opening a channel requires the verifier-reviewed artifact | Accepted | critical |
+| [0050](0050-deadline-kill-covers-the-process-tree.md) | The deadline kill covers the whole process tree, and a kill it cannot confirm is loud | Accepted | elevated |
