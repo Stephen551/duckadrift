@@ -6,9 +6,6 @@ import { validateCitations } from "./citations.js";
 import type { CitationVerdict, Tier1Finding } from "./citations.js";
 import { confirmDeadPremise } from "./confirm-premise.js";
 import { buildRequest } from "./prompt.js";
-import { canonicalRequestHash } from "./recording.js";
-import type { RecordingKey } from "./recording.js";
-import type { SweepCheckpoint } from "./sweep.js";
 import { Tier1TransportError } from "./transport.js";
 import type { Tier1Transport, Tier1TransportResult } from "./transport.js";
 
@@ -43,13 +40,8 @@ export interface Tier1RunResult {
   livePremises: Array<{ check: "S5"; claim: string }>;
   /** One entry per check that made a call (live or replay); skipped checks contribute none. */
   usage: Tier1CheckUsage[];
-  /** Present when quota exhaustion paused the sweep (ADR-0045): completed and total units, and the units NOT checked, enumerated by name, never summarized (PDR 2.8). */
+  /** Present when quota exhaustion paused the sweep (ADR-0045 visible pause; ADR-0047 restart, not resume): completed and total units, and the units NOT checked, enumerated by name, never summarized (PDR 2.8). */
   paused?: { completed: number; total: number; notChecked: Tier1CheckId[] };
-}
-
-export interface RunTier1Options {
-  /** The sweep checkpoint (ADR-0045). Absent for gated PR-mode runs; present for sweeps that must pause visibly and resume exactly. */
-  checkpoint?: SweepCheckpoint;
 }
 
 /** Reads the four usage fields off the seam's untrusted usage block, defensively: any absent field is 0 (a replay body may omit them). The block arrives already extracted by the transport (ADR-0044); the runner never learns an envelope shape. */
@@ -97,24 +89,21 @@ function extractToolInput(response: unknown): Extracted {
 export async function runTier1Checks(
   ctx: AdrLogContext,
   checks: readonly CheckDefinition[],
-  transport: Tier1Transport,
-  opts: RunTier1Options = {}
+  transport: Tier1Transport
 ): Promise<Tier1RunResult> {
   // Model and effort come from the repo's config — the same values that key
-  // the recording (ADR-0028) and, at M4, the calibration entry (PDR §2.6).
-  // Quiet load: any per-run config notices were already emitted by the
-  // loadAdrLog that produced ctx. Backend is data here, never a fork
-  // (ADR-0044): it only labels the checkpoint's unit keys.
-  const { backend, model, effort } = loadConfig(ctx.repoRoot, { quiet: true }).tier1;
+  // the recording (ADR-0028) and the calibration entry (PDR §2.6). Quiet load:
+  // any per-run config notices were already emitted by the loadAdrLog that
+  // produced ctx.
+  const { model, effort } = loadConfig(ctx.repoRoot, { quiet: true }).tier1;
 
   const result: Tier1RunResult = { findings: [], discarded: [], droppedCitations: [], skipped: [], errors: [], livePremises: [], usage: [] };
 
   // Selections run once, up front: they are deterministic and free, and the
-  // sweep's total unit count (the pause block's denominator, ADR-0045) must
-  // be known before quota can cut the loop short.
+  // sweep's total unit count (the pause block's denominator, ADR-0045/0047)
+  // must be known before quota can cut the loop short.
   const selections = checks.map((check) => check.selectInput(ctx));
   const totalUnits = selections.filter((selection) => !isSkip(selection)).length;
-  opts.checkpoint?.noteTotal(totalUnits);
 
   let quotaPaused = false;
   const notChecked: Tier1CheckId[] = [];
@@ -142,17 +131,6 @@ export async function runTier1Checks(
     }
 
     const request = buildRequest(check, selection, { model, effort });
-    const unitKey: RecordingKey = { backend, model, effort, checkId: check.id, promptHash: canonicalRequestHash(request) };
-    const stored = opts.checkpoint?.lookup(unitKey);
-
-    // A completed unit is never re-sent (ADR-0045): a stored error replays as
-    // the same counted error, and a stored response re-enters the pipeline
-    // below exactly where a live one would, so a resumed sweep's report is
-    // byte-identical to an uninterrupted one.
-    if (stored !== undefined && stored.status === "errored") {
-      result.errors.push({ check: check.id, message: stored.message });
-      continue;
-    }
 
     // The whole untrusted-response handling — transport, extract, validate —
     // is inside one try/catch: one check's failure never silently costs
@@ -163,32 +141,22 @@ export async function runTier1Checks(
     // S3-16/S3-17). Any throw becomes a counted error and the run continues.
     try {
       let seamResult: Tier1TransportResult;
-      if (stored !== undefined) {
-        seamResult = { response: stored.response, usage: stored.usage };
-      } else {
-        try {
-          seamResult = await transport.send(request);
-        } catch (err) {
-          // Quota exhaustion pauses the sweep with the unit on the incomplete
-          // side, always (ADR-0045): it is never recorded, and the resume
-          // re-runs it exactly once. Every other transport failure is the
-          // unit's outcome: recorded complete, counted, never retried by a
-          // resume.
-          if (err instanceof Tier1TransportError && err.kind === "quota") {
-            quotaPaused = true;
-            notChecked.push(check.id);
-            continue;
-          }
-          const message = err instanceof Error ? err.message : String(err);
-          opts.checkpoint?.record(unitKey, { status: "errored", message });
-          result.errors.push({ check: check.id, message });
+      try {
+        seamResult = await transport.send(request);
+      } catch (err) {
+        // Quota exhaustion stops the sweep with this unit unsent (ADR-0045
+        // visible pause). There is no checkpoint and no cross-run resume
+        // (ADR-0047): the next run restarts from the beginning and redoes the
+        // work. Every other transport failure is the unit's outcome: counted,
+        // and the run continues to the next check.
+        if (err instanceof Tier1TransportError && err.kind === "quota") {
+          quotaPaused = true;
+          notChecked.push(check.id);
           continue;
         }
-        opts.checkpoint?.record(unitKey, {
-          status: "responded",
-          response: seamResult.response,
-          usage: seamResult.usage,
-        });
+        const message = err instanceof Error ? err.message : String(err);
+        result.errors.push({ check: check.id, message });
+        continue;
       }
       const { response, usage } = seamResult;
 

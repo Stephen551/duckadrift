@@ -23,10 +23,8 @@ export type Tier1Status =
       signals: Tier1Signal[]; // always computed in PR mode, [] otherwise
       /** On no-credentials: WHICH env var is missing, named by the transport module's backend map (ADR-0044) so the skip line says exactly what the run lacked. */
       credentialName?: string;
-      /** The sweep pause block (ADR-0045, PDR 2.8): completed and total units, the units not checked, and the estimated window reopening (~HH:MM, the caller's clock). */
-      paused?: { completed: number; total: number; notChecked: string[]; resumeAt?: string };
-      /** A refused checkpoint (changed tree, foreign key, unparseable bytes): named loudly; the sweep restarted from zero (ADR-0045). */
-      checkpointRefusal?: string;
+      /** The sweep pause block (ADR-0045 visible pause; PDR 2.8): completed and total units and the units not checked, enumerated by name. The next run restarts from the beginning (ADR-0047, no cross-run resume), so there is no resume-at estimate. */
+      paused?: { completed: number; total: number; notChecked: string[] };
       findings?: Tier1RunResult["findings"];
       discarded?: Tier1RunResult["discarded"];
       droppedCitations?: Tier1RunResult["droppedCitations"];
@@ -158,19 +156,13 @@ function renderTier1Block(tier1: Tier1Status): string[] {
   } else {
     lines.push(`Tier 1 eligible: ${tier1.signals.length} signal(s) detected.`, "");
   }
-  // The sweep's checkpoint states (ADR-0045), loud and first among the run
-  // details: a refused checkpoint names its reason and the restart; a pause
-  // carries the PDR 2.8 block with the unchecked units enumerated by name,
-  // never summarized.
-  if (tier1.checkpointRefusal !== undefined) {
-    lines.push(
-      `Tier 1 sweep checkpoint refused: ${tier1.checkpointRefusal} The sweep restarted from zero.`,
-      ""
-    );
-  }
+  // The sweep's visible pause (ADR-0045 pause, ADR-0047 restart), loud among
+  // the run details: the PDR 2.8 block with the unchecked units enumerated by
+  // name, never summarized. There is no checkpoint to refuse and no resume;
+  // the next run restarts from the beginning and redoes the work.
   if (tier1.paused !== undefined) {
     lines.push(
-      `Tier 1 sweep paused: ${tier1.paused.completed} of ${tier1.paused.total} checks completed; resuming at ${tier1.paused.resumeAt ?? "~--:--"}`,
+      `Tier 1 sweep paused: ${tier1.paused.completed} of ${tier1.paused.total} checks completed; the next run restarts from the beginning (no cross-run resume, ADR-0047).`,
       `Not checked: ${tier1.paused.notChecked.join(", ")}`,
       ""
     );
