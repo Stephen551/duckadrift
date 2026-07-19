@@ -1,9 +1,9 @@
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { delimiter, dirname, join, resolve } from "node:path";
+import { delimiter, dirname, isAbsolute, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterAll, describe, expect, it } from "vitest";
-import { Tier1TransportError, claudeCodeTransport, killProcessTree } from "../src/tier1/transport.js";
+import { Tier1TransportError, claudeCodeTransport, killProcessTree, resolveTrustedClaudeBinary } from "../src/tier1/transport.js";
 
 const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
 
@@ -157,16 +157,34 @@ describe("the binary is resolved from a trusted location, never PATH (ADR-0048)"
     expect((result.response as { content: Array<Record<string, unknown>> }).content[0]!.input).toEqual({ findings: [] });
   });
 
-  it("with no binary injected and claude-code absent from the tool's install, the transport refuses loudly and never falls through to PATH", async () => {
-    // No claudeBinaryPath: production resolution runs. @anthropic-ai/claude-code
-    // is not a duckadrift dependency, so the trusted resolution finds nothing and
-    // refuses: it does not resolve the fake planted on PATH.
-    const env = { ...harnessEnv(), PATH: `${join(FAKE_ROOT, "path-hijack")}${delimiter}${process.env.PATH ?? ""}` };
-    const transport = claudeCodeTransport({ deadlineSeconds: 60, repoRoot: REPO_ROOT, env });
-    const err = await errorFrom(transport.send(request()));
-    expect(err.kind).toBe("transport");
-    expect(err.message).toContain("PATH");
-    expect(err.message).not.toContain(PATH_SENTINEL);
+  it("with the optional dependency installed, the trusted resolution returns the absolute claude binary from duckadrift's OWN node_modules (present-branch, closes the Stage 2+3 gap; ADR-0051)", () => {
+    // Stage 2+3 could not exercise this branch: the package was absent, so the
+    // happy-path resolution was unverified. It is now provisioned as an optional
+    // dependency, so the resolution returns the real binary's absolute path from
+    // the tool's own install. The binary is NOT spawned and no live call is made
+    // the resolved path IS the assertion, no spawn.
+    const bin = resolveTrustedClaudeBinary();
+    expect(isAbsolute(bin)).toBe(true);
+    const ownInstall = resolve(join(__dirname, ".."), "node_modules", "@anthropic-ai", "claude-code");
+    expect(resolve(bin).startsWith(ownInstall)).toBe(true);
+    expect(existsSync(bin)).toBe(true);
+  });
+
+  it("when claude-code is absent from the tool's install (an --omit=optional install), the resolution refuses loudly and never falls through to PATH (absent-branch)", () => {
+    // A package name absent from duckadrift's node_modules stands in for an install
+    // that omitted the optional dependency: toolRequire.resolve throws and the
+    // resolution refuses, naming the trusted install and never PATH, so it can
+    // never resolve a fake a scanned repo planted on PATH.
+    let err: unknown;
+    try {
+      resolveTrustedClaudeBinary("@anthropic-ai/claude-code-omitted-from-this-install");
+    } catch (e) {
+      err = e;
+    }
+    expect(err).toBeInstanceOf(Tier1TransportError);
+    const message = (err as Tier1TransportError).message;
+    expect(message).toContain("not resolvable from duckadrift's own install");
+    expect(message).toContain("PATH");
   });
 });
 

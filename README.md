@@ -115,7 +115,7 @@ Tier 0 is string-provable fact. Tier 1 reads the log the way a reviewer would: c
 
 One engine, two transports. Solo and Team are setup presets, never code paths:
 
-- **Solo**: the `claude-code` backend rides your Claude subscription through the Claude Code CLI. Needs the CLI installed and `CLAUDE_CODE_OAUTH_TOKEN` in the environment (`claude setup-token`). Disclosure, stated because it is true: the CLI dials its own telemetry endpoint (a Datadog intake) alongside the API host on every call; if that matters in your environment, use the api backend.
+- **Solo**: the `claude-code` backend rides your Claude subscription through the Claude Code CLI. The CLI is provisioned by default as an optional dependency, resolved from duckadrift's own install (never from `PATH`); you still set `CLAUDE_CODE_OAUTH_TOKEN` in the environment (`claude setup-token`). An api-only install may skip the CLI (about 245 MB) with `npm install --omit=optional`; omitting it makes the subscription backend refuse loudly, never silently substitute another binary. Disclosure, stated because it is true: the CLI dials its own telemetry endpoint (a Datadog intake) alongside the API host on every call; if that matters in your environment, use the api backend.
 - **Team**: the `api` backend calls the Messages API directly with `ANTHROPIC_API_KEY`, the usual choice for CI secrets shared by a team.
 
 ```yaml

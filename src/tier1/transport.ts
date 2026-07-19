@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
@@ -194,23 +194,42 @@ const toolRequire = createRequire(import.meta.url);
  * planted fake; this resolution ignores PATH entirely. If the binary is not in
  * the trusted install, the run refuses loudly: there is no PATH fall-through.
  *
- * NOTE (provisioning follow-up, ADR-0048): @anthropic-ai/claude-code is not yet a
- * duckadrift dependency, so in a stock install this refuses and the subscription
- * backend is inert until claude-code is provisioned into the tool's install.
+ * The binary path is read from the resolved package's OWN `bin.claude` field, not
+ * a hardcoded platform guess (ADR-0051 corrects ADR-0048's derivation, which
+ * guessed `bin/claude` on POSIX): @anthropic-ai/claude-code names its bin
+ * `bin/claude.exe` on every platform, so the guess did not exist on Linux. The
+ * package's own declaration is both correct and self-adjusting. It is provisioned
+ * as an OPTIONAL dependency, so an api-only or action install that omits it
+ * (`--omit=optional`) makes the subscription backend refuse loudly here, never
+ * silently substitute (ADR-0051).
  */
-function resolveTrustedClaudeBinary(): string {
-  let packageJson: string;
+export function resolveTrustedClaudeBinary(packageName = "@anthropic-ai/claude-code"): string {
+  let packageJsonPath: string;
   try {
-    packageJson = toolRequire.resolve("@anthropic-ai/claude-code/package.json");
+    packageJsonPath = toolRequire.resolve(`${packageName}/package.json`);
   } catch {
     throw new Tier1TransportError(
       "transport",
       "the claude-code CLI is not resolvable from duckadrift's own install; the subscription backend resolves its binary only from the tool's trusted node_modules, never from PATH (ADR-0048). Refused."
     );
   }
-  // The native launcher under the package, mirroring ADR-0044's Windows
-  // derivation (bin/claude.exe) and its POSIX analog (bin/claude).
-  const bin = join(dirname(packageJson), "bin", process.platform === "win32" ? "claude.exe" : "claude");
+  let binField: unknown;
+  try {
+    const pkg = JSON.parse(readFileSync(packageJsonPath, "utf-8")) as { bin?: unknown };
+    binField = typeof pkg.bin === "object" && pkg.bin !== null ? (pkg.bin as Record<string, unknown>).claude : pkg.bin;
+  } catch {
+    throw new Tier1TransportError(
+      "transport",
+      "the claude-code package.json at the trusted location could not be read to resolve its binary; refused (ADR-0051)"
+    );
+  }
+  if (typeof binField !== "string" || binField === "") {
+    throw new Tier1TransportError(
+      "transport",
+      "the claude-code package declares no `bin.claude`; the trusted binary cannot be resolved from its own declaration (ADR-0051)"
+    );
+  }
+  const bin = resolve(dirname(packageJsonPath), binField);
   if (!existsSync(bin)) {
     throw new Tier1TransportError(
       "transport",
