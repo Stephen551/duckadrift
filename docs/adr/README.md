@@ -49,3 +49,4 @@ Architecture decisions for duckadrift itself, recorded in duckadrift's own vocab
 | [0043](0043-calibration-entries-by-discipline.md) | Calibration entries satisfy gates by discipline, not by floors met | Accepted | elevated |
 | [0044](0044-transport-contract.md) | The transport contract: one seam, owned deadlines, hermetic spawns | Accepted | elevated |
 | [0045](0045-sweep-checkpoint-contract.md) | The sweep checkpoint contract: pause visibly, resume exactly, refuse loudly | Accepted | elevated |
+| [0046](0046-tier1-execution-threat-model.md) | The Tier 1 execution threat model: the scanned repo is untrusted input | Accepted | critical |
